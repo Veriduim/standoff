@@ -107,6 +107,8 @@ const FAN_LIFE := 240         ## ...and is back in hand after this long whatever
 const TEMPO_MAX := 4          ## Tempo: beats; Encore at four
 const TEMPO_DMG := 0.06       ## ...each beat: this much more damage
 const TEMPO_FADE := 300       ## ...a beat fades after this long without a new one
+const TEMPO_MOVE := 0.08      ## ...and each beat moves her this much faster (dashes, steps, jumps)
+const CARRY := 0.95           ## friction in an attack's startup - she slides on with her momentum (FRICTION otherwise)
 const FORMS := ["flow", "snap", "floor"]
 const FLOOR_HEIGHT := 56.0    ## Forms: how tall she is in the Floor form (high hits pass over)
 const SNAP_DMG := 1.15        ## ...the Snap form's strikes: more damage...
@@ -290,7 +292,7 @@ func _xf_ok(f: Fighter, mid: String, m: Dictionary) -> bool:
 	if xf.has("fans"):
 		if f.fans < int(m.get("fans", 0)):
 			return false
-		if m.has("recall_at") and not _fans_out(f):
+		if (m.has("recall_at") or m.has("needs_out")) and not _fans_out(f):
 			return false
 	if xf.has("tempo") and f.tempo < int(m.get("tempo", 0)):
 		return false
@@ -657,10 +659,19 @@ func _motion(f: Fighter) -> void:
 		return
 	var m := Moves.move(f.character, f.move)
 	var k := lerpf(float(m["dist"][2]), 1.0, f.dist) if m.has("dist") else 1.0   # (a short one goes slower)
+	var kind := str(m.get("kind", ""))
+	if xf.has("tempo") and kind == "move":   # (Tempo: each beat moves her faster)
+		k *= 1.0 + TEMPO_MOVE * float(f.tempo)
+	if m.has("blink_at") and int(m["blink_at"]) == f.frame:   # (Fan Step: to her thrown fan, in a blink)
+		_blink(f)
 	for seg: Array in m.get("motion", []):
 		if f.frame >= int(seg[0]) and f.frame <= int(seg[1]):
 			var vx := _val(seg[2], f) * k
-			f.vel.x = vx if seg[2] is Array else vx * f.facing   # (a picked direction is already left / right)
+			var nx := vx if seg[2] is Array else vx * f.facing   # (a picked direction is already left / right)
+			# (an attack's lunge keeps any faster momentum the same way - 23:23 "better movement")
+			if kind in ["attack", "special", "super"] and signf(f.vel.x) == signf(nx) and absf(f.vel.x) > absf(nx):
+				nx = f.vel.x
+			f.vel.x = nx
 			f.vel.y = _val(seg[3], f) * k
 
 
@@ -700,7 +711,7 @@ func _physics(f: Fighter) -> void:
 				f.move = ""
 		# sliding to a stop (knockback, the end of a step) unless a move is pushing them this frame
 		if not _pushing(f):
-			f.vel.x *= FRICTION
+			f.vel.x *= CARRY if _in_startup(f) else FRICTION   # (an attack's startup slides on with her momentum)
 			if absf(f.vel.x) < 0.05:
 				f.vel.x = 0.0
 	var half := float(Moves.stats(f.character)["width"]) / 2.0
@@ -739,6 +750,35 @@ func _floor(f: Fighter) -> void:
 	f.kd = false
 	f.vel.x *= 0.3
 	_event("down", f, null)
+
+
+## In an attack's startup (before its first hit) - momentum carries through it.
+func _in_startup(f: Fighter) -> bool:
+	if f.move == "" or f.stun > 0 or f.blockstun > 0 or f.lock > 0:
+		return false
+	var m := Moves.move(f.character, f.move)
+	if not str(m.get("kind", "")) in ["attack", "special", "super", "grab"]:
+		return false
+	var hits: Array = m.get("hits", [])
+	return not hits.is_empty() and f.frame < int(hits[0]["from"])
+
+
+## Fan Step: she blinks to her nearest fan in the air (a step off the ground at most) and catches it.
+func _blink(f: Fighter) -> void:
+	var best: Dictionary = {}
+	for s: Dictionary in shots:
+		if int(s["owner"]) == f.id and bool(s.get("ret", false)) and (best.is_empty()
+				or (s["pos"] as Vector2).distance_to(f.pos) < (best["pos"] as Vector2).distance_to(f.pos)):
+			best = s
+	if best.is_empty():
+		return
+	var to: Vector2 = best["pos"]
+	_event("blink", f, null, 0, {"from": [f.pos.x, f.pos.y]})
+	f.pos = Vector2(clampf(to.x, -half + 20.0, half - 20.0), minf(0.0, to.y + 60.0))
+	f.vel = Vector2.ZERO
+	shots.erase(best)
+	f.fans = mini(FANS_MAX, f.fans + 1)
+	_event("catch", f, null)
 
 
 func _pushing(f: Fighter) -> bool:

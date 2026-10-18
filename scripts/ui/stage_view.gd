@@ -82,6 +82,10 @@ func show_tick(rec: Array, events: Array = [], flying: Array = []) -> void:
 	var prev := frame
 	frame = rec
 	shots = flying
+	for sh: Array in flying:   # (a thrown fan trails a ribbon of her colour - the mods' beams)
+		if str(sh[2]) == "fan" and int(sh[3]) < frame.size():
+			fx.ribbon(Vector2(float(sh[0]) - float(sh[4]), float(sh[1]) - float(sh[5])), Vector2(float(sh[0]),
+					float(sh[1])), colour_of(int(sh[3])))
 	for sh: Array in flying:   # (the ground wave kicks up dust as it runs)
 		if str(sh[2]) == "ripple" and int(sh[6]) % 3 == 0:
 			fx.dust(Vector2(float(sh[0]), -2.0), 0.55, _tick_n * 7 + int(sh[6]))
@@ -150,7 +154,7 @@ func _effect(e: Dictionary, prev: Array) -> void:
 		fx.burst_out(a, _chest(a), colour_of(a), n + a)
 		return
 	if type in ["down", "whiff", "sad", "sadness", "bounce", "splat", "ic", "beat", "onbeat", "catch", "recall",
-			"form_snap", "form_floor", "form_flow", "gust", "sweep", "sweep_up"]:   # (a = who it happened to)
+			"form_snap", "form_floor", "form_flow", "gust", "sweep", "sweep_up", "blink"]:   # (a = who it happened to)
 		var at := _chest(a) if not type in ["down", "bounce"] else Vector2(float(frame[a][0]), -6.0)
 		if type == "gust":   # (in front of her, low)
 			at = Vector2(float(frame[a][0]) + face * 50.0, -70.0)
@@ -573,6 +577,8 @@ func _figure(i: int, r: Array, alpha: float) -> void:
 		Stick.fan_at(self, pts, "f", face, sc, open, col, alpha >= 1.0, Stick.STEEL if alpha >= 1.0 else col)
 	if alpha < 1.0:
 		return
+	if alpha >= 1.0 and r.size() > 15 and int(r[15]) > 0 and int(r[5]) != 4:   # (Tempo: shards of her colour orbit her,
+		_tempo_aura(i, pts, int(r[15]), col, h * zoom)                          # one a beat - Yharim's in the mod study)
 	if deciding.has(i):
 		var pulse := 0.5 + 0.5 * sin(_time * 6.0)
 		draw_arc(pts["head"], head_r + (7.0 + 3.0 * pulse) * zoom, 0, TAU, 24, Color(1, 1, 1, 0.5 + 0.4 * pulse), 2.0)
@@ -586,6 +592,20 @@ func _figure(i: int, r: Array, alpha: float) -> void:
 		var s := maxf(6.0, 9.0 * zoom)
 		draw_colored_polygon(PackedVector2Array([tip, tip + Vector2(-s, -s * 1.1), tip + Vector2(s, -s * 1.1)]),
 				Color.WHITE)
+
+
+func _tempo_aura(i: int, pts: Dictionary, beats: int, col: Color, sc: float) -> void:
+	var mid: Vector2 = (pts["neck"] as Vector2).lerp(pts["hip"], 0.4)
+	for k in beats:
+		var a := _time * 2.6 + k * TAU / float(beats) + i
+		var p := mid + Vector2(cos(a) * 44.0, sin(a) * 18.0) * sc
+		var s := (4.5 + (2.0 if beats == Sim.TEMPO_MAX else 0.0)) * sc
+		var dir := Vector2.from_angle(a + PI / 2.0)
+		var c := col.lightened(0.45)
+		if sin(a) < 0.0:   # (the far side of the orbit, behind her - dimmer)
+			c = col.darkened(0.2)
+		draw_colored_polygon(PackedVector2Array([p + dir * s * 1.8, p + dir.orthogonal() * s * 0.7, p - dir * s * 1.8,
+			p - dir.orthogonal() * s * 0.7]), c)
 
 
 func _unhandled_input(event: InputEvent) -> void:

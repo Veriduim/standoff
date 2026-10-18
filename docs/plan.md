@@ -144,6 +144,12 @@ one stage; each attack aims at a picked target.
   Ripple a shockwave along the floor, the big white impact ring gone; 0.10.2: her fans bigger (Stick.FAN_R 27 - the
   prop that makes her, as Colossus's sword makes him) and her hand strikes leave crescent slashes off the fan's edge,
   longer and fuller.
+- 23:05-23:14 0.10.3-0.10.5: the mods' dark starburst hit, cards share the top bar, no shapes on hit; the mod study
+  (giant fan sweeps, glide ribbon, throw sphere, super floor ring).
+- 23:23 "Have we made it so more of our moves allow for better movement? Along with incorporating some of these into the
+  styles" -> 0.11.0: attacks keep momentum (low friction in their startup, a lunge never slows a faster slide); a
+  Distance on the lunging attacks (Straight, Side Kick, Sweep, Knee Dash, Silk Glide); per style: Fan Step (blink to
+  your thrown fan) + fan ribbons, Tempo beats move you faster + a shard aura, Snap Step; Encore ends in a sweep.
 
 ## To tune / later
 - **Match length with 6:** bot matches take 120-270 decision points with 6 fighters (50-90 with 2). At ~10 s a decision

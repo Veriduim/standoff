@@ -19,6 +19,19 @@
 | **Tempo** | A beat (pink ▮ on her card) for each move of hers that lands or is blocked (once per move; a fan counts once per throw), and for dodging through a hit. Each beat adds damage. Getting hit loses them all, and with no new beat one fades. | **Encore** (Special, at four beats: a four-hit dance ending in a launch; it spends all four). | `TEMPO_MAX` 4, `TEMPO_DMG` +6% a beat, `TEMPO_FADE` 300 ticks |
 | **Forms** | Flow is the Dancer as she was. **Snap**: her strikes do 15% more damage and +2 hitstun. **Floor**: she's low (56 tall instead of 104), so high hits pass over her; she only has her floor moves, low kicks / sweeps / ripple / Dodge, defence and supers. No jumps. Getting up off a knockdown puts her back in Flow. | **Snap Form / Floor Form / Flow Form** (Special, 8f). Snap: **Pop** (a 2f jab), **Snap Kick**. Floor: **Windmill** (three low hits, a knockdown), **Kip-Up** (invulnerable rising kick, back to Flow), **Floor Slide** (Movement). | `FLOOR_HEIGHT` 56, `SNAP_DMG` 1.15, `SNAP_STUN` 2 |
 
+**Movement and the mod study (23:23, 0.11.0):** each style got a movement tool and a look from the YOMI mod study
+(Standoff Workshop/references/yomi_mods/NOTES.md, study only):
+- **Fans:**
+  - **Fan Step** (Movement, while a fan is out): she blinks to her thrown fan and catches it, like Ninja's swap to his
+    shuriken. Throw one past them, then blink behind.
+  - Thrown fans trail a ribbon of her colour.
+- **Tempo:**
+  - Each beat moves her 8% faster (dashes, steps, jumps).
+  - Her beats show as shards of her colour orbiting her (Yharim's aura).
+  - Encore ends in a giant fan sweep.
+- **Forms:** **Snap Step** (Movement, Snap form) is a 10-frame step at speed, untouchable for frames 1-4, with a
+  Distance setting.
+
 **Tests and screenshots:**
 - `tools/test.sh sim`, section "The Dancer's x-factors on trial" (19 checks):
   - each switch, each move, the numbers;

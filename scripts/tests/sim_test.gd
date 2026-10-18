@@ -527,6 +527,67 @@ func _test_fan_dancer() -> void:
 			and float((s.shots[0]["vel"] as Vector2).y) < -1.0 and float((s.shots[0]["vel"] as Vector2).x) > 1.0)
 
 
+func _test_movement() -> void:
+	_section("Better movement (Timmy 23:23): momentum into attacks, how far you lunge, each style's movement tool")
+	var still := _duel("dancer", "dancer", 600.0)
+	still.apply({0: {"move": "jab", "x": 1.0}, 1: {"move": "wait"}})
+	var moving := _duel("dancer", "dancer", 600.0)
+	moving.fighters[0].vel.x = 16.0   # (coming out of a dash)
+	moving.apply({0: {"move": "jab", "x": 1.0}, 1: {"move": "wait"}})
+	for _i in 12:
+		still.step()
+		moving.step()
+	var d0 := still.fighters[0].pos.x + 300.0
+	var d1 := moving.fighters[0].pos.x + 300.0
+	_check("an attack started on the move keeps the momentum (jab from still %.0f px, from a dash %.0f px)" % [d0, d1],
+			d1 > d0 + 40.0)
+	var near := _duel("dancer", "dancer", 600.0)
+	near.apply({0: {"move": "straight", "x": 1.0, "dist": 0.0}, 1: {"move": "wait"}})
+	var far := _duel("dancer", "dancer", 600.0)
+	far.apply({0: {"move": "straight", "x": 1.0, "dist": 100.0}, 1: {"move": "wait"}})
+	for _i in 16:
+		near.step()
+		far.step()
+	_check("lunging attacks take a Distance: a Straight at 0 stays put (%.0f), at 100 lunges (%.0f)"
+			% [near.fighters[0].pos.x + 300.0, far.fighters[0].pos.x + 300.0],
+			absf(near.fighters[0].pos.x + 300.0) < 6.0 and far.fighters[0].pos.x + 300.0 > 30.0
+			and Moves.move("dancer", "straight").has("dist"))
+	var s := _xf("fans", 700.0)
+	s.apply({0: {"move": "fan", "x": 1.0}, 1: {"move": "wait"}})
+	_steps(s, 30, func() -> bool: return s.fighters[0].actionable())
+	var can := s.legal_moves(0).has("fanstep")
+	var from := s.fighters[0].pos.x
+	s.apply({0: {"move": "fanstep"}})
+	var fan_x := 0.0
+	for _i in 8:
+		if not s.shots.is_empty():
+			fan_x = float((s.shots[0]["pos"] as Vector2).x) + float((s.shots[0]["vel"] as Vector2).x)   # (where it'll be)
+		s.step()
+	_check("Fans: Fan Step blinks her to her thrown fan and she catches it (from %.0f to %.0f, the fan at %.0f, fans %d)"
+			% [from, s.fighters[0].pos.x, fan_x, s.fighters[0].fans], can and absf(s.fighters[0].pos.x - fan_x) < 30.0
+			and s.fighters[0].pos.x - from > 100.0 and s.fighters[0].fans == 2 and s.shots.is_empty())
+	s = _xf("forms", 600.0)
+	s.apply({0: {"move": "snapform"}, 1: {"move": "wait"}})
+	s.run_segment()
+	var x0 := s.fighters[0].pos.x
+	var has_step := s.legal_moves(0).has("snapstep")
+	s.apply({0: {"move": "snapstep", "x": 1.0}})
+	for _i in 10:
+		s.step()
+	_check("Forms: Snap Step - a quick sharp step in the Snap form (%.0f px)" % (s.fighters[0].pos.x - x0),
+			has_step and s.fighters[0].pos.x - x0 > 50.0)
+	var slow := _xf("tempo", 900.0)
+	var fast := _xf("tempo", 900.0)
+	fast.fighters[0].tempo = 4
+	for t: Sim in [slow, fast]:
+		t.apply({0: {"move": "dash", "x": 1.0}, 1: {"move": "wait"}})
+		for _i in 14:
+			t.step()
+	_check("Tempo: on the beat she moves faster (a dash: %.0f px, at four beats %.0f px)"
+			% [slow.fighters[0].pos.x + 450.0, fast.fighters[0].pos.x + 450.0],
+			fast.fighters[0].pos.x > slow.fighters[0].pos.x + 15.0)
+
+
 ## Two Dancers with these x-factors on (Sim RULES "xf"), gap apart, facing each other.
 func _xf(rule: String, gap := 300.0) -> Sim:
 	var s := Sim.create([{"character": "dancer"}, {"character": "dancer"}], "ffa", {"xf": rule})

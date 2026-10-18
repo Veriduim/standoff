@@ -14,7 +14,7 @@ const AIR := ["divekick", "airkick", "airknee", "airspin", "airdash", "fastfall"
 	"airthrow", "airjump"]
 const GRABS := ["grab", "hiptoss", "spinthrow"]
 const SUPERS := ["flurry", "cyclone", "finale"]
-const CLOSE_IN := ["walk", "dash", "roll", "kneedash", "floorslide"]
+const CLOSE_IN := ["walk", "dash", "roll", "kneedash", "floorslide", "snapstep", "fanstep"]
 const BACK_OFF := ["backstep", "walk", "dash"]
 
 var rng := RandomNumberGenerator.new()
