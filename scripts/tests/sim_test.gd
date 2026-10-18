@@ -131,10 +131,16 @@ func _test_snapshots() -> void:
 			JSON.stringify(a["frames"]) == JSON.stringify(b["frames"]) and JSON.stringify(s.to_dict()) == JSON.stringify(copy.to_dict()))
 	var p := Sim.create([{"character": "bruiser"}, {"character": "dancer"}])
 	var before := JSON.stringify(p.to_dict())
-	var ghost := p.preview({0: {"move": "step", "x": 1.0}}, 30)
+	var ghost: Array = p.preview({0: {"move": "step", "x": 1.0}}, 30)["frames"]
 	_check("a preview shows the move (30 frames, it walks forward) and leaves the match untouched",
 			ghost.size() == 30 and float(ghost[-1][0][0]) > float(p.fighters[0].pos.x) + 20.0
 			and JSON.stringify(p.to_dict()) == before)
+	var d := _duel("bruiser", "bruiser", 80.0)
+	d.apply({1: {"move": "jab"}})   # (they're already swinging; you're still free to pick)
+	var pv: Dictionary = d.preview({0: {"move": "wait", "x": 20}}, 30)
+	var hit_me: Array = pv["events"].filter(func(e: Dictionary) -> bool: return e["type"] == "hit" and int(e["d"]) == 0)
+	_check("a preview reports what lands on you: standing still in front of a jab gets you hit (%s)" % [pv["events"]],
+			not hit_me.is_empty())
 
 
 func _test_bot_matches() -> void:

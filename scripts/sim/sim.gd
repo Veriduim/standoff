@@ -186,8 +186,9 @@ func run_segment(cap := SEGMENT_CAP) -> Dictionary:
 
 
 ## What a picked move would do (the ghost preview): a copy of the match with these picks, every other fighter who's
-## free standing still, run `ticks` ticks whatever happens.
-func preview(choices: Dictionary, ticks := 90) -> Array:
+## free standing still, run `ticks` ticks whatever happens -> {frames, events} (the events say what lands on whom - a
+## dash into someone mid-swing shows you getting hit).
+func preview(choices: Dictionary, ticks := 90) -> Dictionary:
 	var copy := Sim.from_dict(to_dict())
 	var all := {}
 	for id in copy.deciders():
@@ -203,7 +204,7 @@ func preview(choices: Dictionary, ticks := 90) -> Array:
 			for id in free:
 				hold[id] = {"move": "wait", "x": 40.0}
 			copy.apply(hold)
-	return frames
+	return {"frames": frames, "events": copy.events}
 
 
 ## One tick: the moves push their fighters, gravity and the stage, hits, then every counter ticks down.

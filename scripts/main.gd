@@ -3,6 +3,7 @@ extends Node
 
 const SUITES := [
 	preload("res://scripts/tests/sim_test.gd"),
+	preload("res://scripts/tests/ui_test.gd"),
 ]
 
 
@@ -11,10 +12,13 @@ func _ready() -> void:
 		var code := await _run_tests()
 		get_tree().quit(code)
 		return
-	var screen: Node = load("res://scripts/ui/game_screen.gd").new() if ResourceLoader.exists(
-			"res://scripts/ui/game_screen.gd") else null
-	if screen != null:
-		add_child(screen)
+	var game: Control = load("res://scripts/ui/game_screen.gd").new()
+	add_child(game)
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--shots="):   # (dev: screenshots of a match - tools/shots.sh)
+			var shots: Node = load("res://scripts/dev/shots.gd").new()
+			add_child(shots)
+			shots.call("run", game, arg.trim_prefix("--shots="))
 
 
 func _areas() -> PackedStringArray:

@@ -20,7 +20,7 @@ extends RefCounted
 ##   armor     [from, to] - strikes in this window hurt but don't stop the move (grabs still do)
 ##   land_ends true = the move ends when they touch the ground (and `landing` frames of lag follow)
 ##   cost      meter it needs (supers)
-##   pose      [[frame, pose name], ...] for the stick figure (scripts/ui/poses.gd); held until the next entry
+##   pose      [[frame, pose name], ...] for the stick figure (scripts/ui/poses.gd); eased into the next entry
 
 const COMMON := {
 	"wait": {"name": "Wait", "kind": "wait", "frames": 10, "where": "both", "param": "frames", "range": [4, 40],
@@ -28,7 +28,7 @@ const COMMON := {
 	"guard": {"name": "Guard", "kind": "guard", "frames": 20, "where": "both", "param": "frames", "range": [8, 40],
 		"pose": [[0, "guard"]]},
 	"parry": {"name": "Parry", "kind": "parry", "frames": 20, "where": "both", "param": "frame", "range": [1, 14],
-		"window": 3, "pose": [[0, "idle"], [-1, "parry"]]},
+		"window": 3, "pose": [[0, "parry"]]},
 }
 
 const BRUISER := {
