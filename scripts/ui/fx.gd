@@ -313,6 +313,7 @@ func draw_combos(st: StageView, frame: Array) -> void:
 		_bold = FontVariation.new()
 		_bold.base_font = ThemeDB.fallback_font
 		_bold.variation_embolden = 1.1
+	var placed: Array[Vector2] = []
 	for id: int in combos:
 		var c: Dictionary = combos[id]
 		if int(c["hits"]) < 2 or id >= frame.size():
@@ -324,6 +325,14 @@ func draw_combos(st: StageView, frame: Array) -> void:
 		var p := st.w2s(Vector2(float(r[0]), float(r[1]) - 150.0))
 		p.x = clampf(p.x, st.view_left + 70.0, st.view_right - 70.0)
 		p.y = clampf(p.y, st.view_top + 60.0, st.view_bottom - 50.0)
+		var moved := true
+		while moved:   # (two counts over fighters stood together go one above the other)
+			moved = false
+			for q: Vector2 in placed:
+				if absf(q.x - p.x) < 120.0 and absf(q.y - p.y) < 72.0:
+					p.y = q.y - 76.0
+					moved = true
+		placed.append(p)
 		var size := int(46.0 + 18.0 * float(c["pop"]))
 		var col: Color = c["by"]
 		col = col.lightened(0.15)

@@ -17,6 +17,10 @@ func _ready() -> void:
 			var shots: Node = load("res://scripts/dev/shots.gd").new()
 			add_child(shots)
 			shots.call("run", game, arg.trim_prefix("--shots="))
+		elif arg.begins_with("--reel="):   # (dev: bots play a match for a video - tools/reel.sh)
+			var reel: Node = load("res://scripts/dev/shots.gd").new()
+			add_child(reel)
+			reel.call("reel", game, float(arg.trim_prefix("--reel=")))
 
 
 func _areas() -> PackedStringArray:

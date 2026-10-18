@@ -65,6 +65,15 @@ func run(game: Control, out: String) -> void:
 	get_tree().quit()
 
 
+## Bots (you too) play a match at normal speed for `seconds`, then it quits - recorded with --write-movie
+## (tools/reel.sh) to show the effects moving.
+func reel(game: Control, seconds: float) -> void:
+	game.auto_me = true
+	game.start_local(3, "ffa", 0)
+	await _wait(int(seconds * 60.0))
+	get_tree().quit()
+
+
 func _until(ok: Callable, frames: int) -> void:
 	for _i in frames:
 		if ok.call():
