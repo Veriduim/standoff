@@ -126,7 +126,7 @@ func on_event(type: String, at: Vector2, face: float, dmg: int, by: Color, victi
 			var s := clampf(float(dmg) / 32.0, 0.5, 1.8)
 			_burst(at, face, s, by, victim_col)
 			if counter:   # (they were mid-attack: a red COUNTER and a harder flash)
-				_add("text", at + Vector2(0, -46), Vector2(0, -60), 0.6, Color("#ff5d5d"), 26.0)
+				_add("text", at + Vector2(0, -40), Vector2(0, -50), 0.42, Color("#ff5d5d"), 17.0)   # (small - they're common)
 				parts[-1]["txt"] = "COUNTER"
 				flash[victim] = 0.08
 			if dmg >= 30:   # (a hard one: the shockwave, impact lines, the one hit flashes white)
