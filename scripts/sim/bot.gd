@@ -5,12 +5,12 @@ extends RefCounted
 ## pick is a move and a direction (toward that enemy). Seeded, so a test match plays the same every time.
 
 const GROUND_HITS := ["jab", "straight", "lowkick", "sidekick", "uppercut", "spin", "sweep", "axekick", "kneedash",
-	"flashkick", "haymaker"]
-const AIR := ["drop", "divekick", "airkick", "airknee", "airspin", "airdash", "fastfall", "guard", "wait"]
+	"flashkick"]
+const AIR := ["divekick", "airkick", "airknee", "airspin", "airdash", "fastfall", "guard", "wait"]
 const GRABS := ["grab", "hiptoss"]
-const SUPERS := ["slam", "flurry", "cyclone"]
-const CLOSE_IN := ["walk", "dash", "step", "roll", "kneedash"]
-const BACK_OFF := ["backstep", "walk", "dash", "step"]
+const SUPERS := ["flurry", "cyclone"]
+const CLOSE_IN := ["walk", "dash", "roll", "kneedash"]
+const BACK_OFF := ["backstep", "walk", "dash"]
 
 var rng := RandomNumberGenerator.new()
 

@@ -16,6 +16,7 @@ const ZOOM_MIN := 0.45
 const ZOOM_MAX := 1.35
 
 var characters: Array = []   ## per fighter id
+var palette: Array = []      ## each fighter's colour (empty = COLOURS in order) - the player picks theirs
 var names: Array = []
 var frame: Array = []        ## the tick shown (Sim.record)
 var ghost: Array = []        ## a preview's ticks, looped
@@ -34,6 +35,10 @@ var quiet := false          ## no sparks (skipping ahead)
 var zoom := 0.8
 var _ghost_i := 0
 var _time := 0.0
+
+
+func colour_of(i: int) -> Color:
+	return palette[i] if i < palette.size() else COLOURS[i % COLOURS.size()]
 
 
 func setup(chars: Array, fighter_names: Array) -> void:
@@ -173,7 +178,7 @@ func scrub_to(i: int) -> void:
 func _boxes(i: int, r: Array) -> void:
 	if int(r[5]) == 4:
 		return
-	var ch := str(characters[i]) if i < characters.size() else "bruiser"
+	var ch := str(characters[i]) if i < characters.size() else "dancer"
 	var st := Moves.stats(ch)
 	var w := float(st["width"])
 	var h := float(st["height"])
@@ -195,17 +200,17 @@ func _boxes(i: int, r: Array) -> void:
 
 
 func _figure(i: int, r: Array, alpha: float) -> void:
-	var ch := str(characters[i]) if i < characters.size() else "bruiser"
+	var ch := str(characters[i]) if i < characters.size() else "dancer"
 	var h := float(Moves.stats(ch)["height"]) / 100.0
 	var base := Vector2(float(r[0]), float(r[1]))
 	var face := float(r[2])
-	var col: Color = COLOURS[i % COLOURS.size()]
+	var col := colour_of(i)
 	if int(r[5]) == 4:
 		col = col.darkened(0.55)
 	col.a = alpha
-	var head_r := (12.0 if ch == "bruiser" else 10.0) * h * zoom
+	var head_r := 10.0 * h * zoom
 	var pts := Stick.draw(self, Poses.for_record(ch, r), w2s(base), h * zoom, face, col,
-			(7.0 if ch == "bruiser" else 5.0) * zoom, head_r)
+			5.0 * zoom, head_r)
 	if alpha < 1.0:
 		return
 	if ch == "dancer":   # (her scarf - a line trailing behind the neck)

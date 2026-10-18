@@ -1,7 +1,8 @@
 extends Control
-## The game on one phone (for now: you against bots - the same-Wi-Fi lobby plugs into this later): the start menu,
-## everyone's cards along the top, the stage, and - when it's your turn - the PickPanel (side tabs, the frame scrubber,
-## Confirm). Then the segment plays out and the next turn comes.
+## The game on one phone (for now: you against bots - online plugs into this later): the HomeScreen (a live bot match
+## behind it), everyone's cards along the top, the stage, and - when it's your turn - the PickPanel (side tabs of move
+## icons, the direction pad, the frame scrubber, Confirm). Then the segment plays out and the next turn comes.
+## One character for now - everyone is the Dancer, in their own colour (Timmy 17:52).
 
 const FONT := 22
 const SMALL := 17
@@ -11,16 +12,16 @@ var bots := {}             ## fighter id -> Bot
 var me := 0
 var phase := "menu"        ## menu | pick | play | over
 var speed := 1.0
-var setup_char := "bruiser"
 var setup_count := 3       ## opponents
 var setup_mode := "ffa"
+var setup_colour := 0      ## your colour (StageView.COLOURS) - the bots take the others
 var auto_me := false       ## a bot plays you too (the tests; a demo)
 
 var stage: StageView
 var pick: PickPanel
 var cards: HBoxContainer
 var banner: Label
-var start_panel: PanelContainer
+var home: HomeScreen
 var over_panel: PanelContainer
 var fast_btn: Button
 
@@ -29,6 +30,12 @@ var _events: Array = []
 var _first_tick := 0
 var _play_pos := 0.0
 var _shown := -1
+var _demo: Sim               ## the bot match behind the home screen
+var _demo_bots: Array = []
+var _demo_frames: Array = []
+var _demo_events: Array = []
+var _demo_first := 0
+var _demo_pos := 0.0
 
 
 func _ready() -> void:
@@ -36,6 +43,9 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE   # (taps on the stage reach StageView's _unhandled_input)
 	stage = StageView.new()
 	add_child(stage)
+	home = HomeScreen.new()
+	add_child(home)
+	home.fight.connect(func(n: int, m: String, c: int) -> void: start_local(n, m, c))
 	cards = HBoxContainer.new()
 	cards.position = Vector2(8, 6)
 	cards.add_theme_constant_override("separation", 6)
@@ -52,7 +62,6 @@ func _ready() -> void:
 	pick.confirmed.connect(func(c: Dictionary) -> void:
 		if phase == "pick":
 			_commit(c))
-	_build_start()
 	_build_over()
 	get_viewport().size_changed.connect(_layout)
 	_layout()
@@ -66,64 +75,20 @@ func _layout() -> void:
 	fast_btn.position = Vector2(10, Ui.CARD_H + 8)
 	fast_btn.size = Vector2(70, 44)
 	_stage_band()
-	for p in [start_panel, over_panel]:
-		(p as Control).position = (vp - (p as Control).size) / 2.0
+	over_panel.position = (vp - over_panel.size) / 2.0
 
 
 ## The stage keeps to the screen the panels leave: under the cards, above the bar and left of the tabs on your turn.
 func _stage_band() -> void:
 	var vp := get_viewport_rect().size
 	var picking := pick != null and pick.visible
-	stage.view_top = Ui.CARD_H + 48.0
+	stage.view_top = Ui.CARD_H + 48.0 if phase != "menu" else 40.0
 	stage.view_bottom = vp.y - (PickPanel.BAR_H + 10.0 if picking else 24.0)
 	stage.view_left = 0.0
 	stage.view_right = vp.x - (PickPanel.TAB_W + 12.0 if picking else 0.0)
 
 
 # ---------- the start and end ----------
-
-func _build_start() -> void:
-	start_panel = PanelContainer.new()
-	start_panel.add_theme_stylebox_override("panel", Ui.box())
-	start_panel.size = Vector2(620, 420)
-	add_child(start_panel)
-	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", 14)
-	start_panel.add_child(v)
-	var title := Ui.label("STANDOFF", 46, Color("#f2f2f7"))
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	v.add_child(title)
-	var pick_char := func(x: String) -> void: setup_char = x
-	var pick_count := func(x: String) -> void: setup_count = int(x)
-	var pick_mode := func(x: String) -> void: setup_mode = x
-	v.add_child(_choice_row("You", [["Bruiser", "bruiser"], ["Dancer", "dancer"]], pick_char, "bruiser"))
-	v.add_child(_choice_row("Opponents", [["1", "1"], ["2", "2"], ["3", "3"], ["4", "4"], ["5", "5"]], pick_count,
-			"3"))
-	v.add_child(_choice_row("Mode", [["Free-for-all", "ffa"], ["Teams", "teams"]], pick_mode, "ffa"))
-	var go := Ui.button("Fight", func() -> void: start_local(setup_char, setup_count, setup_mode), 30)
-	go.add_theme_stylebox_override("normal", Ui.box(Color("#c0392b")))
-	go.add_theme_stylebox_override("hover", Ui.box(Color("#c0392b")))
-	v.add_child(go)
-	var wifi := Ui.button("Same Wi-Fi (coming next)", func() -> void: pass, SMALL)
-	wifi.disabled = true
-	v.add_child(wifi)
-
-
-func _choice_row(title: String, opts: Array, on: Callable, start: String) -> HBoxContainer:
-	var h := HBoxContainer.new()
-	h.add_theme_constant_override("separation", 8)
-	var t := Ui.label(title, FONT, Color("#a7a7b8"))
-	t.custom_minimum_size = Vector2(150, 0)
-	h.add_child(t)
-	var group := ButtonGroup.new()
-	for o: Array in opts:
-		var b := Ui.button(str(o[0]), func() -> void: on.call(str(o[1])))
-		b.toggle_mode = true
-		b.button_group = group
-		b.button_pressed = str(o[1]) == start
-		h.add_child(b)
-	return h
-
 
 func _build_over() -> void:
 	over_panel = PanelContainer.new()
@@ -141,27 +106,79 @@ func _build_over() -> void:
 	h.alignment = BoxContainer.ALIGNMENT_CENTER
 	h.add_theme_constant_override("separation", 16)
 	v.add_child(h)
-	h.add_child(Ui.button("Rematch", func() -> void: start_local(setup_char, setup_count, setup_mode)))
+	h.add_child(Ui.button("Rematch", func() -> void: start_local(setup_count, setup_mode, setup_colour)))
 	h.add_child(Ui.button("Menu", func() -> void: _show_start()))
 	over_panel.visible = false
 
 
 func _show_start() -> void:
 	phase = "menu"
-	start_panel.visible = true
+	home.visible = true
 	over_panel.visible = false
+	fast_btn.visible = false
 	pick.close()
 	banner.text = ""
+	for c in cards.get_children():
+		cards.remove_child(c)
+		c.queue_free()
+	_demo_start()
+	_stage_band()
+
+
+## The match behind the home screen: four bots, round and round.
+func _demo_start() -> void:
+	var players := []
+	for i in 4:
+		players.append({"name": "", "character": "dancer"})
+	_demo = Sim.create(players, "ffa")
+	_demo_bots.clear()
+	for i in 4:
+		_demo_bots.append(Bot.new(randi() % 9999 + i))
+	stage.setup(_demo.fighters.map(func(f: Fighter) -> String: return f.character), [])
+	stage.palette = []
+	stage.you = -1
+	stage.deciding = []
+	stage.ghost = []
+	stage.show_tick(_demo.record())
+	_demo_frames = []
+	_demo_pos = 0.0
+
+
+func _demo_step(delta: float) -> void:
+	if _demo == null:
+		return
+	if int(_demo_pos) >= _demo_frames.size():
+		if _demo.over():
+			_demo_start()
+			return
+		var picks := {}
+		for id in _demo.deciders():
+			picks[id] = (_demo_bots[id] as Bot).choose(_demo, id)
+		_demo.apply(picks)
+		var seg := _demo.run_segment()
+		_demo_frames = seg["frames"]
+		_demo_events = seg["events"]
+		_demo_first = int(seg["end_tick"]) - _demo_frames.size() + 1
+		_demo_pos = 0.0
+	var before := int(_demo_pos)
+	_demo_pos += delta * 60.0
+	for k in range(before, mini(int(_demo_pos), _demo_frames.size() - 1) + 1):
+		var t := _demo_first + k
+		stage.show_tick(_demo_frames[k], _demo_events.filter(func(e: Dictionary) -> bool: return int(e["t"]) == t))
 
 
 # ---------- the match ----------
 
-## You plus `opponents` bots; teams = two sides (you on the first), else everyone for themselves.
-func start_local(character: String, opponents: int, mode: String) -> void:
-	var players := [{"name": "You", "character": character, "team": 0}]
-	var chars := ["dancer", "bruiser"]
+## You plus `opponents` bots, everyone the Dancer; teams = two sides (you on the first), else everyone for themselves.
+## You wear `colour`; the bots take the others in order.
+func start_local(opponents: int, mode: String, colour := 0) -> void:
+	setup_count = opponents
+	setup_mode = mode
+	setup_colour = colour
+	_demo = null
+	var players := [{"name": "You", "character": "dancer", "team": 0}]
 	for i in opponents:
-		players.append({"name": "Bot %d" % (i + 1), "character": chars[i % 2], "team": (i + 1) % 2})
+		players.append({"name": "Bot %d" % (i + 1), "character": "dancer", "team": (i + 1) % 2})
 	if mode == "teams" and opponents < 2:
 		mode = "ffa"
 	sim = Sim.create(players, mode)
@@ -171,9 +188,15 @@ func start_local(character: String, opponents: int, mode: String) -> void:
 	me = 0
 	stage.setup(sim.fighters.map(func(f: Fighter) -> String: return f.character),
 			sim.fighters.map(func(f: Fighter) -> String: return f.name))
+	var palette: Array = [StageView.COLOURS[colour]]
+	for c: Color in StageView.COLOURS:
+		if c != StageView.COLOURS[colour]:
+			palette.append(c)
+	stage.palette = palette
 	stage.you = me
 	stage.show_tick(sim.record())
-	start_panel.visible = false
+	home.visible = false
+	fast_btn.visible = true
 	over_panel.visible = false
 	_build_cards()
 	_next()
@@ -190,16 +213,16 @@ func _build_cards() -> void:
 		p.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		var st := Ui.box(Color("#1e2029dd"), 10)
 		st.set_content_margin_all(6)
-		st.border_color = StageView.COLOURS[f.id % 6]
+		st.border_color = stage.colour_of(f.id)
 		st.border_width_left = 5
 		p.add_theme_stylebox_override("panel", st)
 		var v := VBoxContainer.new()
 		v.add_theme_constant_override("separation", 3)
 		p.add_child(v)
-		var n := Ui.label("%s · %s" % [f.name, Moves.stats(f.character)["name"]], 15, Color("#e2e2ea"))
+		var n := Ui.label(f.name, 15, Color("#e2e2ea"))
 		n.name = "Name"
 		v.add_child(n)
-		v.add_child(_bar("HP", StageView.COLOURS[f.id % 6], 12))
+		v.add_child(_bar("HP", stage.colour_of(f.id), 12))
 		v.add_child(_bar("Meter", Color("#ffd166"), 6))
 		cards.add_child(p)
 	_update_cards()
@@ -279,6 +302,9 @@ func _commit(mine: Dictionary) -> void:
 
 
 func _process(delta: float) -> void:
+	if phase == "menu":
+		_demo_step(delta)
+		return
 	if phase != "play":
 		return
 	_play_pos += delta * 60.0 * speed

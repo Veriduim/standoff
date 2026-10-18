@@ -17,11 +17,11 @@ func _wait(frames: int) -> void:
 
 func run(game: Control, out: String) -> void:
 	DirAccess.make_dir_recursive_absolute(out)
-	await _wait(10)
-	await _snap(out.path_join("1_start.png"))
+	await _wait(150)   # (the match behind the home screen gets going)
+	await _snap(out.path_join("1_home.png"))
 	# a few turns played by a bot for you, to get everyone moving
 	game.auto_me = true
-	game.start_local("dancer", 5, "ffa")
+	game.start_local(5, "ffa", 0)
 	for _t in 14:
 		if game.phase == "play":
 			game.finish_playback()

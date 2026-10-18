@@ -206,7 +206,7 @@ func _build_tabs() -> void:
 		b.custom_minimum_size = Vector2(TAB_W, 54)
 		b.toggle_mode = true
 		b.disabled = _moves_in(tid).is_empty()
-		var on := Ui.box(StageView.COLOURS[me % 6].darkened(0.2), 10)
+		var on := Ui.box(stage.colour_of(me).darkened(0.2), 10)
 		b.add_theme_stylebox_override("pressed", on)
 		b.add_theme_stylebox_override("hover_pressed", on)
 		tabs_box.add_child(b)
@@ -227,7 +227,7 @@ func _tab(tid: String) -> void:
 		var pick := func() -> void:
 			select(mid)
 			_close_drawer()
-		var icon := MoveIcon.make(f.character, mid, StageView.COLOURS[me % 6], pick)
+		var icon := MoveIcon.make(f.character, mid, stage.colour_of(me), pick)
 		icon.selected = mid == str(choice.get("move", ""))
 		drawer_grid.add_child(icon)
 	drawer.visible = true
@@ -287,7 +287,7 @@ func select(mid: String) -> void:
 			d = Vector2.ZERO
 	picked_icon.character = f.character
 	picked_icon.move_id = mid
-	picked_icon.colour = StageView.COLOURS[me % 6]
+	picked_icon.colour = stage.colour_of(me)
 	picked_icon.queue_redraw()
 	picked_label.text = "%s\n%s" % [m["name"], frame_data(m)]
 	set_dir(d)

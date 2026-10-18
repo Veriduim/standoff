@@ -37,14 +37,14 @@ func _draw() -> void:
 		draw_rect(Rect2(Vector2.ZERO, size), colour.darkened(0.55), true)
 		draw_rect(Rect2(Vector2(1, 1), size - Vector2(2, 2)), colour, false, 2.0)
 	var pose := Poses.get_pose(Moves.icon_pose(m))
-	var head_r := 11.0 if character == "bruiser" else 9.5
+	var head_r := 9.5
 	var bb := Stick.bounds(pose, head_r)
 	var area := Rect2(Vector2(8, 6), Vector2(size.x - 16, size.y - 30))
 	# (one figure size for every icon - a curled-up roll isn't blown up to fill the box)
 	var sc := minf(minf(area.size.x / maxf(bb.size.x, 1.0), area.size.y / maxf(bb.size.y, 1.0)) * 0.95, area.size.y / 108.0)
 	var origin := area.get_center() - bb.get_center() * sc
 	var col := colour if not disabled else colour.darkened(0.6)
-	Stick.draw(self, pose, origin, sc, 1.0, col, maxf(2.0, (5.0 if character == "bruiser" else 3.6) * sc),
+	Stick.draw(self, pose, origin, sc, 1.0, col, maxf(2.0, 3.6 * sc),
 			head_r * sc)
 	var font := get_theme_default_font()
 	var text_col := Color("#e8e8f0") if not disabled else Color("#6b6b78")

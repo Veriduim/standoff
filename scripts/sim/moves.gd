@@ -38,39 +38,6 @@ const COMMON := {
 		"pose": [[0, "idle"]]},
 }
 
-const BRUISER := {
-	"stats": {"name": "Bruiser", "hp": 600, "weight": 1.2, "width": 44, "height": 112},
-	"moves": {
-		"step": {"name": "Step", "tab": "move", "kind": "move", "frames": 16, "where": "ground", "aim": "facing",
-			"motion": [[0, 13, 6.0, 0.0]], "pose": [[0, "walk1"], [5, "walk2"], [10, "walk1"], [14, "idle"]]},
-		"jump": {"name": "Jump", "tab": "move", "kind": "move", "frames": 8, "where": "ground", "aim": "up",
-			"motion": [[2, 2, ["px", 5.0], -12.5]], "pose": [[0, "crouch"], [2, "jump"]], "icon": "jump"},
-		"jab": {"name": "Jab", "tab": "attack", "kind": "attack", "frames": 18, "where": "ground", "aim": "facing",
-			"hits": [{"from": 6, "to": 8, "box": [10, -96, 56, 24], "dmg": 30, "stun": 16, "kb": [3.0, 0.0],
-				"block": 10, "chip": 2, "group": 0}],
-			"pose": [[0, "jab_wind"], [6, "jab_hit"], [11, "idle"]]},
-		"haymaker": {"name": "Haymaker", "tab": "attack", "kind": "attack", "frames": 34, "where": "ground",
-			"aim": "facing", "motion": [[6, 10, 3.0, 0.0]], "armor": [5, 12],
-			"hits": [{"from": 12, "to": 15, "box": [8, -108, 74, 44], "dmg": 90, "stun": 26, "kb": [9.0, -6.0],
-				"block": 16, "chip": 8, "group": 0}],
-			"pose": [[0, "heavy_wind"], [12, "heavy_hit"], [22, "idle"]]},
-		"grab": {"name": "Grab", "tab": "grab", "kind": "grab", "frames": 26, "where": "ground", "aim": "facing",
-			"hits": [{"from": 6, "to": 8, "box": [8, -92, 44, 64], "dmg": 70, "stun": 30, "kb": [8.0, -8.0],
-				"group": 0}],
-			"pose": [[0, "grab_reach"], [9, "throw"], [18, "idle"]]},
-		"drop": {"name": "Body Drop", "tab": "air", "kind": "attack", "frames": 40, "where": "air", "aim": "facing",
-			"motion": [[3, 40, 1.0, 14.0]], "land_ends": true, "landing": 10,
-			"hits": [{"from": 3, "to": 40, "box": [-12, -34, 56, 40], "dmg": 60, "stun": 20, "kb": [5.0, -4.0],
-				"block": 12, "chip": 5, "group": 0}],
-			"pose": [[0, "dive"]]},
-		"slam": {"name": "Ground Slam", "tab": "super", "kind": "super", "frames": 42, "where": "ground",
-			"aim": "facing", "cost": 50, "armor": [0, 16],
-			"hits": [{"from": 15, "to": 19, "box": [-90, -64, 180, 64], "dmg": 120, "stun": 32, "kb": [6.0, -10.0],
-				"block": 20, "chip": 12, "group": 0}],
-			"pose": [[0, "heavy_wind"], [15, "slam"], [28, "idle"]]},
-	},
-}
-
 ## The Dancer - the full kit (17:37: "one char that has as many moves as what a YOMIH char would have and see how we
 ## get that to fit with icons"): fast, light, kicks and footwork.
 const DANCER := {
@@ -203,7 +170,8 @@ const DANCER := {
 	},
 }
 
-const ROSTER := {"bruiser": BRUISER, "dancer": DANCER}
+## One character for now (Timmy 18 Oct 17:52: "Just work on getting one char working and remove the other one").
+const ROSTER := {"dancer": DANCER}
 ## The menu's tabs, in order: [id, name].
 const TABS := [["attack", "Attack"], ["air", "Air"], ["grab", "Grab"], ["move", "Move"], ["defend", "Defend"],
 	["super", "Super"]]

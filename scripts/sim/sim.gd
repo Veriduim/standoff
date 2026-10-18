@@ -36,7 +36,7 @@ static func create(players: Array, match_mode := "ffa") -> Sim:
 		var p: Dictionary = players[i]
 		var f := Fighter.new()
 		f.id = i
-		f.character = str(p.get("character", "bruiser"))
+		f.character = str(p.get("character", "dancer"))
 		f.name = str(p.get("name", "P%d" % (i + 1)))
 		f.team = int(p.get("team", i)) if match_mode == "teams" else i
 		var st := Moves.stats(f.character)

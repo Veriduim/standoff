@@ -5,7 +5,7 @@ extends RefCounted
 
 var id := 0
 var team := 0            ## free-for-all: every fighter its own team; teams: shared numbers, no friendly fire
-var character := "bruiser"
+var character := "dancer"
 var name := ""
 var pos := Vector2.ZERO  ## between the feet; y down, the ground at 0
 var vel := Vector2.ZERO

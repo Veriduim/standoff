@@ -14,12 +14,21 @@ func _screen() -> Control:
 func _test_your_pick() -> void:
 	_section("Your turn: side tabs of move icons, the direction pad, the ghost, the frame scrubber, Confirm")
 	var g := _screen()
-	_check("it opens on the start menu", g.phase == "menu" and g.start_panel.visible)
-	g.start_local("dancer", 3, "ffa")
+	_check("it opens on the home screen with a bot match playing behind it", g.phase == "menu" and g.home.visible
+			and g._demo != null and g._demo.fighters.size() == 4)
+	g._process(1.0)
+	_check("...and the match behind it moves", g._demo.tick > 0)
+	(g.home as HomeScreen)._set_colour(2)
+	(g.home as HomeScreen)._set_count(9)
+	_check("the home screen keeps 1-5 opponents (9 -> %d)" % g.home.opponents, g.home.opponents == 5)
+	(g.home as HomeScreen)._set_count(3)
+	(g.home.find_child("Fight", true, false) as Button).pressed.emit()
 	var p: PickPanel = g.pick
 	_check("a match with you and 3 bots: your turn first, the pick panel up (drawer tucked away), the start menu gone",
 			g.sim.fighters.size() == 4 and g.phase == "pick" and p.visible and not p.drawer.visible
-			and not g.start_panel.visible)
+			and not g.home.visible and g._demo == null)
+	_check("you wear the colour you picked; everyone is the Dancer", g.stage.colour_of(0) == StageView.COLOURS[2]
+			and g.sim.fighters.all(func(f: Fighter) -> bool: return f.character == "dancer"))
 	var names := p.menu_moves()
 	_check("on the ground the tabs hold %d moves - ground attacks, grabs, moves, defence; no air moves, no supers yet"
 			% names.size(), names.size() >= 20 and names.has("sweep") and names.has("hiptoss") and names.has("roll")
@@ -70,15 +79,15 @@ func _test_your_pick() -> void:
 
 func _test_full_matches() -> void:
 	_section("Whole matches through the screen (a bot playing you): free-for-all and teams")
-	for setup: Array in [["bruiser", 1, "ffa"], ["dancer", 5, "ffa"], ["bruiser", 5, "teams"], ["dancer", 3, "teams"]]:
+	for setup: Array in [[1, "ffa"], [5, "ffa"], [5, "teams"], [3, "teams"]]:
 		var g := _screen()
 		g.auto_me = true
-		g.start_local(setup[0], setup[1], setup[2])
+		g.start_local(setup[0], setup[1])
 		var guard := 0
 		while g.phase == "play" and guard < 5000:
 			g.finish_playback()
 			guard += 1
 		var result := (g.over_panel.find_child("Result", true, false) as Label).text
-		_check("%s with %d bots (%s) ends with a result on screen (%s)" % [setup[0], setup[1], setup[2], result],
+		_check("%d bots (%s) ends with a result on screen (%s)" % [setup[0], setup[1], result],
 				g.phase == "over" and g.over_panel.visible and not result.is_empty())
 		g.queue_free()
