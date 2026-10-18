@@ -708,6 +708,7 @@ func _show_card(side: String) -> void:
 func _outcome() -> String:
 	var lines: Array[String] = []
 	var dealt := {}
+	var spots := {}   # (target -> 1 at the edge / -1 too close, the spacer's)
 	for e: Dictionary in preview_events:
 		var type := str(e["type"])
 		var a := int(e["a"])
@@ -716,6 +717,8 @@ func _outcome() -> String:
 		var line := ""
 		if a == me and type in ["hit", "throw"]:
 			dealt[d] = int(dealt.get(d, 0)) + int(e["dmg"])
+			if int(e.get("spot", 0)) != 0 and not spots.has(d):
+				spots[d] = int(e["spot"])
 		elif a == me and type == "block":
 			var adv := -int(e.get("adv", 0))
 			line = "%s blocks it%s (you're %s%d)" % [other, " (worse - wrong height)" if e.get("worse", false) else "",
@@ -739,7 +742,9 @@ func _outcome() -> String:
 		if line != "" and not lines.has(line):
 			lines.append(line)
 	for id in dealt:
-		lines.push_front("Hits %s for %d" % [sim.fighters[id].name, int(dealt[id])])
+		var sp := int(spots.get(id, 0))
+		lines.push_front("Hits %s for %d%s" % [sim.fighters[id].name, int(dealt[id]),
+				"  ·  at the fan's edge!" if sp == 1 else ("  ·  too close - weak" if sp == -1 else "")])
 	return "" if lines.is_empty() else "\n" + "\n".join(lines)
 
 

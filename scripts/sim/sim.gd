@@ -109,6 +109,18 @@ const TEMPO_DMG := 0.06       ## ...each beat: this much more damage
 const TEMPO_FADE := 300       ## ...a beat fades after this long without a new one
 const TEMPO_MOVE := 0.08      ## ...and each beat moves her this much faster (dashes, steps, jumps)
 const CARRY := 0.95           ## friction in an attack's startup - she slides on with her momentum (FRICTION otherwise)
+## A spacer (the Dancer - 23:59 "she is clearly control and spacer"): her melee hits at the far end of their reach
+## (EDGE_AT of the hitbox or further, and not on top of them) do EDGE_DMG and EDGE_STUN more, and leave her EDGE_BLOCK
+## safer on block; point blank (CLOSE_PX apart) they do CLOSE_DMG, CLOSE_STUN less.
+const EDGE_AT := 0.55
+const EDGE_DMG := 1.25
+const EDGE_STUN := 4
+const EDGE_BLOCK := 3
+const CLOSE_PX := 40.0
+const CLOSE_DMG := 0.8
+const CLOSE_STUN := 3
+const NO_FAN_CHIP := 1.5      ## ...and her limit: no fan in hand, she blocks worse (more chip, NO_FAN_BLOCK longer)
+const NO_FAN_BLOCK := 3
 const FORMS := ["flow", "snap", "floor"]
 const FLOOR_HEIGHT := 56.0    ## Forms: how tall she is in the Floor form (high hits pass over)
 const SNAP_DMG := 1.15        ## ...the Snap form's strikes: more damage...
@@ -623,6 +635,8 @@ func _upkeep(f: Fighter) -> void:
 			f.sad = 0
 	elif f.stun == 0 and f.down == 0:
 		var d := 1 + (2 if v < -0.5 else 0) - (2 if v > 0.5 else 0)
+		if xf.has("fans") and d > 0 and _fans_out(f):   # (a fan of hers in the air: she's zoning, not running away)
+			d = 0
 		f.sad = clampi(f.sad + d, SAD_MIN, SAD_MAX)
 		if f.sad >= SAD_MAX * 2 / 3 and not f.sad_warned:
 			f.sad_warned = true
@@ -968,7 +982,7 @@ func _resolve_hits() -> Dictionary:
 							touched[d.id] = true
 					else:
 						a.hit_done[key] = true
-						_strike(a, d, e, kind[d.id], frame[d.id])
+						_strike(a, d, _spaced(a, d, e), kind[d.id], frame[d.id])
 						struck[d.id] = true
 						touched[d.id] = true
 	for id: int in _cancels:   # (hit cancels: out of the move, free next tick; not the same move straight away)
@@ -990,6 +1004,35 @@ func _resolve_hits() -> Dictionary:
 			f.lock = 0
 			_event("ko", f, null)
 	return touched
+
+
+## A spacer's hit, by where it lands: at the far end of its reach ("spot" 1 - harder), point blank (-1 - weaker), or
+## between (as it is). Small hitboxes (under 40 px) don't care.
+func _spaced(a: Fighter, d: Fighter, e: Dictionary) -> Dictionary:
+	if str(Moves.stats(a.character).get("trait", "")) != "spacer":
+		return e
+	var box := hitbox(a, e)
+	if box.size.x < 40.0:
+		return e
+	var body := hurtbox(d)
+	var near := body.position.x if a.facing == 1 else body.end.x   # (their side nearest her)
+	var reach := (near - box.position.x) / box.size.x if a.facing == 1 else (box.end.x - near) / box.size.x
+	var spot := 0
+	if absf(d.pos.x - a.pos.x) < CLOSE_PX:
+		spot = -1
+	elif reach >= EDGE_AT:
+		spot = 1
+	if spot == 0:
+		return e
+	var out := e.duplicate()
+	out["spot"] = spot
+	if spot == 1:
+		out["dmg"] = int(round(float(e["dmg"]) * EDGE_DMG))
+		out["stun"] = int(e["stun"]) + EDGE_STUN
+	else:
+		out["dmg"] = int(round(float(e["dmg"]) * CLOSE_DMG))
+		out["stun"] = maxi(1, int(e["stun"]) - CLOSE_STUN)
+	return out
 
 
 func _strike(a: Fighter, d: Fighter, e: Dictionary, d_kind: String, d_frame: int) -> void:
@@ -1032,8 +1075,13 @@ func _block(a: Fighter, d: Fighter, e: Dictionary, dm: Dictionary, d_frame: int,
 		_event("parry", d, a, 0, {"shot": shot})
 		return true
 	var chip := 0 if push else int(e.get("chip", 0)) * (1 if right else 2)
+	var no_fan := xf.has("fans") and d.fans == 0 and str(Moves.stats(d.character).get("trait", "")) == "spacer"
+	if no_fan:   # (the spacer's limit: no fan in hand to block with)
+		chip = int(ceil(float(chip) * NO_FAN_CHIP))
 	d.hp -= chip
-	d.blockstun = int(e.get("block", 8)) + (0 if right else WRONG_HEIGHT) + (0 if d.grounded() else AIR_BLOCK)
+	d.blockstun = int(e.get("block", 8)) + (0 if right else WRONG_HEIGHT) + (0 if d.grounded() else AIR_BLOCK) \
+			+ (NO_FAN_BLOCK if no_fan else 0) + (EDGE_BLOCK if int(e.get("spot", 0)) == 1 else 0) \
+			- (EDGE_BLOCK if int(e.get("spot", 0)) == -1 else 0)
 	var away := signf(d.pos.x - a.pos.x) if absf(d.pos.x - a.pos.x) > 1.0 else float(a.facing)
 	d.vel.x = away * 3.0
 	if push and not shot:   # (Push Block: the striker's shoved back)
@@ -1044,7 +1092,8 @@ func _block(a: Fighter, d: Fighter, e: Dictionary, dm: Dictionary, d_frame: int,
 	_beat(a, str(e.get("key", "m%d" % a.instance)))   # (Tempo: a move of theirs met - blocked counts)
 	if not shot:
 		a.fc = mini(FC_MAX, a.fc + 1)
-	_event("block", a, d, chip, {"adv": a.busy() - d.blockstun, "worse": not right, "push": push, "shot": shot})
+	_event("block", a, d, chip, {"adv": a.busy() - d.blockstun, "worse": not right, "push": push, "shot": shot,
+		"spot": int(e.get("spot", 0))})
 	return true
 
 
@@ -1303,7 +1352,10 @@ func _hurt(a: Fighter, d: Fighter, e: Dictionary, type: String, src := "", side_
 	if type == "hit" and src == "" and _kind(a) == "attack" \
 			and not bool(Moves.move(a.character, a.move).get("no_cancel", false)):
 		_cancels[a.id] = true
-	_event(type, a, d, dmg, {"counter": true} if counter else {})
+	var extra := {"counter": true} if counter else {}
+	if int(e.get("spot", 0)) != 0:
+		extra["spot"] = int(e["spot"])
+	_event(type, a, d, dmg, extra)
 
 
 ## A grab connects on someone standing who isn't reeling; two grabs meeting push apart (a tech).

@@ -83,7 +83,7 @@ const COMMON := {
 ## The Dancer - the full kit (17:37: "one char that has as many moves as what a YOMIH char would have and see how we
 ## get that to fit with icons"): fast, light, kicks and footwork.
 const DANCER := {
-	"stats": {"name": "Dancer", "hp": 450, "weight": 0.85, "width": 34, "height": 104},
+	"stats": {"name": "Dancer", "hp": 450, "weight": 0.85, "width": 34, "height": 104, "trait": "spacer"},
 	"moves": {
 		# ---- moving
 		"walk": {"name": "Walk", "tab": "move", "kind": "move", "interrupt": true, "frames": 16, "where": "ground", "aim": "facing",

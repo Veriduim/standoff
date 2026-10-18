@@ -356,3 +356,24 @@ func _test_enemy_always_shown() -> void:
 			p.foe == 1 and (card["panel"] as Control).visible and p.foe_box.visible and text.contains("Spin Kick")
 			and text.contains("left") and (p.foe_box.get_child(0) as Button).disabled and p.foe_name.text.contains("mid-move"))
 	g.queue_free()
+
+
+func _test_replay() -> void:
+	_section("Replay (Timmy 23:59): the whole match again from the result, every turn as it played")
+	var g := _screen()
+	g.auto_me = true
+	g.start_local(1, "ffa")
+	var n := 0
+	while g.phase != "over" and n < 5000:
+		g.finish_playback()
+		n += 1
+	var turns: int = g._replay_log.size()
+	g.watch_replay()
+	var playing: bool = g._replaying and g.phase == "play" and not g.over_panel.visible
+	var m := 0
+	while g._replaying and m < 5000:
+		g.finish_playback()
+		m += 1
+	_check("Replay plays every turn (%d) and comes back to the result" % turns, turns > 3 and playing
+			and g.phase == "over" and g.over_panel.visible and m >= turns - 1)
+	g.queue_free()

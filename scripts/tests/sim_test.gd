@@ -240,8 +240,10 @@ func _test_escaping_combos() -> void:
 	s.apply({0: {"move": "jab"}, 1: {"move": "sidekick"}})
 	evs = _play(s, {})
 	var counter := evs.filter(func(e: Dictionary) -> bool: return e["type"] == "hit" and e.get("counter", false))
+	var spot_k := {1: Sim.EDGE_DMG, -1: Sim.CLOSE_DMG, 0: 1.0}   # (where it landed - the spacer's edge / point blank)
 	_check("hitting someone mid-attack is a counter hit for 10%% more (%s)" % [counter],
-			not counter.is_empty() and int(counter[0]["dmg"]) == 20)
+			not counter.is_empty() and int(counter[0]["dmg"]) == int(round(round(18.0 * float(spot_k[int(counter[0].get(
+				"spot", 0))])) * 1.1)))
 	s = _duel("dancer", "dancer", 300.0)
 	s.apply({0: {"move": "dash", "x": 1.0}, 1: {"move": "wait"}})
 	s.run_segment()
@@ -629,6 +631,54 @@ func _test_wiki_mechanics_2() -> void:
 	var evs: Array = s.run_segment()["events"]
 	var hit_on_me: bool = evs.any(func(e: Dictionary) -> bool: return str(e["type"]) == "hit" and int(e["d"]) == 0)
 	_check("Low Profile: Silk Glide ducks under a Straight (%s)" % [_types(evs)], not hit_on_me)
+
+
+func _test_spacer() -> void:
+	_section("The Dancer, a spacer (Timmy 23:59): the fan's edge, point blank weaker, zoning isn't Sadness, her limits")
+	var far := _duel("dancer", "dancer", 95.0)
+	far.fighters[1].burst = 0
+	far.apply({0: {"move": "sidekick", "x": 1.0, "dist": 0.0}, 1: {"move": "wait"}})
+	var ef: Array = far.run_segment()["events"]
+	var near := _duel("dancer", "dancer", 30.0)
+	near.fighters[1].burst = 0
+	near.apply({0: {"move": "sidekick", "x": 1.0, "dist": 0.0}, 1: {"move": "wait"}})
+	var en: Array = near.run_segment()["events"]
+	var hf: Array = ef.filter(func(e: Dictionary) -> bool: return str(e["type"]) == "hit")
+	var hn: Array = en.filter(func(e: Dictionary) -> bool: return str(e["type"]) == "hit")
+	_check("a Side Kick at the fan's edge hits harder than point blank (%s vs %s)" % [hf, hn], not hf.is_empty()
+			and not hn.is_empty() and int(hf[0].get("spot", 0)) == 1 and int(hn[0].get("spot", 0)) == -1
+			and int(hf[0]["dmg"]) > int(hn[0]["dmg"]))
+	var z := _duel("dancer", "dancer", 700.0)
+	z.fighters[0].sad = 100
+	z.apply({0: {"move": "fan", "x": 1.0}, 1: {"move": "wait"}})
+	var sad_first := -1
+	var sad_max := 0
+	for _i in 40:
+		z.step()
+		if not z.shots.is_empty():
+			if sad_first < 0:
+				sad_first = z.fighters[0].sad
+			sad_max = maxi(sad_max, z.fighters[0].sad)
+	_check("Sadness doesn't build while her fan's in the air (%d when it left her hand, at most %d after)"
+			% [sad_first, sad_max], sad_first >= 0 and sad_max <= sad_first)
+	var t := _duel("dancer", "dancer", 600.0)
+	var thrown := 0
+	for _i in 4:
+		if t.legal_moves(0).has("fan"):
+			t.apply({0: {"move": "fan", "x": 1.0}, 1: {"move": "wait"}})
+			thrown += 1
+		for _k in 26:
+			t.step()
+	_check("two fans, so two throws before one's back (thrown %d before the first came home)" % thrown, thrown <= 3
+			and Sim.FANS_MAX == 2)
+	var b1 := _duel("dancer", "dancer", 60.0)
+	var b2 := _duel("dancer", "dancer", 60.0)
+	b2.fighters[1].fans = 0
+	for b: Sim in [b1, b2]:
+		b.apply({0: {"move": "straight", "x": 1.0, "dist": 0.0}, 1: {"move": "block", "y": -1.0}})
+		b.run_segment()
+	_check("her limit: with no fan in hand she blocks worse (chip %d vs %d)" % [450 - b1.fighters[1].hp,
+			450 - b2.fighters[1].hp], 450 - b2.fighters[1].hp > 450 - b1.fighters[1].hp)
 
 
 ## Two Dancers with these x-factors on (Sim RULES "xf"), gap apart, facing each other.

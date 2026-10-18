@@ -114,6 +114,8 @@ func on_event(type: String, at: Vector2, face: float, dmg: int, by: Color, victi
 			_add("shock", at, Vector2.ZERO, 0.18, Color.WHITE, 46.0)
 			_add("text", at + Vector2(0, -60), Vector2(0, -50), 0.5, Color.WHITE, 18.0)
 			parts[-1]["txt"] = "WHIFF CANCEL"
+		"edge":   # (a spacer's hit at the fan's edge: a gold glint)
+			_add("glint", at, Vector2.ZERO, 0.32, Color("#ffd23f"), 34.0)
 		"blink":   # (Fan Step: a flash where she lands, a ring of her colour)
 			_add("glow", at, Vector2.ZERO, 0.25, by.lightened(0.4), 60.0)
 			_add("sweep", at, Vector2.ZERO, 0.25, by, 70.0, 0.0)

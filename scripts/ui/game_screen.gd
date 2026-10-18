@@ -45,6 +45,10 @@ var _shown := -1
 var _lag := {}               ## fighter id -> [HP shown by the white chunk, seconds before it drains, HP now]
 var _turn_left := 0.0        ## seconds left on your turn
 var _ask := ""               ## what your turn asks (the banner)
+var _replay_log: Array = []   ## every turn as it played this match (frames, events, shots, first tick) - Replay
+var _replaying := false
+var _replay_i := -1
+var replay_btn: Button
 var _history: Array = []     ## against bots: the match as it was at each of your picks (Undo - YOMI's single player)
 var _demo: Sim               ## the bot match behind the home screen
 var _demo_bots: Array = []
@@ -101,6 +105,9 @@ func _ready() -> void:
 	add_child(lobby)
 	lobby.play.connect(start_online)
 	lobby.closed.connect(func() -> void: _show_start())
+	replay_btn = Ui.button("Skip ▶▶", func() -> void: _end_replay(), 16)
+	replay_btn.visible = false
+	add_child(replay_btn)
 	leave_btn = Ui.button("Leave", func() -> void: _leave_match(), 16)
 	leave_btn.visible = false
 	add_child(leave_btn)
@@ -118,6 +125,9 @@ func _layout() -> void:
 	if leave_btn != null:
 		leave_btn.position = Vector2(vp.x - 230.0, Ui.CARD_H + 44)
 		leave_btn.size = Vector2(90, 40)
+	if replay_btn != null:
+		replay_btn.position = Vector2(vp.x - 250.0, Ui.CARD_H + 44)
+		replay_btn.size = Vector2(110, 40)
 	clock.position = Vector2(vp.x - 230.0, Ui.CARD_H + 14)
 	clock.size = Vector2(120, 30)
 	post.position = Vector2.ZERO   # (sized by hand - this screen's own rect isn't the viewport's)
@@ -157,6 +167,9 @@ func _build_over() -> void:
 	var again := Ui.button("Rematch", func() -> void: start_local(setup_count, setup_mode, setup_colour))
 	again.name = "Rematch"
 	h.add_child(again)
+	var rp := Ui.button("Replay", func() -> void: watch_replay())   # (23:59 "No replay on fight finish?")
+	rp.name = "Replay"
+	h.add_child(rp)
 	var menu := Ui.button("Menu", func() -> void: _leave_match())
 	menu.name = "Menu"
 	h.add_child(menu)
@@ -245,6 +258,7 @@ func start_local(opponents: int, mode: String, colour := 0) -> void:
 		mode = "ffa"
 	sim = Sim.create(players, mode)   # (the Dancer as she is: Fans + Tempo - 23:31)
 	_history.clear()
+	_replay_log.clear()
 	stage.ceiling = sim.ceiling
 	bots.clear()
 	for i in range(1, players.size()):
@@ -426,6 +440,7 @@ func start_online(nm: NetMatch) -> void:
 	_demo = null
 	bots.clear()
 	sim = Sim.from_dict(nm.start_snap)
+	_replay_log.clear()
 	me = nm.mine
 	stage.setup(sim.fighters.map(func(f: Fighter) -> String: return f.character),
 			sim.fighters.map(func(f: Fighter) -> String: return f.name))
@@ -475,6 +490,7 @@ func _on_net_turn(t: int, picks: Dictionary, snap: Dictionary) -> void:
 	_events = seg["events"]
 	_shots = seg.get("shots", [])
 	_first_tick = int(seg["end_tick"]) - _frames.size() + 1
+	_replay_log.append({"frames": _frames, "events": _events, "shots": _shots, "first": _first_tick})
 	_play_pos = 0.0
 	_shown = -1
 	phase = "play"
@@ -561,6 +577,50 @@ func _next() -> void:
 		_commit({})
 
 
+## Replay (23:59): the whole match again, every turn as it played, at the speed button's speed; Skip (or its end) back
+## to the result.
+func watch_replay() -> void:
+	if _replay_log.is_empty() or phase != "over":
+		return
+	_replaying = true
+	_replay_i = -1
+	over_panel.visible = false
+	leave_btn.visible = false
+	replay_btn.visible = true
+	fast_btn.visible = true
+	stage.fx.clear()
+	banner.text = "▶ Replay"
+	_replay_next()
+
+
+func _replay_next() -> void:
+	_replay_i += 1
+	if _replay_i >= _replay_log.size():
+		_end_replay()
+		return
+	var seg: Dictionary = _replay_log[_replay_i]
+	_frames = seg["frames"]
+	_events = seg["events"]
+	_shots = seg["shots"]
+	_first_tick = int(seg["first"])
+	_play_pos = 0.0
+	_shown = -1
+	phase = "play"
+
+
+func _end_replay() -> void:
+	if not _replaying:
+		return
+	_replaying = false
+	replay_btn.visible = false
+	phase = "over"
+	banner.text = ""
+	stage.fx.clear()
+	stage.show_tick(sim.record(), [], sim.record_shots())
+	_update_cards()
+	over_panel.visible = true
+
+
 ## Undo (against bots only): back to your last pick - the match as it was, everyone's ghosts and cards with it.
 func undo() -> void:
 	if net_match != null or _history.is_empty() or phase != "pick":
@@ -614,6 +674,7 @@ func _commit(mine: Dictionary) -> void:
 	_events = seg["events"]
 	_shots = seg.get("shots", [])
 	_first_tick = int(seg["end_tick"]) - _frames.size() + 1
+	_replay_log.append({"frames": _frames, "events": _events, "shots": _shots, "first": _first_tick})
 	_play_pos = 0.0
 	_shown = -1
 	phase = "play"
@@ -653,6 +714,9 @@ func _process(delta: float) -> void:
 			break
 	_update_cards(_frames[maxi(_shown, 0)] if not _frames.is_empty() else [])
 	if not stage.fx.frozen() and int(_play_pos) >= _frames.size():
+		if _replaying:   # (the replay: on to the next turn as it played)
+			_replay_next()
+			return
 		stage.show_tick(sim.record(), [], sim.record_shots())
 		_update_cards()
 		if not _net_queue.is_empty():   # (online: a turn that came in meanwhile)

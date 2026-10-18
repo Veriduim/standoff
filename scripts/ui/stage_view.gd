@@ -185,6 +185,8 @@ func _effect(e: Dictionary, prev: Array) -> void:
 	var reeling := d < prev.size() and int(prev[d][5]) == 1
 	fx.on_event(type, at, face, int(e.get("dmg", 0)), colour_of(a), d, colour_of(d), reeling, n + d,
 			bool(e.get("counter", false)) or bool(e.get("worse", false)), bool(e.get("push", false)))
+	if type == "hit" and int(e.get("spot", 0)) == 1:   # (the fan's edge - a gold glint where it lands)
+		fx.on_event("edge", at, face, 0, colour_of(a), d, colour_of(d), false, n + d)
 
 
 func _char(i: int) -> String:
