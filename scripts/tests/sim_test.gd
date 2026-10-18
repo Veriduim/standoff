@@ -414,6 +414,81 @@ func _test_combo_depth() -> void:
 			s.fighters[0].burst < Sim.BURST_FULL and s.fighters[1].busy() - s.fighters[0].busy() > 10)
 
 
+## Step 3 - cooler moves (Timmy 20:05 "continue on please").
+func _test_cooler_moves() -> void:
+	_section("Cooler moves: fans and ripples, the Sway, a chain, Mirror, air throws, initiative, a third super")
+	var s := _duel("dancer", "dancer", 300.0)
+	s.fighters[1].burst = 0
+	var evs := _play(s, {0: {"move": "fan"}, 1: {"move": "wait"}})
+	_check("a Fan Throw flies across and hits from range (%s, hp %d)" % [_types(evs), s.fighters[1].hp],
+			_types(evs).has("shot") and _types(evs).has("hit") and s.fighters[1].hp < 450)
+	for kind: Array in [["fan", -1.0, "parry"], ["ripple", 1.0, "block"]]:
+		s = _duel("dancer", "dancer", 300.0)
+		s.apply({0: {"move": str(kind[0])}, 1: {"move": "wait"}})
+		for _i in 90:   # (to just before it lands)
+			s.step()
+			if not s.shots.is_empty() and s.hurtbox(s.fighters[1]).position.x - float((s.shots[0]["pos"] as Vector2).x) < 30.0:
+				break
+		s.events.clear()
+		s.apply({1: {"move": "block", "y": float(kind[1])}})
+		for _i in 10:
+			s.step()
+		_check("a %s met by a Block just started: %s (%s)" % [kind[0], kind[2], _types(s.events)],
+				_types(s.events).has(str(kind[2])) and (str(kind[2]) == "parry" or not _types(s.events).has("parry")))
+	s = _duel("dancer", "dancer", 300.0)
+	_check("the Sway's moves aren't there outside it", not s.legal_moves(0).has("swaykick"))
+	s.apply({0: {"move": "sway"}, 1: {"move": "wait"}})
+	s.run_segment()
+	_check("...in the Sway: Sway Kick, Rising Heel, Sway Step (%s)" % [s.legal_moves(0).filter(func(m: String) -> bool:
+			return m.begins_with("sway") or m == "risingheel")], s.legal_moves(0).has("swaykick")
+			and s.legal_moves(0).has("risingheel") and s.legal_moves(0).has("swaystep"))
+	s = _duel()
+	s.fighters[1].burst = 0
+	_check("One-Two only after landing a jab", not s.legal_moves(0).has("onetwo"))
+	s.apply({0: {"move": "jab"}, 1: {"move": "wait"}})
+	s.run_segment()
+	_check("...landed: One-Two is there, Spin Finish not yet", s.legal_moves(0).has("onetwo")
+			and not s.legal_moves(0).has("spinfinish"))
+	s.fighters[0].pos.x = s.fighters[1].pos.x - 60.0
+	s.fighters[1].vel = Vector2.ZERO
+	s.apply({0: {"move": "onetwo"}, 1: {"move": "hold"}})
+	s.run_segment()
+	_check("...and after the One-Two, Spin Finish", s.legal_moves(0).has("spinfinish"))
+	s = _duel()
+	evs = _play(s, {0: {"move": "jab"}, 1: {"move": "mirror"}})
+	_check("Mirror catches a jab in its window and strikes back (%s, the jabber's hp %d)" % [_types(evs),
+			s.fighters[0].hp], _types(evs).has("countered") and s.fighters[0].hp < 450 and s.fighters[1].hp == 450)
+	s = _duel("dancer", "dancer", 40.0)
+	s.fighters[0].pos.y = -120.0
+	s.fighters[1].pos.y = -120.0
+	s.fighters[0].vel.y = -4.0
+	s.fighters[1].vel.y = -4.0
+	s.apply({0: {"move": "airthrow"}, 1: {"move": "wait"}})
+	evs = []
+	for _i in 12:
+		s.step()
+	_check("an Air Throw takes them out of the air (%s)" % [_types(s.events)], _types(s.events).has("throw"))
+	s = _duel("dancer", "dancer", 50.0)
+	s.fighters[1].burst = 0
+	s.apply({0: {"move": "sway"}, 1: {"move": "wait"}})
+	s.run_segment()
+	s.apply({0: {"move": "risingheel"}, 1: {"move": "hold"}})
+	for _i in 6:
+		s.run_segment()
+		if s.fighters[0].actionable():
+			break
+		s.apply({1: {"move": "hold"}})
+	_check("Rising Heel launches and cancels only into jumps (%s)" % [s.legal_moves(0)], s.fighters[1].stun > 0
+			and s.legal_moves(0).has("superjump") and not s.legal_moves(0).has("jab"))
+	s = _duel()
+	evs = _play(s, {0: {"move": "uppercut"}, 1: {"move": "jab"}})
+	_check("initiative: an uppercut picked while they pick too goes through their jab (%s, hp %d / %d)" % [_types(evs),
+			s.fighters[0].hp, s.fighters[1].hp], s.fighters[0].hp == 450 and s.fighters[1].hp < 450)
+	s = _duel()
+	s.fighters[0].meter = Sim.METER_MAX
+	_check("Grand Finale, the third super, takes all 3 bars", s.legal_moves(0).has("finale"))
+
+
 func _test_snapshots() -> void:
 	_section("Snapshots and previews")
 	var s := Sim.create([{"character": "dancer"}, {"character": "dancer"}])

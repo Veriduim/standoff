@@ -19,6 +19,14 @@ extends RefCounted
 ##   dist      [shortest frames, longest frames, slowest speed share] - the move takes a distance 0-100 (dashes, jumps)
 ##   air_option true = uses one of the air options (Sim.AIR_OPTIONS) until they land
 ##   knockdown (on a hit) floors them when they land
+##   spawn     a projectile thrown on frame `at`: {kind, speed, from: [x, y], box: [w, h], dmg, stun, kb, block, chip,
+##             life, height, parry: false = can't be parried, grav}
+##   enter     a stance move: puts them in that stance (its moves - "stance": that name - are open while it runs)
+##   after     [move ids] - a follow-up: there only right after landing one of those
+##   cancel_into [move ids] - landing this only frees them into these (the wiki's hit-cancel limits)
+##   init_invuln [from, to] - invulnerable on these frames too, with initiative (the nearest enemy was choosing too)
+##   window / counter_hit / counter_move - a counter stance: struck in the window, counter_hit lands on the striker
+##   air_grab  true = a grab that takes them out of the air; hidden true = never in the menu (a counter's follow-up)
 ##   proration the combo scaling a combo starting with this move starts at (the wiki: +2 = starts 2 hits in)
 ##   (on a hit) min_dmg - never less than this, scaling or not; bounce - off the ground once a combo; splat - stuck to
 ##   the wall (3 a combo); otg - hits someone lying down (picks them up into the combo)
@@ -119,7 +127,8 @@ const DANCER := {
 			"hits": [{"from": 8, "to": 10, "box": [12, -66, 78, 22], "dmg": 40, "stun": 18, "kb": [9.0, -2.0],
 				"block": 12, "chip": 3, "group": 0, "splat": true}],
 			"pose": [[0, "kick_wind"], [8, "side_kick"], [15, "idle"]]},
-		"uppercut": {"name": "Uppercut", "tab": "attack", "kind": "attack", "no_cancel": true, "frames": 26, "where": "ground",
+		"uppercut": {"name": "Uppercut", "tab": "attack", "kind": "attack", "init_invuln": [1, 6],
+			"cancel_into": ["jump", "superjump"], "frames": 26, "where": "ground",
 			"aim": "facing",
 			"hits": [{"from": 6, "to": 9, "box": [4, -120, 46, 70], "dmg": 38, "stun": 26, "kb": [1.5, -12.0],
 				"block": 12, "chip": 3, "group": 0}],
@@ -158,10 +167,69 @@ const DANCER := {
 			"hits": [{"from": 3, "to": 6, "box": [6, -80, 40, 36], "dmg": 28, "stun": 16, "kb": [5.0, -4.0],
 				"block": 8, "chip": 2, "group": 0}],
 			"pose": [[0, "knee"], [10, "fall"]]},
+		# ---- a chain off the jab (follow-ups: there only right after landing the move before - the wiki: "some actions
+		# are only available after using a specific action")
+		"onetwo": {"name": "One-Two", "tab": "attack", "kind": "attack", "after": ["jab"], "frames": 16,
+			"where": "ground", "aim": "facing",
+			"hits": [{"from": 3, "to": 4, "box": [10, -82, 62, 20], "dmg": 24, "stun": 16, "kb": [3.0, 0.0], "block": 8,
+				"chip": 2, "group": 0}],
+			"pose": [[0, "jab_wind"], [3, "straight"], [10, "idle"]], "icon": "straight"},
+		"spinfinish": {"name": "Spin Finish", "tab": "attack", "kind": "attack", "after": ["onetwo"], "frames": 26,
+			"where": "ground", "aim": "facing",
+			"hits": [{"from": 6, "to": 9, "box": [-30, -96, 110, 44], "dmg": 38, "stun": 24, "kb": [9.0, -7.0],
+				"block": 12, "chip": 4, "group": 0, "knockdown": true, "splat": true}],
+			"pose": [[0, "crouch"], [6, "spin2"], [16, "idle"]], "icon": "spin2"},
+		# ---- specials: projectiles, the Sway stance, a counter
+		"fan": {"name": "Fan Throw", "tab": "special", "kind": "special", "frames": 24, "where": "ground",
+			"aim": "facing",
+			"spawn": {"at": 8, "kind": "fan", "speed": 11.0, "from": [30, -74], "box": [26, 20], "dmg": 20, "stun": 14,
+				"kb": [4.0, -2.0], "block": 8, "chip": 2, "life": 70},
+			"pose": [[0, "throw_wind"], [8, "throw_out"], [17, "idle"]], "icon": "throw_out"},
+		"airfan": {"name": "Air Fan", "tab": "special", "kind": "special", "frames": 20, "where": "air", "aim": "down",
+			"float": true,
+			"spawn": {"at": 6, "kind": "fan", "speed": 11.0, "from": [24, -60], "box": [26, 20], "dmg": 18, "stun": 14,
+				"kb": [3.0, 2.0], "block": 8, "chip": 2, "life": 50},
+			"pose": [[0, "throw_wind"], [6, "throw_out"], [14, "fall"]], "icon": "throw_out"},
+		"ripple": {"name": "Ground Ripple", "tab": "special", "kind": "special", "frames": 30, "where": "ground",
+			"aim": "facing",
+			"spawn": {"at": 11, "kind": "ripple", "speed": 6.5, "from": [26, -12], "box": [44, 24], "dmg": 16, "stun": 20,
+				"kb": [2.0, -7.0], "block": 10, "chip": 3, "life": 95, "height": "low", "parry": false},
+			"pose": [[0, "crouch"], [11, "slam"], [22, "idle"]], "icon": "slam"},
+		"sway": {"name": "Sway", "tab": "special", "kind": "move", "enter": "sway", "interrupt": true, "frames": 36,
+			"where": "ground", "aim": "none", "invuln": [2, 9], "pose": [[0, "sway"]], "icon": "sway"},
+		"swaykick": {"name": "Sway Kick", "tab": "special", "kind": "attack", "stance": "sway", "frames": 15,
+			"where": "ground", "aim": "facing", "proration": 1,
+			"hits": [{"from": 3, "to": 5, "box": [8, -28, 64, 24], "dmg": 20, "stun": 15, "kb": [3.0, 0.0], "block": 7,
+				"chip": 1, "group": 0, "height": "low"}],
+			"pose": [[0, "sway"], [3, "low_kick"], [10, "idle"]], "icon": "low_kick"},
+		"risingheel": {"name": "Rising Heel", "tab": "special", "kind": "attack", "stance": "sway", "frames": 26,
+			"where": "ground", "aim": "facing", "init_invuln": [1, 6], "cancel_into": ["jump", "superjump"],
+			"hits": [{"from": 5, "to": 8, "box": [0, -130, 50, 110], "dmg": 34, "stun": 26, "kb": [2.0, -14.0],
+				"block": 12, "chip": 3, "group": 0}],
+			"pose": [[0, "sway"], [5, "flash_kick"], [15, "fall"]], "icon": "flash_kick"},
+		"swaystep": {"name": "Sway Step", "tab": "special", "kind": "move", "stance": "sway", "frames": 14,
+			"where": "ground", "aim": "facing", "invuln": [1, 8], "motion": [[1, 10, -8.0, 0.0]],
+			"pose": [[0, "sway"], [10, "idle"]], "icon": "sway"},
+		"mirror": {"name": "Mirror", "tab": "special", "kind": "counter", "frames": 34, "where": "ground", "aim": "none",
+			"window": [3, 24], "counter_move": "mirrorstrike",
+			"counter_hit": {"dmg": 42, "stun": 30, "kb": [6.0, -11.0], "group": 0},
+			"pose": [[0, "mirror"]], "icon": "mirror"},
+		"mirrorstrike": {"name": "Mirror Strike", "tab": "special", "kind": "attack", "hidden": true, "frames": 20,
+			"where": "both", "aim": "none", "invuln": [0, 12], "pose": [[0, "side_kick"], [12, "idle"]]},
+		"spinthrow": {"name": "Spin Throw", "tab": "grab", "kind": "grab", "frames": 32, "where": "ground",
+			"aim": "facing",
+			"hits": [{"from": 9, "to": 10, "box": [6, -96, 56, 76], "dmg": 72, "stun": 32, "kb": [13.0, -6.0], "group": 0,
+				"knockdown": true, "splat": true}],
+			"pose": [[0, "grab_reach"], [10, "spin1"], [14, "throw"], [24, "idle"]], "icon": "spin1"},
 		"stomp": {"name": "Stomp", "tab": "attack", "kind": "attack", "frames": 22, "where": "ground", "aim": "facing",
 			"hits": [{"from": 8, "to": 10, "box": [8, -26, 54, 28], "dmg": 26, "stun": 18, "kb": [2.0, -7.0], "block": 8,
 				"chip": 2, "group": 0, "height": "low", "otg": true}],
 			"pose": [[0, "kick_wind"], [8, "axe_down"], [15, "idle"]], "icon": "axe_down"},
+		"airthrow": {"name": "Air Throw", "tab": "air", "kind": "grab", "air_grab": true, "frames": 20, "where": "air",
+			"aim": "facing",
+			"hits": [{"from": 3, "to": 6, "box": [4, -100, 50, 80], "dmg": 50, "stun": 26, "kb": [-6.0, 9.0],
+				"group": 0, "knockdown": true}],
+			"pose": [[0, "grab_reach"], [6, "throw"], [14, "fall"]], "icon": "grab_reach"},
 		"divekick": {"name": "Dive Kick", "tab": "air", "kind": "attack", "frames": 32, "where": "air", "aim": "down",
 			"motion": [[3, 32, ["px", 9.0], ["pyd", 12.0]]], "land_ends": true, "landing": 8,
 			"hits": [{"from": 3, "to": 32, "box": [0, -26, 46, 30], "dmg": 45, "stun": 18, "kb": [5.0, -3.0],
@@ -195,6 +263,18 @@ const DANCER := {
 			],
 			"pose": [[0, "jab_wind"], [8, "jab_hit"], [12, "kick_hit"], [18, "jab_hit"], [24, "spin1"], [28, "heavy_hit"], [36, "idle"]],
 			"icon": "kick_hit"},
+		"finale": {"name": "Grand Finale", "tab": "super", "kind": "super", "frames": 64, "where": "ground",
+			"aim": "facing", "cost": 375, "motion": [[3, 12, 12.0, 0.0]], "invuln": [0, 6],
+			"hits": [
+				{"from": 10, "to": 11, "box": [6, -96, 70, 60], "dmg": 20, "stun": 16, "kb": [2.0, -1.0], "block": 6, "chip": 2, "group": 0},
+				{"from": 16, "to": 17, "box": [6, -96, 70, 60], "dmg": 20, "stun": 16, "kb": [2.0, -1.0], "block": 6, "chip": 2, "group": 1},
+				{"from": 22, "to": 23, "box": [6, -96, 70, 60], "dmg": 20, "stun": 16, "kb": [2.0, -1.0], "block": 6, "chip": 2, "group": 2},
+				{"from": 28, "to": 29, "box": [6, -96, 70, 60], "dmg": 20, "stun": 16, "kb": [2.0, -1.0], "block": 6, "chip": 2, "group": 3},
+				{"from": 34, "to": 35, "box": [6, -96, 70, 60], "dmg": 20, "stun": 18, "kb": [2.0, -1.0], "block": 6, "chip": 2, "group": 4},
+				{"from": 44, "to": 47, "box": [-20, -150, 100, 150], "dmg": 70, "stun": 40, "kb": [4.0, -16.0], "block": 16, "chip": 8, "group": 5, "min_dmg": 30, "knockdown": true},
+			],
+			"pose": [[0, "dash"], [10, "kick_hit"], [16, "spin1"], [22, "jab_hit"], [28, "spin2"], [34, "heavy_hit"],
+				[40, "crouch"], [44, "flash_kick"], [54, "fall"]], "icon": "flash_kick"},
 		"cyclone": {"name": "Cyclone", "tab": "super", "kind": "super", "frames": 50, "where": "ground",
 			"aim": "facing", "cost": 250, "motion": [[6, 40, 4.0, 0.0]],
 			"hits": [
@@ -214,8 +294,8 @@ const DANCER := {
 ## One character for now (Timmy 18 Oct 17:52: "Just work on getting one char working and remove the other one").
 const ROSTER := {"dancer": DANCER}
 ## The menu's tabs, in order: [id, name].
-const TABS := [["attack", "Attack"], ["air", "Air"], ["grab", "Grab"], ["move", "Move"], ["defend", "Defend"],
-	["super", "Super"]]
+const TABS := [["attack", "Attack"], ["air", "Air"], ["grab", "Grab"], ["special", "Special"], ["move", "Move"],
+	["defend", "Defend"], ["super", "Super"]]
 
 
 ## A character's full move list: their own plus the shared ones.

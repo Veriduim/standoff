@@ -32,6 +32,9 @@ var frame: Array = []        ## the tick shown (Sim.record)
 var ghost: Array = []        ## a preview's ticks, looped
 var ghost_only := -1         ## draw only this fighter's ghost (-1 = all that move)
 var ghost_ids: Array = []    ## or only these (you and the ones you're guessing for)
+var ghost_shots: Array = []  ## the ghost's projectiles, a list per ghost frame
+var shots: Array = []        ## the projectiles on the tick shown (Sim.record_shots)
+var _shot_trail := {}        ## projectile (owner, kind, ...) -> its last few screen spots, for the fan's trail
 var you := -1                ## this phone's fighter (a marker over them)
 var deciding: Array = []     ## who's choosing now (a pulse over them)
 var fx := Fx.new()           ## sparks, the freeze, the shake, combo counts, arcs
@@ -66,6 +69,7 @@ func setup(chars: Array, fighter_names: Array) -> void:
 	characters = chars
 	names = fighter_names
 	fx.clear()
+	shots = []
 	_spin.clear()
 	_after_n.clear()
 	_land.clear()
@@ -73,9 +77,10 @@ func setup(chars: Array, fighter_names: Array) -> void:
 	advantage = {}
 
 
-func show_tick(rec: Array, events: Array = []) -> void:
+func show_tick(rec: Array, events: Array = [], flying: Array = []) -> void:
 	var prev := frame
 	frame = rec
+	shots = flying
 	if quiet:
 		fx.clear()
 		_spin.clear()
@@ -98,7 +103,7 @@ func _motion_fx(prev: Array) -> void:
 		var mv := str(r[3])
 		var kind := str(Moves.move(_char(i), mv).get("kind", "")) if mv != "" else ""
 		if kind == "super" and int(r[4]) <= 1 and (str(p[3]) != mv or int(p[4]) > int(r[4])):
-			fx.super_start(i, _chest(i), colour_of(i), _tick_n * 13 + i)
+			fx.super_start(i, _chest(i), colour_of(i), _tick_n * 13 + i, str(Moves.move(_char(i), mv)["name"]))
 		var speed := maxf(absf(float(r[0]) - float(p[0])), absf(float(r[1]) - float(p[1])) * 0.8)
 		var fast := int(r[5]) != 4 and (speed > 6.5 or kind in ["super", "burst"])
 		_after_n[i] = int(_after_n.get(i, 0)) + 1 if fast else 0
@@ -144,6 +149,13 @@ func _effect(e: Dictionary, prev: Array) -> void:
 			at = Vector2(signf(float(frame[a][0])) * (Sim.STAGE_HALF - 4.0), _chest(a).y)
 			face = signf(float(frame[a][0]))
 		fx.on_event(type, at, face, 0, colour_of(a), a, colour_of(a), false, n + a)
+		return
+	if type == "shot":   # (a throw: a flash at the hand)
+		fx.on_event(type, _chest(a) + Vector2(face * 34.0, -10.0), face, 0, colour_of(a), -1, colour_of(a), false, n + a)
+		return
+	if type == "countered":   # (Mirror: the strike caught and turned)
+		fx.on_event(type, (_chest(a) + _chest(d)) / 2.0 if d >= 0 else _chest(a), face, 0, colour_of(a), d,
+				colour_of(d) if d >= 0 else Color.WHITE, false, n + a)
 		return
 	if type == "time":
 		fx.on_event(type, cam, 1.0, 0, Color.WHITE, -1, Color.WHITE, false, n)
@@ -363,6 +375,12 @@ func _draw() -> void:
 		if int(frame[i][5]) != 4:
 			_figure(i, frame[i], 1.0)
 	fx.draw_trails(self)   # (over the fighters - a kick's path mostly runs along its own leg)
+	if not ghost.is_empty() and ghost_index() < ghost_shots.size():   # (the ghost's projectiles, faint)
+		for s: Array in ghost_shots[ghost_index()]:
+			if ghost_ids.is_empty() or ghost_ids.has(int(s[3])):
+				_shot(s, GHOST_ALPHA)
+	for s: Array in shots:
+		_shot(s, 1.0)
 	if fx.dim > 0.0:   # (a super: the stage goes dark round the one starting it)
 		draw_rect(Rect2(Vector2(-20, -20), vp + Vector2(40, 40)), Color(0, 0, 0, fx.dim))
 		if fx.dim_id >= 0 and fx.dim_id < frame.size():
@@ -374,6 +392,42 @@ func _draw() -> void:
 	fx.draw_parts(self)
 	fx.draw_combos(self, frame)
 	_advantage_labels()
+
+
+## A projectile: [x, y, kind, owner, vx, vy, life]. A fan: three blades spinning, a fading trail; a ripple: a low wave
+## running along the floor, its crest bright.
+func _shot(s: Array, alpha: float) -> void:
+	var at := w2s(Vector2(float(s[0]), float(s[1])))
+	var col := colour_of(int(s[3])).lightened(0.35)
+	if alpha < 1.0:
+		col = col.lerp(BG, 1.0 - alpha)
+	var dir := signf(float(s[4])) if absf(float(s[4])) > 0.1 else 1.0
+	var spin := float(s[6]) * 0.55 * dir
+	match str(s[2]):
+		"fan":
+			var r := 17.0 * zoom
+			if alpha >= 1.0:   # (the trail - a few fading copies behind)
+				var back := Vector2(-float(s[4]), -float(s[5])).normalized() * 9.0 * zoom
+				for k in range(3, 0, -1):
+					var c := col
+					c.a = 0.18 * (4 - k)
+					draw_circle(at + back * k, r * (1.0 - 0.15 * k), c, true, -1.0, true)
+			for k in 3:
+				var ang := spin + TAU * k / 3.0
+				var tip := at + Vector2.from_angle(ang) * r
+				var side := Vector2.from_angle(ang + PI / 2.0) * r * 0.42
+				draw_colored_polygon(PackedVector2Array([at + side * 0.6, tip, at - side * 0.6]), col)
+				draw_line(at, tip, Color(1, 1, 1, alpha * 0.8), maxf(1.0, 1.5 * zoom), true)
+			draw_circle(at, 3.5 * zoom, Color(1, 1, 1, alpha), true, -1.0, true)
+		"ripple":
+			var w := 26.0 * zoom
+			var h := (12.0 + 4.0 * sin(float(s[6]) * 0.6)) * zoom
+			var pts := PackedVector2Array()
+			for k in 9:
+				var u := float(k) / 8.0
+				pts.append(at + Vector2((u - 0.5) * 2.0 * w, -sin(u * PI) * h + 10.0 * zoom))
+			draw_polyline(pts, col, maxf(2.0, 6.0 * zoom), true)
+			draw_polyline(pts, Color(1, 1, 1, alpha * 0.9), maxf(1.0, 2.0 * zoom), true)
 
 
 func _free(r: Array) -> bool:

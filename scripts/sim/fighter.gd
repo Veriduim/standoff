@@ -50,6 +50,8 @@ var bounced := false     ## ...used up for this combo
 var splat_due := false   ## the hit on them sticks them to the wall if they reach it
 var splats := 0          ## wall splats this combo (3 at most)
 var splat := 0           ## ticks left stuck to the wall
+var stance := ""         ## the stance they're in ("" = none) - its moves are open while it lasts
+var initiative := false  ## started their move while the nearest enemy was choosing too (some moves get more for it)
 var ko := false
 
 
@@ -90,7 +92,7 @@ func to_dict() -> Dictionary:
 		"air_moves": air_moves, "burst": burst, "di": [di.x, di.y], "combo_used": combo_used.duplicate(true),
 		"cancelled": cancelled, "cancel_frame": cancel_frame, "fc": fc, "freed": freed, "whiffed": whiffed, "down": down, "down_pick": down_pick,
 		"kd": kd, "sad": sad, "sadness": sadness, "sad_warned": sad_warned, "dist": dist, "parry_at": parry_at, "pushed": pushed, "prorate": prorate, "bounce_due": bounce_due, "bounced": bounced,
-		"splat_due": splat_due, "splats": splats, "splat": splat, "ko": ko}
+		"splat_due": splat_due, "splats": splats, "splat": splat, "stance": stance, "initiative": initiative, "ko": ko}
 
 
 static func from_dict(d: Dictionary) -> Fighter:
@@ -142,5 +144,7 @@ static func from_dict(d: Dictionary) -> Fighter:
 	f.splat_due = bool(d.get("splat_due", false))
 	f.splats = int(d.get("splats", 0))
 	f.splat = int(d.get("splat", 0))
+	f.stance = str(d.get("stance", ""))
+	f.initiative = bool(d.get("initiative", false))
 	f.ko = bool(d["ko"])
 	return f

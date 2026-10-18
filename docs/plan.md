@@ -87,6 +87,10 @@ one stage; each attack aims at a picked target.
   way, 2 combo depth, 3 much cooler moves, 4 effects per move (+ sound, replays, lobby rules). 19:48 "Continue working
   on that please" -> 0.6.0 = steps 1 and 2 (docs/mechanics.md).
 
+- 20:03 the parry explained (a perfect block - the frame filled in from the preview). 20:05 "Ok. Then yeah continue
+  on please" -> 0.7.0 = step 3: projectiles, the Sway stance, the jab chain, Mirror, Spin / Air Throw, initiative, Grand
+  Finale (docs/mechanics.md).
+
 ## To tune / later
 - **Match length with 6:** bot matches take 120-270 decision points with 6 fighters (50-90 with 2). At ~10 s a decision
   that's far too long - lower HP or more damage with more players (a lobby setting), and a turn timer.

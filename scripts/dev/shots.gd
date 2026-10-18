@@ -152,6 +152,23 @@ func _effects(game: Control, out: String) -> void:
 	await _until(func() -> bool: return game.stage.fx.split > 0.5, 120)
 	await _wait(5)
 	await _snap(out.path_join("12_burst.png"))
+	# a fan in flight, a ripple along the floor, the third super's name
+	for m: Array in [["fan", "14_fan.png"], ["ripple", "15_ripple.png"]]:
+		await _until(func() -> bool: return game.phase == "pick", 600)
+		game.sim.fighters[0].pos.x = game.sim.fighters[1].pos.x - 280.0
+		game._commit({"move": str(m[0]), "x": 1.0})
+		var kind := str(m[0])
+		var flying := func() -> bool: return game.stage.shots.any(func(x: Array) -> bool: return str(x[2]) == kind)
+		await _until(flying, 200)
+		await _wait(8)
+		await _snap(out.path_join(str(m[1])))
+	await _until(func() -> bool: return game.phase == "pick", 600)
+	game.sim.fighters[0].meter = Sim.METER_MAX
+	game.sim.fighters[0].pos.x = game.sim.fighters[1].pos.x - 120.0
+	game._commit({"move": "finale", "x": 1.0})
+	await _until(func() -> bool: return game.stage.fx.dim > 0.3, 120)
+	await _wait(10)
+	await _snap(out.path_join("16_finale.png"))
 	# the pixel look, mid-match
 	await _until(func() -> bool: return game.phase == "pick", 600)
 	var was: bool = game.home.pixel

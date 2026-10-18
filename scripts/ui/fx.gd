@@ -78,6 +78,16 @@ func on_event(type: String, at: Vector2, face: float, dmg: int, by: Color, victi
 						_rng.randf_range(0.25, 0.45), Color("#9a9daa"), _rng.randf_range(3.0, 6.0))
 			_add("shock", at, Vector2.ZERO, 0.2, Color("#c9ccd8"), 40.0)
 			kick(2.0)
+		"shot":   # (a throw: a quick flash at the hand)
+			_add("shock", at, Vector2.ZERO, 0.14, by.lightened(0.5), 26.0)
+		"countered":   # (Mirror: a big white flash and MIRROR)
+			_add("glint", at, Vector2.ZERO, 0.3, Color.WHITE, 80.0)
+			_add("shock", at, Vector2.ZERO, 0.32, by.lightened(0.4), 110.0)
+			_add("text", at + Vector2(0, -70), Vector2(0, -40), 0.7, Color.WHITE, 30.0)
+			parts[-1]["txt"] = "MIRROR!"
+			splash(0.5, at)
+			freeze(0.18, victim)
+			kick(4.0)
 		"bounce":   # (off the ground: a flat shockwave and dust)
 			_add("shock", at, Vector2.ZERO, 0.25, Color.WHITE, 70.0)
 			for i in 10:
@@ -201,8 +211,11 @@ func burst_out(id: int, at: Vector2, col: Color, seed_n: int) -> void:
 
 
 ## Someone starts a super: the stage dims round them, rays and rings burst out, it all holds a moment and splits.
-func super_start(id: int, at: Vector2, col: Color, seed_n: int) -> void:
+func super_start(id: int, at: Vector2, col: Color, seed_n: int, title := "") -> void:
 	_rng.seed = seed_n
+	if title != "":   # (its name, big, over them)
+		_add("text", at + Vector2(0, -150), Vector2(0, -24), 0.95, col.lightened(0.55), 46.0)
+		parts[-1]["txt"] = title.to_upper()
 	dim = 0.62
 	dim_id = id
 	_add("rays", at, Vector2.ZERO, 0.4, col.lightened(0.45), 190.0)

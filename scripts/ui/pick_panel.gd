@@ -212,6 +212,7 @@ func close() -> void:
 	_close_drawer()
 	if stage != null:
 		stage.ghost = []
+		stage.ghost_shots = []
 		stage.ghost_ids = []
 		stage.show_boxes = false
 		stage.guessing = -1
@@ -413,6 +414,7 @@ func refresh() -> void:
 		pv = sim.preview(picks, 80)
 	preview_events = pv["events"]
 	stage.ghost = pv["frames"]
+	stage.ghost_shots = pv.get("shots", [])
 	stage.ghost_only = me
 	stage.ghost_ids = [me] + guesses.keys()   # (guessing: their ghosts play against yours)
 	stage.ghost_play = true

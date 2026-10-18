@@ -6,7 +6,7 @@ extends Button
 
 const AIM_BADGE := {"facing": "↔", "dir8": "✣", "up": "↑", "down": "↓", "lean": "✣", "none": ""}
 ## Each tab's colour - its icons are drawn in it, so a move's kind reads at a glance (pick 12).
-const TAB_COLOURS := {"attack": Color("#ffd23f"), "air": Color("#6fd3ff"), "grab": Color("#ff7ab6"),
+const TAB_COLOURS := {"attack": Color("#ffd23f"), "air": Color("#6fd3ff"), "grab": Color("#ff7ab6"), "special": Color("#ff6b6b"),
 	"move": Color("#eef0f6"), "defend": Color("#7ee0a1"), "super": Color("#c58bff")}
 
 

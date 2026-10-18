@@ -62,8 +62,20 @@ the rules of play. The names, art, characters and code are not ours to take, and
 | Instant Cancel | A bar: full moveset 1 frame later | A bar: the move you just landed, again ("IC" on its icon) |
 | Burst Cancel | The whole Burst gauge: an offensive burst, +24 on hit | Burst Cancel (full gauge, someone in a combo close by) |
 
+## Built (0.7.0 - step 3, cooler moves; Timmy 20:05 "continue on please")
+| Mechanic | The wiki (character pages) | Standoff |
+|---|---|---|
+| Projectiles | Thrown things with their own hitboxes; parried by blocking within 3 frames; some can't be parried; projectiles cancel each other | `Sim.shots`: Fan Throw, Air Fan (down-forward), Ground Ripple (low, can't be parried); a Block started 3 frames or less before parries a parryable one; two meeting clash |
+| Stances | Moves that open their own moveset (Ninja's Back Sway -> Palm Strike) | Sway (dodges early, gives way): Sway Kick (low), Rising Heel, Sway Step |
+| Follow-ups | Actions only available after a specific one | Jab -> One-Two -> Spin Finish (splat + knockdown) |
+| Hit-cancel limits | A landed hit can limit what you can do next | Uppercut / Rising Heel cancel only into jumps (`cancel_into`) - the launch-and-chase |
+| Counter stance | (several characters' counters) | Mirror: struck in frames 3-24 it strikes back at once ("MIRROR!"); grabs beat it |
+| Initiative | Moves get invulnerability when the opponent's not already committed | `init_invuln`: the uppercut and Rising Heel (frames 1-6) when the nearest enemy was choosing too |
+| Command grab / air grab | Grabs with their own rules; same air/ground state | Spin Throw (into the wall), Air Throw (air to air) |
+| Supers | 1-3 bars | Flurry (1), Cyclone (2), Grand Finale (3 - a rush and a launch); the super's name splashed over them |
+
 ## Later
-- **Initiative:** some moves gain invulnerability / speed against someone not yet committed.
+- **Initiative** on more moves (faster startup with it, as some of the wiki's do).
 - **Restands** (a hit as they land from an air combo puts them back in a grounded combo).
 - **Burst Cancel's** slower Burst refill for the rest of the combo; parry lock-out after a missed block.
 - Step 3 - much cooler moves (projectiles, a stance with its own moves, rekka chains, a command grab, a launcher route,

@@ -5,10 +5,12 @@ extends RefCounted
 ## pick is a move and a direction (toward that enemy). Seeded, so a test match plays the same every time.
 
 const GROUND_HITS := ["jab", "straight", "lowkick", "sidekick", "uppercut", "spin", "sweep", "axekick", "kneedash",
-	"flashkick"]
-const AIR := ["divekick", "airkick", "airknee", "airspin", "airdash", "fastfall", "block", "wait"]
-const GRABS := ["grab", "hiptoss"]
-const SUPERS := ["flurry", "cyclone"]
+	"flashkick", "onetwo", "spinfinish", "swaykick", "risingheel", "stomp"]
+const FROM_AFAR := ["fan", "ripple", "fan", "sway"]
+const AIR := ["divekick", "airkick", "airknee", "airspin", "airdash", "fastfall", "block", "wait", "airfan",
+	"airthrow", "airjump"]
+const GRABS := ["grab", "hiptoss", "spinthrow"]
+const SUPERS := ["flurry", "cyclone", "finale"]
 const CLOSE_IN := ["walk", "dash", "roll", "kneedash"]
 const BACK_OFF := ["backstep", "walk", "dash"]
 
@@ -71,6 +73,8 @@ func choose(sim: Sim, id: int) -> Dictionary:
 			c["y"] = -1.0
 		elif r0 < 0.22:
 			c["move"] = pick.call(["taunt", "wait"])
+		elif r0 < 0.45:   # (from afar: a fan, a ripple, now and then the Sway)
+			c["move"] = pick.call(FROM_AFAR)
 		else:
 			c["move"] = pick.call(CLOSE_IN)
 		return c
@@ -86,6 +90,8 @@ func choose(sim: Sim, id: int) -> Dictionary:
 		c["move"] = pick.call(GROUND_HITS)
 	elif r < 0.68:
 		c["move"] = pick.call(GRABS)
+	elif r < 0.71:   # (now and then the Mirror)
+		c["move"] = pick.call(["mirror", "block"])
 	elif r < 0.86:   # (a block - the height their move calls for; often reading the frame it lands on to parry)
 		c["move"] = "block" if r < 0.8 else "pushblock"
 		var read := _read(t)

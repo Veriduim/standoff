@@ -68,6 +68,7 @@ const BOUNCE_UP := 9.0        ## a ground bounce sends them back up this fast...
 const BOUNCE_STUN := 6        ## ...with this much more stun
 const SPLAT_TICKS := 30       ## stuck to the wall (each splat after the first lets go 8 sooner)
 const SPLATS_MAX := 3
+const SHOT_PARRY := 3         ## a projectile is parried by a Block started this many frames before it lands, or fewer
 const FC_MAX := 2             ## Free Cancels
 const WHIFF_COST := 1125      ## a Whiff Cancel takes this much of the Burst gauge (3/4 of BURST_FULL)
 const WHIFF_LOCK := 2         ## ...and they're free this many ticks later
@@ -97,6 +98,9 @@ var mode := "ffa"        ## "ffa" | "teams"
 var tick := 0
 var events: Array = []   ## this segment's: {t, type, a, d, dmg (, counter)}
 var _cancels := {}       ## attackers whose hit landed this tick (hit cancel)
+var shots: Array = []    ## projectiles in flight: {id, owner, team, kind, pos, vel, box, dmg, stun, kb, block, chip, life,
+                         ## parry, height, grav, src}
+var _shot_n := 0
 
 
 ## A new match. players: [{name, character, team}] (team only read in "teams" mode) - spread across the stage, each
@@ -257,18 +261,29 @@ func legal_moves(id: int) -> Array[String]:
 		if (air and where == "ground") or (not air and where == "air"):
 			continue
 		var kind := str(m["kind"])
+		if bool(m.get("hidden", false)):
+			continue
 		if kind in ["burst", "hold", "whiff", "getup"] and mid != "burstcancel":   # (only offered in their own moments)
 			continue
 		if int(m.get("cost", 0)) > f.meter:
 			continue
 		if bool(m.get("air_option", false)) and f.air_moves >= AIR_OPTIONS:
 			continue
-		if f.sadness > 0 and kind == "guard":   # (SADNESS!: no defensive options)
+		if f.sadness > 0 and kind in ["guard", "counter"]:   # (SADNESS!: no defensive options)
 			continue
 		if f.whiffed and not kind in ["attack", "grab"]:   # (just Whiff Cancelled: attacks only)
 			continue
 		if mid == f.cancelled and f.meter < BAR:   # (just landed it - again only with an Instant Cancel: a bar)
 			continue
+		if str(m.get("stance", "")) != "" and str(m["stance"]) != f.stance:   # (a stance's moves, only in it)
+			continue
+		var after: Array = m.get("after", [])
+		if not after.is_empty() and not after.has(f.cancelled):   # (a follow-up: only right after landing its opener)
+			continue
+		if f.cancelled != "" and f.actionable():   # (some hits only cancel into certain moves - the wiki's hit-cancel limits)
+			var into: Array = Moves.move(f.character, f.cancelled).get("cancel_into", [])
+			if not into.is_empty() and not into.has(mid) and after.is_empty() and mid != f.cancelled:
+				continue
 		if mid == "burstcancel" and not _can_burst_cancel(f):
 			continue
 		out.append(mid)
@@ -288,6 +303,10 @@ func nearest_enemy(f: Fighter) -> Fighter:
 ## Start the picked moves: choices = {fighter id: {move, x, y}} - (x, y) is the picked direction (Sim.aim fits it to
 ## the move). A pick that isn't legal becomes a wait.
 func apply(choices: Dictionary) -> void:
+	var choosing := deciders()   # (initiative: starting while the nearest enemy is choosing too, not already committed)
+	for f in fighters:
+		var n := nearest_enemy(f)
+		f.initiative = n != null and choosing.has(n.id) and (n.actionable() or interruptible(n))
 	for id in choices:
 		var f := get_f(int(id))
 		if f == null:
@@ -407,6 +426,7 @@ func _start(f: Fighter, c: Dictionary) -> void:
 	f.hit_done.clear()
 	f.cancelled = ""
 	f.whiffed = false
+	f.stance = str(m.get("enter", ""))   # (a stance move puts them in it; anything else takes them out)
 
 
 ## A picked direction made to fit the move (17:37 Timmy: "Just have the direction functionality"): "facing" -> ← or →
@@ -435,12 +455,14 @@ static func aim(kind: String, d: Vector2, facing: int) -> Vector2:
 func run_segment(cap := SEGMENT_CAP) -> Dictionary:
 	events.clear()
 	var frames: Array = []
+	var flying: Array = []
 	for _i in cap:
 		step()
 		frames.append(record())
+		flying.append(record_shots())
 		if over() or not deciders().is_empty():
 			break
-	return {"frames": frames, "events": events.duplicate(), "end_tick": tick}
+	return {"frames": frames, "events": events.duplicate(), "end_tick": tick, "shots": flying}
 
 
 ## What a picked move would do (the ghost preview): a copy of the match with these picks, every other fighter who's
@@ -453,9 +475,11 @@ func preview(choices: Dictionary, ticks := 90) -> Dictionary:
 		all[id] = choices.get(id, {"move": "hold"})
 	copy.apply(all)
 	var frames: Array = []
+	var flying: Array = []
 	for _i in ticks:
 		copy.step()
 		frames.append(copy.record())
+		flying.append(copy.record_shots())
 		var free := copy.deciders()
 		if not free.is_empty():   # (whoever's free again stands there, free; anyone mid-something carries on)
 			var hold := {}
@@ -463,7 +487,7 @@ func preview(choices: Dictionary, ticks := 90) -> Dictionary:
 				if not copy.fighters[id].actionable():
 					hold[id] = {"move": "hold"}
 			copy.apply(hold)
-	return {"frames": frames, "events": copy.events}
+	return {"frames": frames, "events": copy.events, "shots": flying}
 
 
 ## One tick: the moves push their fighters, gravity and the stage, hits, then every counter ticks down.
@@ -473,10 +497,12 @@ func step() -> void:
 		if f.move in ["burst", "burstcancel"] and f.frame == 0:   # (a Burst's first tick - the screens' flash)
 			_event("burst", f, null)
 		_motion(f)
+		_spawn(f)
 	for f in fighters:
 		_physics(f)
 	_separate()
 	var hit_now := _resolve_hits()
+	_shots_step(hit_now)
 	for f in fighters:
 		if not hit_now.has(f.id):
 			_count(f)
@@ -671,6 +697,8 @@ func _count(f: Fighter) -> void:
 				_gain(f, WHIFF_METER)
 			if str(m["kind"]) == "getup":   # (up again - the combo's over)
 				f.combo_over()
+			if m.has("enter"):   # (the stance move's run out - out of the stance)
+				f.stance = ""
 			f.move = ""
 			f.frame = 0
 			f.freed = false
@@ -710,8 +738,12 @@ func invulnerable(f: Fighter) -> bool:
 		return true
 	if f.move == "" or f.stun > 0:
 		return false
-	var inv: Array = Moves.move(f.character, f.move).get("invuln", [])
-	return not inv.is_empty() and f.frame >= int(inv[0]) and f.frame <= int(inv[1])
+	var m := Moves.move(f.character, f.move)
+	var inv: Array = m.get("invuln", [])
+	if not inv.is_empty() and f.frame >= int(inv[0]) and f.frame <= int(inv[1]):
+		return true
+	var ini: Array = m.get("init_invuln", [])   # (with initiative: more invulnerable frames)
+	return f.initiative and not ini.is_empty() and f.frame >= int(ini[0]) and f.frame <= int(ini[1])
 
 
 func _kind(f: Fighter) -> String:
@@ -808,29 +840,12 @@ func _strike(a: Fighter, d: Fighter, e: Dictionary, d_kind: String, d_frame: int
 	var dmg := int(e["dmg"])
 	var dm := Moves.move(d.character, d.move) if d.move != "" else {}
 	var reeling := d.stun > 0
-	if (d_kind == "guard" or d.blockstun > 0) and not reeling and not e.get("guardbreak", false):
-		var push := bool(dm.get("push", false))
-		var height := str(e.get("height", "mid"))
-		var right := push or height == "mid" or (height == "low") == (d.param.y > 0.0)
-		if d.move == "block" and d.parry_at > 0 and d_frame == d.parry_at and right:   # (parried: free at once)
-			d.move = ""
-			d.frame = 0
-			d.blockstun = 0
-			_gain(d, PARRY_METER)
-			_event("parry", d, a)
+	if d_kind == "counter" and not reeling:   # (a counter stance: struck in its window, it strikes back at once)
+		var win: Array = dm.get("window", [0, 0])
+		if d_frame >= int(win[0]) and d_frame <= int(win[1]):
+			_counter(d, a, dm)
 			return
-		var chip := 0 if push else int(e.get("chip", 0)) * (1 if right else 2)
-		d.hp -= chip
-		d.blockstun = int(e.get("block", 8)) + (0 if right else WRONG_HEIGHT) + (0 if d.grounded() else AIR_BLOCK)
-		var away := signf(d.pos.x - a.pos.x) if absf(d.pos.x - a.pos.x) > 1.0 else float(a.facing)
-		d.vel.x = away * 3.0
-		if push:   # (Push Block: the striker's shoved back)
-			a.vel.x = -away * PUSH_BACK / float(Moves.stats(a.character)["weight"])
-			a.pushed = PUSH_TICKS
-		_gain(a, PARRY_METER / 3.0)
-		_gain(d, PARRY_METER / 3.0)
-		a.fc = mini(FC_MAX, a.fc + 1)
-		_event("block", a, d, chip, {"adv": a.busy() - d.blockstun, "worse": not right, "push": push})
+	if _block(a, d, e, dm, d_frame, false):
 		return
 	if d.move != "" and dm.has("armor") and not reeling:
 		var arm: Array = dm["armor"]
@@ -842,14 +857,150 @@ func _strike(a: Fighter, d: Fighter, e: Dictionary, d_kind: String, d_frame: int
 	_hurt(a, d, e, "hit")
 
 
-func _hurt(a: Fighter, d: Fighter, e: Dictionary, type: String) -> void:
+## A hit meeting a block (or a Block's parry). shot = a projectile: parried by a Block started within SHOT_PARRY frames
+## (any height) unless it can't be. True = it was blocked or parried.
+func _block(a: Fighter, d: Fighter, e: Dictionary, dm: Dictionary, d_frame: int, shot: bool) -> bool:
+	if not ((_kind(d) == "guard" or d.blockstun > 0) and d.stun == 0 and not e.get("guardbreak", false)):
+		return false
+	var push := bool(dm.get("push", false))
+	var height := str(e.get("height", "mid"))
+	var right := push or height == "mid" or (height == "low") == (d.param.y > 0.0)
+	var parried := d.move == "block" and d.parry_at > 0 and d_frame == d.parry_at and right
+	if shot:
+		parried = d.move == "block" and d_frame <= SHOT_PARRY and bool(e.get("parry", true))
+	if parried:   # (parried: free at once)
+		d.move = ""
+		d.frame = 0
+		d.blockstun = 0
+		_gain(d, PARRY_METER)
+		_event("parry", d, a, 0, {"shot": shot})
+		return true
+	var chip := 0 if push else int(e.get("chip", 0)) * (1 if right else 2)
+	d.hp -= chip
+	d.blockstun = int(e.get("block", 8)) + (0 if right else WRONG_HEIGHT) + (0 if d.grounded() else AIR_BLOCK)
+	var away := signf(d.pos.x - a.pos.x) if absf(d.pos.x - a.pos.x) > 1.0 else float(a.facing)
+	d.vel.x = away * 3.0
+	if push and not shot:   # (Push Block: the striker's shoved back)
+		a.vel.x = -away * PUSH_BACK / float(Moves.stats(a.character)["weight"])
+		a.pushed = PUSH_TICKS
+	_gain(a, PARRY_METER / 3.0)
+	_gain(d, PARRY_METER / 3.0)
+	if not shot:
+		a.fc = mini(FC_MAX, a.fc + 1)
+	_event("block", a, d, chip, {"adv": a.busy() - d.blockstun, "worse": not right, "push": push, "shot": shot})
+	return true
+
+
+## A counter stance struck in its window: the striker's hit is caught and the counter lands on them at once.
+func _counter(d: Fighter, a: Fighter, dm: Dictionary) -> void:
+	var into := str(dm.get("counter_move", ""))
+	d.facing = 1 if a.pos.x >= d.pos.x else -1
+	if into != "":
+		var cm := Moves.move(d.character, into)
+		d.move = into
+		d.frame = 0
+		d.length = int(cm["frames"])
+		d.instance += 1
+		d.hit_done.clear()
+	_event("countered", d, a)
+	_hurt(d, a, dm["counter_hit"], "hit", into if into != "" else "counter", float(d.facing))
+
+
+## A move's projectile, thrown on its frame: the way they aim it (straight ahead, or down for the air one).
+func _spawn(f: Fighter) -> void:
+	if f.ko or f.move == "" or f.stun > 0 or f.blockstun > 0 or f.lock > 0:
+		return
+	var m := Moves.move(f.character, f.move)
+	var sp: Dictionary = m.get("spawn", {})
+	if sp.is_empty() or int(sp["at"]) != f.frame:
+		return
+	var dir := Vector2(float(f.facing), 0.0)
+	if str(m.get("aim", "")) in ["down", "dir8"] and f.param.length() > 0.1:
+		dir = f.param.normalized()
+	var off: Array = sp.get("from", [30, -70])
+	_shot_n += 1
+	shots.append({"id": _shot_n, "owner": f.id, "team": f.team, "kind": str(sp["kind"]),
+		"pos": f.pos + Vector2(float(off[0]) * f.facing, float(off[1])), "vel": dir * float(sp["speed"]),
+		"box": sp.get("box", [24, 18]), "dmg": int(sp["dmg"]), "stun": int(sp["stun"]), "kb": sp["kb"],
+		"block": int(sp.get("block", 8)), "chip": int(sp.get("chip", 1)), "life": int(sp.get("life", 60)),
+		"parry": bool(sp.get("parry", true)), "height": str(sp.get("height", "mid")),
+		"grav": float(sp.get("grav", 0.0)), "src": f.move})
+	_event("shot", f, null, 0, {"kind": str(sp["kind"])})
+
+
+## Projectiles: two enemies' meeting cancel out; the rest fly on and hit (or are blocked / parried by) the first enemy
+## they touch - invulnerable frames let them pass.
+func _shots_step(touched: Dictionary) -> void:
+	var dead := {}
+	for i in shots.size():
+		for j in range(i + 1, shots.size()):
+			var p: Dictionary = shots[i]
+			var q: Dictionary = shots[j]
+			if int(p["team"]) != int(q["team"]) and _shot_rect(p).intersects(_shot_rect(q)):
+				dead[int(p["id"])] = true
+				dead[int(q["id"])] = true
+				_event("clash", get_f(int(p["owner"])), get_f(int(q["owner"])))
+	var keep: Array = []
+	for s: Dictionary in shots:
+		if dead.has(int(s["id"])):
+			continue
+		var v: Vector2 = s["vel"]
+		v.y += float(s["grav"])
+		s["vel"] = v
+		s["pos"] = (s["pos"] as Vector2) + v
+		s["life"] = int(s["life"]) - 1
+		var p: Vector2 = s["pos"]
+		if int(s["life"]) <= 0 or absf(p.x) > STAGE_HALF + 40.0 or p.y > 4.0:
+			continue
+		var landed := false
+		for d in fighters:
+			if d.ko or d.team == int(s["team"]) or not _shot_rect(s).intersects(hurtbox(d)) or invulnerable(d):
+				continue
+			_shot_hit(s, d)
+			touched[d.id] = true
+			landed = true
+			break
+		if not landed:
+			keep.append(s)
+	shots = keep
+
+
+func _shot_rect(s: Dictionary) -> Rect2:
+	var b: Array = s["box"]
+	return Rect2((s["pos"] as Vector2) - Vector2(float(b[0]), float(b[1])) / 2.0, Vector2(float(b[0]), float(b[1])))
+
+
+func _shot_hit(s: Dictionary, d: Fighter) -> void:
+	var a := get_f(int(s["owner"]))
+	var e := {"dmg": s["dmg"], "stun": s["stun"], "kb": s["kb"], "block": s["block"], "chip": s["chip"],
+		"height": s["height"], "parry": s["parry"]}
+	var dm := Moves.move(d.character, d.move) if d.move != "" else {}
+	if _block(a, d, e, dm, d.frame, true):
+		return
+	var v: Vector2 = s["vel"]
+	_hurt(a, d, e, "hit", str(s["src"]), signf(v.x) if absf(v.x) > 0.1 else float(a.facing))
+
+
+## Every projectile in flight, for playback: [x, y, kind, owner, vx, vy, life].
+func record_shots() -> Array:
+	var out: Array = []
+	for s: Dictionary in shots:
+		var p: Vector2 = s["pos"]
+		var v: Vector2 = s["vel"]
+		out.append([p.x, p.y, s["kind"], s["owner"], v.x, v.y, s["life"]])
+	return out
+
+
+func _hurt(a: Fighter, d: Fighter, e: Dictionary, type: String, src := "", side_dir := 0.0) -> void:
+	var mv := src if src != "" else a.move   # (the move it came from - a projectile's thrower may be doing something else)
 	# combo scaling: full on the first hit, about 0.9x each hit after, 20% from the 15th on
 	if d.combo == 0:   # (the starter's proration: a jab starts the scaling further in than a sweep)
-		d.prorate = int(Moves.move(a.character, a.move).get("proration", 0)) if a.move != "" else 0
+		d.prorate = int(Moves.move(a.character, mv).get("proration", 0)) if mv != "" else 0
 	var c := 0.0 if d.combo == 0 else float(clampi(d.combo + d.prorate, 0, 15))   # (the starter itself is unscaled)
 	var scale := 0.8 * pow((15.0 - c) / 15.0, 2.0) + 0.2
 	# a counter hit (they were mid-attack) does 10% more
-	var counter := type == "hit" and int(e["dmg"]) > 0 and d.move != "" and _kind(d) in ["attack", "super", "grab"]
+	var counter := type == "hit" and int(e["dmg"]) > 0 and d.move != "" \
+			and _kind(d) in ["attack", "super", "grab", "special"]
 	var dmg := maxi(int(e.get("min_dmg", 0)),
 			int(round(float(e["dmg"]) * scale * (1.1 if counter else 1.0) * (1.5 if d.sadness > 0 else 1.0))))
 	d.hp -= dmg
@@ -859,10 +1010,10 @@ func _hurt(a: Fighter, d: Fighter, e: Dictionary, type: String) -> void:
 		d.down_pick = false
 	d.splat = 0
 	# (the same move again in this combo stuns for less - a combo can last forever, but not on one move)
-	var used: Array = d.combo_used.get(a.move, [0, -1])
+	var used: Array = d.combo_used.get(mv, [0, -1])
 	if int(used[1]) != a.instance:
 		used = [int(used[0]) + 1, a.instance]
-		d.combo_used[a.move] = used
+		d.combo_used[mv] = used
 	d.stun = maxi(1, int(round(float(e["stun"]) * maxf(REUSE_FLOOR, 1.0 - REUSE_DECAY * (int(used[0]) - 1)))))
 	if in_air:   # (one more frame of hitstun in the air)
 		d.stun += 1
@@ -873,7 +1024,7 @@ func _hurt(a: Fighter, d: Fighter, e: Dictionary, type: String) -> void:
 	d.combo += 1
 	var kb: Array = e["kb"]
 	var weight := float(Moves.stats(d.character)["weight"])
-	var side := float(a.facing)
+	var side := side_dir if side_dir != 0.0 else float(a.facing)
 	if e.get("away", false):   # (a Burst blows everyone away from the one bursting, front or back)
 		side = signf(d.pos.x - a.pos.x) if absf(d.pos.x - a.pos.x) > 1.0 else float(a.facing)
 	d.vel = Vector2(float(kb[0]) * side, float(kb[1])) / weight
@@ -885,7 +1036,8 @@ func _hurt(a: Fighter, d: Fighter, e: Dictionary, type: String) -> void:
 	if d.combo == LAUNCH_HIT and d.pos.y >= 0.0 and d.vel.y > -4.0:   # (the 7th hit on the ground always launches)
 		d.vel.y = -9.0
 	# combo pushback: the longer the combo, the further the hitter's pushed off (not their speed - their place)
-	a.pos.x -= side * minf(COMBO_PUSH * float(d.combo), COMBO_PUSH_MAX) * 0.5
+	if src == "":   # (combo pushback - on the hitter, when it's their own body that hit)
+		a.pos.x -= side * minf(COMBO_PUSH * float(d.combo), COMBO_PUSH_MAX) * 0.5
 	if e.get("bounce", false) and not d.bounced:   # (a ground bounce - once a combo)
 		if d.pos.y >= 0.0 and float(kb[1]) >= 0.0:
 			_bounce(d)
@@ -905,14 +1057,16 @@ func _hurt(a: Fighter, d: Fighter, e: Dictionary, type: String) -> void:
 		if d.pos.y >= 0.0 and d.vel.y >= 0.0:
 			_floor(d)
 	# a landed attack frees the attacker at once (most do) - the next hit is a new turn
-	if type == "hit" and _kind(a) == "attack" and not bool(Moves.move(a.character, a.move).get("no_cancel", false)):
+	if type == "hit" and src == "" and _kind(a) == "attack" \
+			and not bool(Moves.move(a.character, a.move).get("no_cancel", false)):
 		_cancels[a.id] = true
 	_event(type, a, d, dmg, {"counter": true} if counter else {})
 
 
 ## A grab connects on someone standing who isn't reeling; two grabs meeting push apart (a tech).
 func _grab(a: Fighter, d: Fighter, e: Dictionary, kind: Dictionary, live: Dictionary) -> bool:
-	if not d.grounded() or d.stun > 0 or d.blockstun > 0:
+	var air := bool(Moves.move(a.character, a.move).get("air_grab", false))   # (an air grab takes them out of the air)
+	if d.grounded() == air or d.stun > 0 or d.blockstun > 0:
 		return false
 	if kind[d.id] == "grab":
 		for ed: Dictionary in live[d.id]:
@@ -949,7 +1103,14 @@ func record() -> Array:
 
 
 func to_dict() -> Dictionary:
-	return {"mode": mode, "tick": tick, "fighters": fighters.map(func(f: Fighter) -> Dictionary: return f.to_dict())}
+	var flying: Array = []
+	for s: Dictionary in shots:
+		var c := s.duplicate()
+		c["pos"] = [(s["pos"] as Vector2).x, (s["pos"] as Vector2).y]
+		c["vel"] = [(s["vel"] as Vector2).x, (s["vel"] as Vector2).y]
+		flying.append(c)
+	return {"mode": mode, "tick": tick, "fighters": fighters.map(func(f: Fighter) -> Dictionary: return f.to_dict()),
+		"shots": flying, "shot_n": _shot_n}
 
 
 static func from_dict(d: Dictionary) -> Sim:
@@ -958,4 +1119,12 @@ static func from_dict(d: Dictionary) -> Sim:
 	s.tick = int(d["tick"])
 	for fd: Dictionary in d["fighters"]:
 		s.fighters.append(Fighter.from_dict(fd))
+	for sd: Dictionary in d.get("shots", []):
+		var c := sd.duplicate()
+		c["pos"] = Vector2(float(sd["pos"][0]), float(sd["pos"][1]))
+		c["vel"] = Vector2(float(sd["vel"][0]), float(sd["vel"][1]))
+		for k in ["id", "owner", "team", "dmg", "stun", "block", "chip", "life"]:
+			c[k] = int(sd[k])
+		s.shots.append(c)
+	s._shot_n = int(d.get("shot_n", 0))
 	return s

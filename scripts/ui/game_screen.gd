@@ -34,6 +34,7 @@ var fast_btn: Button
 
 var _frames: Array = []
 var _events: Array = []
+var _shots: Array = []       ## the segment's projectiles, a list per frame
 var _first_tick := 0
 var _play_pos := 0.0
 var _shown := -1
@@ -44,6 +45,7 @@ var _demo: Sim               ## the bot match behind the home screen
 var _demo_bots: Array = []
 var _demo_frames: Array = []
 var _demo_events: Array = []
+var _demo_shots: Array = []
 var _demo_first := 0
 var _demo_pos := 0.0
 var _demo_shown := -1
@@ -188,6 +190,7 @@ func _demo_step(delta: float) -> void:
 		var seg := _demo.run_segment()
 		_demo_frames = seg["frames"]
 		_demo_events = seg["events"]
+		_demo_shots = seg.get("shots", [])
 		_demo_first = int(seg["end_tick"]) - _demo_frames.size() + 1
 		_demo_pos = 0.0
 		_demo_shown = -1
@@ -196,7 +199,8 @@ func _demo_step(delta: float) -> void:
 	while _demo_shown < upto:
 		_demo_shown += 1
 		var t := _demo_first + _demo_shown
-		stage.show_tick(_demo_frames[_demo_shown], _demo_events.filter(func(e: Dictionary) -> bool: return int(e["t"]) == t))
+		stage.show_tick(_demo_frames[_demo_shown], _demo_events.filter(func(e: Dictionary) -> bool: return int(e["t"]) == t),
+				_demo_shots[_demo_shown] if _demo_shown < _demo_shots.size() else [])
 		if stage.fx.frozen():
 			_demo_pos = float(_demo_shown)
 			break
@@ -418,6 +422,7 @@ func _commit(mine: Dictionary) -> void:
 	var seg := sim.run_segment()
 	_frames = seg["frames"]
 	_events = seg["events"]
+	_shots = seg.get("shots", [])
 	_first_tick = int(seg["end_tick"]) - _frames.size() + 1
 	_play_pos = 0.0
 	_shown = -1
@@ -449,7 +454,8 @@ func _process(delta: float) -> void:
 	while _shown < i:
 		_shown += 1
 		var t := _first_tick + _shown
-		stage.show_tick(_frames[_shown], _events.filter(func(e: Dictionary) -> bool: return int(e["t"]) == t))
+		stage.show_tick(_frames[_shown], _events.filter(func(e: Dictionary) -> bool: return int(e["t"]) == t),
+				_shots[_shown] if _shown < _shots.size() else [])
 		if stage.fx.frozen():
 			_play_pos = float(_shown)
 			break
