@@ -267,6 +267,17 @@ func _test_multiplayer_qol() -> void:
 			% [far, near], str(p.guesses[1]["move"]) == "dash" and float(p.guesses[1]["dist"]) == 30.0
 			and (theirs["dist_row"] as Control).visible and absf(near - g.sim.fighters[1].pos.x) < absf(far - g.sim.fighters[1].pos.x)
 			and (theirs["label"] as Label).text.contains("Dash"))
+	var their_icon: MoveIcon = theirs["icon"]
+	var my_icon: MoveIcon = mine["icon"]
+	var faced := their_icon.face == -1.0 and my_icon.face == 1.0
+	g.sim.fighters[1].pos.x = -420.0   # (they get round to your left: the icons turn round)
+	p.guess(1)
+	p.select("jab")
+	p.guess(g.me)
+	p.select("jab")
+	_check("the figures on the cards face each other (theirs toward you), and turn when you swap sides",
+			faced and their_icon.face == 1.0 and my_icon.face == -1.0)
+	g.sim.fighters[1].pos.x = -120.0
 	p._on_tap(2)
 	_check("tapping another enemy puts them down the right", p.foe == 2 and p.who == 2)
 	p.guess(g.me)

@@ -839,6 +839,14 @@ func invulnerable(f: Fighter) -> bool:
 	return f.initiative and not ini.is_empty() and f.frame >= int(ini[0]) and f.frame <= int(ini[1])
 
 
+## In a move's projectile-proof frames (Silk Glide) - projectiles pass by.
+func _shot_proof(f: Fighter) -> bool:
+	if f.move == "" or f.stun > 0:
+		return false
+	var r: Array = Moves.move(f.character, f.move).get("shot_invuln", [])
+	return not r.is_empty() and f.frame >= int(r[0]) and f.frame <= int(r[1])
+
+
 func _kind(f: Fighter) -> String:
 	return str(Moves.move(f.character, f.move).get("kind", "")) if f.move != "" else ""
 
@@ -1011,6 +1019,9 @@ func _spawn(f: Fighter) -> void:
 	var m := Moves.move(f.character, f.move)
 	if xf.has("fans") and m.has("recall_at") and int(m["recall_at"]) == f.frame:
 		_recall(f)
+	var cue: Dictionary = m.get("cue", {})   # (a move's own effect, on its frame - Updraft's gust)
+	if not cue.is_empty() and int(cue["at"]) == f.frame:
+		_event(str(cue["type"]), f, null)
 	var sp: Dictionary = m.get("spawn", {})
 	if sp.is_empty() or int(sp["at"]) != f.frame:
 		return
@@ -1113,7 +1124,7 @@ func _shots_step(touched: Dictionary) -> void:
 		for d in fighters:
 			if d.ko or d.team == int(s["team"]) or not _shot_rect(s).intersects(hurtbox(d)):
 				continue
-			if invulnerable(d):
+			if invulnerable(d) or _shot_proof(d):
 				if d.down == 0:
 					_beat(d, "d%d" % d.instance)
 				continue

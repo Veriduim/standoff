@@ -6,8 +6,8 @@ extends RefCounted
 
 const GROUND_HITS := ["jab", "straight", "lowkick", "sidekick", "uppercut", "spin", "sweep", "axekick", "kneedash",
 	"flashkick", "onetwo", "spinfinish", "swaykick", "risingheel", "stomp", "fanslash", "pop", "snapkick", "windmill",
-	"kipup"]
-const FROM_AFAR := ["fan", "ripple", "fan", "sway", "recall"]
+	"kipup", "updraft", "glide"]
+const FROM_AFAR := ["fan", "ripple", "fan", "sway", "recall", "glide"]
 const FLOOR := ["windmill", "kipup", "sweep", "lowkick", "floorslide", "flowform", "snapform", "block", "roll", "ripple"]
 const FORM_SWITCH := ["snapform", "floorform", "flowform"]
 const AIR := ["divekick", "airkick", "airknee", "airspin", "airdash", "fastfall", "block", "wait", "airfan",

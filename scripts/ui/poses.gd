@@ -10,9 +10,23 @@ const BONES := [["neck", "hip"], ["neck", "elbow_f"], ["elbow_f", "hand_f"], ["n
 	["hip", "knee_f"], ["knee_f", "foot_f"], ["hip", "knee_b"], ["knee_b", "foot_b"]]
 
 const P := {
-	"idle": {"head": [4, -92], "neck": [2, -80], "hip": [0, -46], "elbow_f": [14, -64], "hand_f": [22, -76],
-		"elbow_b": [-6, -62], "hand_b": [8, -70], "knee_f": [12, -24], "foot_f": [16, 0], "knee_b": [-10, -24],
-		"foot_b": [-16, 0]},
+	# standing: a fan dancer's stance (21:59 "feel like a dancer") - one fan out in front, the other up behind her head;
+	# idle2 is the other end of her sway (StageView blends them while she stands)
+	"idle": {"head": [3, -92], "neck": [1, -80], "hip": [0, -46], "elbow_f": [16, -68], "hand_f": [28, -76],
+		"elbow_b": [-12, -82], "hand_b": [-18, -98], "knee_f": [12, -24], "foot_f": [22, 0], "knee_b": [-8, -24],
+		"foot_b": [-14, 0]},
+	"idle2": {"head": [5, -91], "neck": [3, -79], "hip": [1, -45], "elbow_f": [18, -62], "hand_f": [30, -60],
+		"elbow_b": [-10, -86], "hand_b": [-8, -104], "knee_f": [13, -23], "foot_f": [22, 0], "knee_b": [-8, -23],
+		"foot_b": [-15, 0]},
+	"fan_low": {"head": [10, -70], "neck": [6, -58], "hip": [-2, -30], "elbow_f": [20, -34], "hand_f": [32, -18],
+		"elbow_b": [-14, -34], "hand_b": [-26, -20], "knee_f": [16, -16], "foot_f": [24, 0], "knee_b": [-10, -14],
+		"foot_b": [-20, 0]},
+	"fan_up": {"head": [2, -100], "neck": [0, -88], "hip": [0, -52], "elbow_f": [14, -104], "hand_f": [24, -124],
+		"elbow_b": [-10, -104], "hand_b": [-14, -124], "knee_f": [8, -26], "foot_f": [12, -4], "knee_b": [-6, -26],
+		"foot_b": [-10, 0]},
+	"glide": {"head": [-20, -40], "neck": [-12, -34], "hip": [0, -18], "elbow_f": [-4, -28], "hand_f": [8, -36],
+		"elbow_b": [-24, -20], "hand_b": [-34, -6], "knee_f": [24, -14], "foot_f": [52, -10], "knee_b": [4, -4],
+		"foot_b": [-12, 0]},
 	# the x-factors on trial: the Snap form's stance, the Floor form's (low, a hand down), the Windmill's two spins
 	"snap": {"head": [6, -94], "neck": [3, -82], "hip": [0, -48], "elbow_f": [18, -70], "hand_f": [24, -88],
 		"elbow_b": [6, -66], "hand_b": [12, -82], "knee_f": [14, -25], "foot_f": [20, 0], "knee_b": [-8, -25],

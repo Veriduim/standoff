@@ -340,6 +340,7 @@ func _tab(tid: String) -> void:
 		if mid == f.cancelled:   # (the move just landed: again = an Instant Cancel, a bar)
 			icon.note = "IC"
 		icon.selected = mid == str(_c().get("move", ""))
+		icon.face = _face_for(who, {})
 		drawer_grid.add_child(icon)
 	drawer.visible = true
 	info.visible = who != me   # (your drawer covers the line about your pick)
@@ -466,6 +467,20 @@ func _build_card(parent: Control, side: String) -> Dictionary:
 		"dist_label": dl, "dist_slider": slider, "free": free, "right": right}
 
 
+## Which way a figure on a card / in a drawer faces (21:59: "the purple guy should face us ... if we are on different
+## sides they should flip again"): the way the pick's aimed, else toward who they're up against - yours the enemy down
+## the right, theirs you.
+func _face_for(id: int, c: Dictionary) -> float:
+	var x := float(c.get("x", 0.0))
+	if absf(x) > 0.2:
+		return signf(x)
+	var f := sim.fighters[id]
+	var other: Fighter = sim.fighters[me] if id != me else (sim.fighters[foe] if foe >= 0 else sim.nearest_enemy(f))
+	if other == null or absf(other.pos.x - f.pos.x) < 1.0:
+		return float(f.facing)
+	return signf(other.pos.x - f.pos.x)
+
+
 ## Whose card it is: "me" -> you; "foe" -> the enemy down the right (-1 = none).
 func _side_id(side: String) -> int:
 	return me if side == "me" else foe
@@ -500,7 +515,7 @@ func _select_for(id: int, mid: String) -> void:
 	var f := sim.fighters[id]
 	var m := Moves.move(f.character, mid)
 	c["free"] = str(m.get("kind", "")) == "attack" and (f.fc > 0 or f.meter >= Sim.BAR)
-	var near := sim.nearest_enemy(f)
+	var near := sim.nearest_enemy(f) if id == me else sim.fighters[me]   # (a guess for them: at you)
 	var toward := float(f.facing) if near == null or absf(near.pos.x - f.pos.x) < 1.0 \
 			else signf(near.pos.x - f.pos.x)
 	var d := Vector2(toward, 0.0)
@@ -616,6 +631,7 @@ func _show_card(side: String) -> void:
 	icon.character = fw.character
 	icon.move_id = mid
 	icon.colour = col
+	icon.face = _face_for(id, c)
 	icon.queue_redraw()
 	(k["label"] as Label).text = "%s\n%s" % [cm["name"], frame_data(cm)] if id == me \
 			else "%s: %s\n%s" % [fw.name, cm["name"], frame_data(cm)]

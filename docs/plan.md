@@ -116,6 +116,13 @@ one stage; each attack aims at a picked target.
   down the right bottom right in theirs (their guessed move, its frame data, their pad, their Distance / parry frame);
   Boxes, Hold, Confirm in the middle. 21:52 "The other player should see themselves on the left side and have a
   simialr interface to me" -> each phone's panel is its own player's (tested online).
+- 21:59 "the icon should flip based on who you selected so the purple guy should face us in the icons bottom right. Then
+  if we are on different sides they should flip again. Last just make the dancer cooler and feel like a dancer. With
+  proper fans. Thinking jade MK series" -> 0.9.3: card / drawer figures face who they're up against (and turn when
+  sides swap); steel war fans in her hands (shut moving, half open standing, wide on strikes; thrown ones the same); a
+  sash; a fan-dance stance that sways; Updraft (a gust off both fans that lifts them - a wind effect, the first move
+  "cue") and Silk Glide (a sliding kick through projectiles); Fan Throw aimed any way. MK's Jade / Kitana: study only.
+  -- --moveshots=<dir>:<moves> snaps any move as it plays.
 
 ## To tune / later
 - **Match length with 6:** bot matches take 120-270 decision points with 6 fighters (50-90 with 2). At ~10 s a decision

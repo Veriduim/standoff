@@ -112,6 +112,12 @@ func on_event(type: String, at: Vector2, face: float, dmg: int, by: Color, victi
 			_add("shock", at, Vector2.ZERO, 0.18, Color.WHITE, 46.0)
 			_add("text", at + Vector2(0, -60), Vector2(0, -50), 0.5, Color.WHITE, 18.0)
 			parts[-1]["txt"] = "WHIFF CANCEL"
+		"gust":   # (Updraft: wind off both fans, rushing up in front of her)
+			for k in 9:
+				var off := Vector2(face * _rng.randf_range(-20.0, 60.0), _rng.randf_range(-20.0, 30.0))
+				_add("wind", at + off, Vector2(face * _rng.randf_range(0.0, 80.0), -_rng.randf_range(650.0, 950.0)),
+						_rng.randf_range(0.35, 0.5), Color("#dff3ff"), _rng.randf_range(26.0, 44.0))
+			_add("shock", at + Vector2(0, -20), Vector2.ZERO, 0.25, Color("#dff3ff"), 60.0)
 		"beat":   # (Tempo: a beat - a pink tick)
 			_add("text", at + Vector2(0, -70), Vector2(0, -50), 0.45, Color("#ff7ab6"), 17.0)
 			parts[-1]["txt"] = "BEAT"
@@ -470,6 +476,9 @@ func draw_parts(st: StageView) -> void:
 			"chip":
 				c.a = 1.0 - t * t
 				st.draw_rect(Rect2(at - Vector2(s, s) / 2.0, Vector2(s, s)), c)
+			"wind":   # (a streak of wind, rushing up and thinning)
+				c.a = 0.85 * (1.0 - t)
+				st.draw_line(at, at + Vector2(sin(float(p["r"])) * 5.0 * z, s * (1.0 - 0.5 * t)), c, maxf(1.5, 3.0 * z), true)
 			"shock":
 				var e := 1.0 - pow(1.0 - t, 3.0)
 				c.a = 0.9 * (1.0 - t)

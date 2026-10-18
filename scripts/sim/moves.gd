@@ -181,7 +181,7 @@ const DANCER := {
 			"pose": [[0, "crouch"], [6, "spin2"], [16, "idle"]], "icon": "spin2"},
 		# ---- specials: projectiles, the Sway stance, a counter
 		"fan": {"name": "Fan Throw", "tab": "special", "kind": "special", "fans": 1, "frames": 24, "where": "ground",
-			"aim": "facing",
+			"aim": "dir8",
 			"spawn": {"at": 8, "kind": "fan", "speed": 11.0, "from": [30, -74], "box": [26, 20], "dmg": 20, "stun": 14,
 				"kb": [4.0, -2.0], "block": 8, "chip": 2, "life": 70},
 			"pose": [[0, "throw_wind"], [8, "throw_out"], [17, "idle"]], "icon": "throw_out"},
@@ -290,6 +290,19 @@ const DANCER := {
 			"pose": [[0, "crouch"], [8, "spin1"], [11, "spin2"], [14, "spin1"], [17, "spin2"], [20, "spin1"], [23, "spin2"],
 				[26, "spin1"], [29, "spin2"], [32, "spin1"], [35, "spin2"], [40, "flash_kick"], [46, "fall"]],
 			"icon": "spin1"},
+		# ---- fan-dancer moves (Timmy 21:59: "make the dancer cooler and feel like a dancer. With proper fans. Thinking
+		# ---- jade MK series" - MK is study only; our own): a gust off both fans that lifts them, a sliding kick that
+		# ---- passes under / through projectiles
+		"updraft": {"name": "Updraft", "tab": "special", "kind": "special", "frames": 30, "where": "ground",
+			"aim": "facing", "cue": {"at": 7, "type": "gust"},
+			"hits": [{"from": 8, "to": 11, "box": [10, -130, 92, 130], "dmg": 14, "stun": 36, "kb": [1.5, -15.0],
+				"block": 10, "chip": 2, "group": 0}],
+			"pose": [[0, "fan_low"], [8, "fan_up"], [20, "idle"]], "icon": "fan_up"},
+		"glide": {"name": "Silk Glide", "tab": "special", "kind": "attack", "frames": 30, "where": "ground",
+			"aim": "facing", "shot_invuln": [2, 18], "motion": [[3, 18, 12.0, 0.0]],
+			"hits": [{"from": 6, "to": 18, "box": [12, -54, 54, 44], "dmg": 30, "stun": 22, "kb": [8.0, -6.0],
+				"block": 8, "chip": 3, "group": 0, "height": "low"}],
+			"pose": [[0, "crouch"], [3, "glide"], [20, "crouch"], [26, "idle"]], "icon": "glide"},
 		# ---- the x-factors on trial (Timmy 21:14: "Can we try the fans, temp and dance forms? Maybe combine two of
 		# ---- them honestly"; 21:17 "We may pick one or a combination of two") - each only with its rule on (Sim.xf)
 		# Fans: two in hand; Fan Throw / Air Fan send one out and it comes back like a boomerang (hitting on the way

@@ -145,8 +145,10 @@ func _effect(e: Dictionary, prev: Array) -> void:
 		fx.burst_out(a, _chest(a), colour_of(a), n + a)
 		return
 	if type in ["down", "whiff", "sad", "sadness", "bounce", "splat", "ic", "beat", "onbeat", "catch", "recall",
-			"form_snap", "form_floor", "form_flow"]:   # (a = who it happened to)
+			"form_snap", "form_floor", "form_flow", "gust"]:   # (a = who it happened to)
 		var at := _chest(a) if not type in ["down", "bounce"] else Vector2(float(frame[a][0]), -6.0)
+		if type == "gust":   # (in front of her, low)
+			at = Vector2(float(frame[a][0]) + face * 50.0, -70.0)
 		if type == "splat":   # (at the wall they hit)
 			at = Vector2(signf(float(frame[a][0])) * (half - 4.0), _chest(a).y)
 			face = signf(float(frame[a][0]))
@@ -408,21 +410,16 @@ func _shot(s: Array, alpha: float) -> void:
 	var dir := signf(float(s[4])) if absf(float(s[4])) > 0.1 else 1.0
 	var spin := float(s[6]) * 0.55 * dir
 	match str(s[2]):
-		"fan":
-			var r := 17.0 * zoom
+		"fan":   # (a folding fan spinning - the same as the ones in her hands)
+			var r := 19.0 * zoom
 			if alpha >= 1.0:   # (the trail - a few fading copies behind)
 				var back := Vector2(-float(s[4]), -float(s[5])).normalized() * 9.0 * zoom
 				for k in range(3, 0, -1):
 					var c := col
 					c.a = 0.18 * (4 - k)
-					draw_circle(at + back * k, r * (1.0 - 0.15 * k), c, true, -1.0, true)
-			for k in 3:
-				var ang := spin + TAU * k / 3.0
-				var tip := at + Vector2.from_angle(ang) * r
-				var side := Vector2.from_angle(ang + PI / 2.0) * r * 0.42
-				draw_colored_polygon(PackedVector2Array([at + side * 0.6, tip, at - side * 0.6]), col)
-				draw_line(at, tip, Color(1, 1, 1, alpha * 0.8), maxf(1.0, 1.5 * zoom), true)
-			draw_circle(at, 3.5 * zoom, Color(1, 1, 1, alpha), true, -1.0, true)
+					draw_circle(at + back * k, r * (0.8 - 0.12 * k), c, true, -1.0, true)
+			Stick.fan(self, at, Vector2.from_angle(spin), r, 0.9, colour_of(int(s[3])) if alpha >= 1.0 else col,
+					alpha >= 1.0)
 		"ripple":
 			var w := 26.0 * zoom
 			var h := (12.0 + 4.0 * sin(float(s[6]) * 0.6)) * zoom
@@ -526,7 +523,25 @@ func _figure(i: int, r: Array, alpha: float) -> void:
 		var mid := hip + Vector2(0, -14)
 		for j: String in Poses.JOINTS:
 			pose[j] = mid + ((pose[j] as Vector2) - mid).rotated(float(_spin[i]))
-	var pts := Stick.draw(self, pose, w2s(base), h * zoom, face, col, Stick.limb(h * zoom), head_r, alpha >= 1.0)
+	var dancer := ch == "dancer"
+	var sc := h * zoom
+	var open := 0.0
+	var fans := 0
+	if dancer:   # (21:59 "feel like a dancer. With proper fans": her fans, a sash, a sway while she stands)
+		var mvk := str(Moves.move(ch, str(r[3])).get("kind", "")) if str(r[3]) != "" else ""
+		open = Stick.fan_open(int(r[5]), mvk)
+		fans = int(r[16]) if r.size() > 16 else 2
+		if int(r[5]) == 0 and str(r[3]) in ["", "wait"] and float(r[1]) >= -1.0 and (r.size() <= 14 or int(r[14]) == 0):
+			var k := 0.5 + 0.5 * sin(_time * 1.9 + i * 1.1)
+			pose = Poses.blend(pose, Poses.get_pose("idle2"), k * (1.0 if alpha >= 1.0 else 0.0))
+		var pre := Stick._place(pose, w2s(base), sc, face)
+		if alpha >= 1.0:
+			_sash(i, pre, face, col, sc)
+		if fans >= 2:
+			Stick.fan_at(self, pre, "b", face, sc, open, col, alpha >= 1.0, Stick.STEEL if alpha >= 1.0 else col)
+	var pts := Stick.draw(self, pose, w2s(base), sc, face, col, Stick.limb(sc), head_r, alpha >= 1.0)
+	if dancer and fans >= 1:   # (ghosts and afterimages: their fans in their own faded colour, not bright steel)
+		Stick.fan_at(self, pts, "f", face, sc, open, col, alpha >= 1.0, Stick.STEEL if alpha >= 1.0 else col)
 	if alpha < 1.0:
 		return
 	if ch == "dancer":   # (her headband - two short tails off the back of the head)
@@ -550,6 +565,31 @@ func _figure(i: int, r: Array, alpha: float) -> void:
 		var s := maxf(6.0, 9.0 * zoom)
 		draw_colored_polygon(PackedVector2Array([tip, tip + Vector2(-s, -s * 1.1), tip + Vector2(s, -s * 1.1)]),
 				Color.WHITE)
+
+
+## The Dancer's sash: a knot at the back of her waist and two silk tails streaming out behind - longer when she moves.
+func _sash(i: int, pts: Dictionary, face: float, col: Color, sc: float) -> void:
+	var neck: Vector2 = pts["neck"]
+	var hip: Vector2 = pts["hip"]
+	var waist := hip.lerp(neck, 0.18) + Vector2(-face * 4.0 * sc, 0.0)
+	var vx := float(_vx.get(i, 0.0))
+	var ink := Color(0.02, 0.02, 0.03)
+	for k in 2:
+		var line: Array[Vector2] = [waist]
+		for s in range(1, 7):
+			var t := float(s) / 6.0
+			var x := (-face * (10.0 + 30.0 * t) - vx * 3.0 * t) * sc
+			var y := (2.0 + (18.0 + 9.0 * k) * t) * sc - absf(vx) * 1.2 * t * sc
+			var wave := sin(_time * 6.0 + i * 1.3 + s * 0.8 + k * 1.9) * 4.5 * t * sc
+			line.append(waist + Vector2(x, y + wave))
+		for s in line.size() - 1:   # (tapering to the tip)
+			var w := maxf(1.5, (7.0 - k * 1.5) * sc * (1.0 - 0.7 * float(s) / line.size()))
+			draw_line(line[s], line[s + 1], ink, w + 3.0, true)
+		for s in line.size() - 1:
+			var w := maxf(1.5, (7.0 - k * 1.5) * sc * (1.0 - 0.7 * float(s) / line.size()))
+			draw_line(line[s], line[s + 1], col.lightened(0.35 + 0.12 * k), w, true)
+	draw_circle(waist, 4.5 * sc, ink, true, -1.0, true)
+	draw_circle(waist, 3.2 * sc, col.lightened(0.45), true, -1.0, true)
 
 
 func _unhandled_input(event: InputEvent) -> void:

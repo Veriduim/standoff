@@ -489,6 +489,38 @@ func _test_cooler_moves() -> void:
 	_check("Grand Finale, the third super, takes all 3 bars", s.legal_moves(0).has("finale"))
 
 
+func _test_fan_dancer() -> void:
+	_section("The fan dancer (Timmy 21:59, Jade-flavoured): Updraft lifts them, Silk Glide slides through projectiles, fans aimed")
+	var s := _duel("dancer", "dancer", 90.0)
+	s.fighters[1].burst = 0
+	s.apply({0: {"move": "updraft", "x": 1.0}, 1: {"move": "wait"}})
+	var up := false
+	for _i in 30:
+		s.step()
+		if s.fighters[1].pos.y < -40.0 and s.fighters[1].stun > 0:
+			up = true
+	_check("Updraft: a gust off both fans lifts them into the air, reeling", up)
+	s = _duel("dancer", "dancer", 360.0)
+	s.fighters[0].burst = 0
+	s.apply({1: {"move": "fan", "x": -1.0}, 0: {"move": "wait"}})
+	for _i in 9:   # (their fan's out, coming at her)
+		s.step()
+	var hp0 := s.fighters[0].hp
+	s.apply({0: {"move": "glide", "x": 1.0}})
+	var through := false
+	for _i in 24:
+		s.step()
+		if s.shots.is_empty() or float((s.shots[0]["pos"] as Vector2).x) < s.fighters[0].pos.x - 30.0:
+			through = true
+	_check("Silk Glide: their fan passes by her (hp %d -> %d)" % [hp0, s.fighters[0].hp], through and s.fighters[0].hp == hp0)
+	s = _duel("dancer", "dancer", 300.0)
+	s.apply({0: {"move": "fan", "x": 1.0, "y": -1.0}, 1: {"move": "wait"}})
+	for _i in 10:
+		s.step()
+	_check("Fan Throw takes any direction - thrown up and out it climbs", not s.shots.is_empty()
+			and float((s.shots[0]["vel"] as Vector2).y) < -1.0 and float((s.shots[0]["vel"] as Vector2).x) > 1.0)
+
+
 ## Two Dancers with these x-factors on (Sim RULES "xf"), gap apart, facing each other.
 func _xf(rule: String, gap := 300.0) -> Sim:
 	var s := Sim.create([{"character": "dancer"}, {"character": "dancer"}], "ffa", {"xf": rule})

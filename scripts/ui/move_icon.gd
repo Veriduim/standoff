@@ -19,6 +19,7 @@ var move_id := ""
 var colour := Color.WHITE
 var selected := false
 var note := ""               ## a tag top left (IC: picking it again is an Instant Cancel - a bar)
+var face := 1.0              ## the way the figure faces (21:59: toward who it's up against - theirs face you)
 
 
 static func make(ch: String, mid: String, col: Color, on: Callable) -> MoveIcon:
@@ -51,9 +52,16 @@ func _draw() -> void:
 	var area := Rect2(Vector2(8, 6), Vector2(size.x - 16, size.y - 30))
 	# (one figure size for every icon - a curled-up roll isn't blown up to fill the box)
 	var sc := minf(minf(area.size.x / maxf(bb.size.x, 1.0), area.size.y / maxf(bb.size.y, 1.0)) * 0.95, area.size.y / 108.0)
-	var origin := area.get_center() - bb.get_center() * sc
+	var mid := bb.get_center()
+	var origin := area.get_center() - Vector2(mid.x * face, mid.y) * sc
 	var col := colour if not disabled else colour.darkened(0.6)
-	Stick.draw(self, pose, origin, sc, 1.0, col, maxf(3.0, Stick.limb(sc)), head_r * sc)
+	var dancer := character == "dancer"
+	var open := Stick.fan_open(0, str(m.get("kind", "")))
+	if dancer:   # (her fans - the far one behind her)
+		Stick.fan_at(self, Stick._place(pose, origin, sc, face), "b", face, sc, open, col)
+	var pts := Stick.draw(self, pose, origin, sc, face, col, maxf(3.0, Stick.limb(sc)), head_r * sc)
+	if dancer:
+		Stick.fan_at(self, pts, "f", face, sc, open, col)
 	var font := get_theme_default_font()
 	var text_col := Color("#e8e8f0") if not disabled else Color("#6b6b78")
 	draw_string(font, Vector2(2, size.y - 7), str(m["name"]), HORIZONTAL_ALIGNMENT_CENTER, size.x - 4, 13, text_col)

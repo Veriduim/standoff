@@ -10,6 +10,7 @@ extends RefCounted
 const BACK := [["neck", "elbow_b"], ["elbow_b", "hand_b"], ["hip", "knee_b"], ["knee_b", "foot_b"]]
 const FRONT := [["hip", "knee_f"], ["knee_f", "foot_f"], ["neck", "elbow_f"], ["elbow_f", "hand_f"]]
 const FAR := 0.3             ## how much darker the far arm and leg are
+const STEEL := Color("#dfe4ee")   ## the Dancer's war fans: steel ribs and edge (21:59 "proper fans")
 
 ## limb / head: for a fighter 100 tall; body: the torso's thickness at the chest, in limbs (hips: `hips`); fist: a
 ## fist's radius in limbs; foot: a foot's length in limbs (0 = none); squash: the legs' length (1 = as posed); ink: the
@@ -103,6 +104,72 @@ static func _foot(ci: CanvasItem, pts: Dictionary, side: String, facing: float, 
 	if across.x * facing < 0.0 or (is_zero_approx(across.x) and across.y < 0.0):
 		across = -across
 	_bone(ci, ankle, ankle + across * length, w, w * 0.85, c)
+
+
+## The Dancer's folding fans (Timmy 21:59 "With proper fans"): how open they are for what she's doing - shut when hit,
+## down or moving, half open standing, wide on strikes, open as a shield guarding.
+static func fan_open(state: int, kind: String) -> float:
+	if state in [1, 4, 5]:
+		return 0.1
+	match kind:
+		"attack", "special", "super", "grab", "counter", "burst":
+			return 1.0
+		"guard":
+			return 0.85
+		"move", "getup":
+			return 0.18
+	return 0.55
+
+
+## A fan held in a hand (side "f" / "b"): pointing on along the forearm, tipped up a little.
+static func fan_at(ci: CanvasItem, pts: Dictionary, side: String, facing: float, scale: float, open: float, col: Color,
+		edge := true, metal := STEEL) -> void:
+	var hand: Vector2 = pts["hand_" + side]
+	var elbow: Vector2 = pts["elbow_" + side]
+	var dir := (hand - elbow).normalized() if hand.distance_to(elbow) > 0.5 else Vector2(facing, 0.0)
+	dir = dir.rotated(-0.3 * facing)
+	fan(ci, hand - dir * 2.0 * scale, dir, 21.0 * scale, open, col.darkened(FAR) if side == "b" else col, edge,
+			metal.darkened(FAR) if side == "b" else metal)
+
+
+## A folding war fan: pivot, the way it points (unit, on screen), its reach; open 0 (shut - a stick) to 1 (spread wide).
+## The leaf in `col` (the fighter's colour), steel ribs and a steel edge (`metal` - a ghost passes its own faded colour),
+## an ink outline.
+static func fan(ci: CanvasItem, pivot: Vector2, dir: Vector2, radius: float, open: float, col: Color, edge := true,
+		metal := STEEL) -> void:
+	var half := lerpf(0.07, 1.25, clampf(open, 0.0, 1.0))
+	var a0 := dir.angle() - half
+	var a1 := dir.angle() + half
+	var n := 8
+	var inner := radius * 0.32
+	var gold := metal
+	gold.a = col.a
+	var ink := Color(0.02, 0.02, 0.03, col.a)
+	if edge:   # (the ink edge: the leaf a little bigger, under it)
+		var e := maxf(1.5, radius * 0.09)
+		var ea := e / maxf(radius, 1.0)
+		for k in n:
+			var u0 := lerpf(a0 - ea, a1 + ea, float(k) / n)
+			var u1 := lerpf(a0 - ea, a1 + ea, float(k + 1) / n)
+			ci.draw_colored_polygon(PackedVector2Array([pivot + Vector2.from_angle(u0) * (radius + e),
+				pivot + Vector2.from_angle(u1) * (radius + e), pivot + Vector2.from_angle(u1) * maxf(0.0, inner - e),
+				pivot + Vector2.from_angle(u0) * maxf(0.0, inner - e)]), ink)
+	for k in n:   # (the leaf, a quad a fold - every piece convex)
+		var u0 := lerpf(a0, a1, float(k) / n)
+		var u1 := lerpf(a0, a1, float(k + 1) / n)
+		var c := col.lightened(0.18) if k % 2 == 0 else col
+		ci.draw_colored_polygon(PackedVector2Array([pivot + Vector2.from_angle(u0) * radius,
+			pivot + Vector2.from_angle(u1) * radius, pivot + Vector2.from_angle(u1) * inner,
+			pivot + Vector2.from_angle(u0) * inner]), c)
+	var w := maxf(1.0, radius * 0.07)
+	for k in 5:   # (the ribs, from the pivot)
+		var u := lerpf(a0, a1, float(k) / 4.0)
+		ci.draw_line(pivot, pivot + Vector2.from_angle(u) * radius, gold.darkened(0.2), w, true)
+	var rim := PackedVector2Array()
+	for k in n + 1:
+		rim.append(pivot + Vector2.from_angle(lerpf(a0, a1, float(k) / n)) * radius)
+	ci.draw_polyline(rim, gold, maxf(1.5, radius * 0.11), true)
+	ci.draw_circle(pivot, w * 1.3, gold, true, -1.0, true)
 
 
 ## A pose's extent (joints + head), for fitting it in a box.
