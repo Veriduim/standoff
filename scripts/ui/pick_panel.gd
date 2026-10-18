@@ -649,7 +649,7 @@ func _show_card(side: String) -> void:
 	if mid == "":   # (no guess for them yet)
 		icon.move_id = ""
 		icon.queue_redraw()
-		(k["label"] as Label).text = "%s\nWhat will they do?\nGuess with their tabs" % fw.name
+		(k["label"] as Label).text = "%s: your guess?\nUse their tabs" % fw.name
 		for b in pad_grid.get_children():
 			if b is Button:
 				(b as Button).disabled = true

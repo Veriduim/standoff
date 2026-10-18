@@ -150,6 +150,12 @@ one stage; each attack aims at a picked target.
   styles" -> 0.11.0: attacks keep momentum (low friction in their startup, a lunge never slows a faster slide); a
   Distance on the lunging attacks (Straight, Side Kick, Sweep, Knee Dash, Silk Glide); per style: Fan Step (blink to
   your thrown fan) + fan ribbons, Tempo beats move you faster + a shard aura, Snap Step; Encore ends in a sweep.
+- 23:31 my call: Fans + Tempo for the Dancer, Forms folded in. 23:34 "I agree with yiur decision" (also "I broke it ...
+  Air Fan spam!!!" and "work on moving iver any more mechanics we miss and general ui improvments") -> 0.12.0:
+  - Fans + Tempo always on (the switches gone; Forms stays in the code, off); Snap Step and Windmill in her normal kit;
+  - Air Fan is an air option with a brief hang;
+  - the Ceiling; Land Cancel; Low Profile; Undo against bots;
+  - quieter beats; the enemy card's empty state (docs/mechanics.md).
 
 ## To tune / later
 - **Match length with 6:** bot matches take 120-270 decision points with 6 fighters (50-90 with 2). At ~10 s a decision

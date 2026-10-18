@@ -74,7 +74,20 @@ the rules of play. The names, art, characters and code are not ours to take, and
 | Command grab / air grab | Grabs with their own rules; same air/ground state | Spin Throw (into the wall), Air Throw (air to air) |
 | Supers | 1-3 bars | Flurry (1), Cyclone (2), Grand Finale (3 - a rush and a launch); the super's name splashed over them |
 
+## Built (0.11.0-0.12.0 - Timmy 23:23 "better movement", 23:34 "moving over any more mechanics we miss")
+| Mechanic | The wiki | Standoff |
+|---|---|---|
+| Momentum | Ninja's Boost and momentum carry into attacks; Beating Backdash | An attack started on the move slides on through its startup (`CARRY`), and its lunge never slows a faster slide |
+| Attack distance | (dash distance) | Distance on the lunging attacks (Straight, Side Kick, Sweep, Knee Dash, Silk Glide) |
+| Ceiling | Rules: Ceiling Height 800 | Rule "ceiling", 900 by default (in the lobby rules); heads bump off it; a faint line shows it |
+| Air options | Air jump / air dash, 2 a jump | Air Fan uses one too (23:34 "Air Fan spam!!!") and only hangs briefly |
+| Land Cancel | Landing ends the move with a little landing lag | Air Kick, Air Knee, Air Spin, Air Throw, Air Fan (Dive Kick already) |
+| Low Profile | The hurtbox goes low; high hits pass over | Sweep, Silk Glide, Windmill (`low_profile`) |
+| Undo | Single player only: undo a turn | ↶ Undo at the top right against bots (up to 40 turns back) |
+
 ## Later
+- **Chess Timer** (a lobby rule: a time bank each instead of the turn clock).
+- **Super Armor** on a move (it tanks one hit).
 - **Initiative** on more moves (faster startup with it, as some of the wiki's do).
 - **Restands** (a hit as they land from an air combo puts them back in a grounded combo).
 - **Burst Cancel's** slower Burst refill for the rest of the combo; parry lock-out after a missed block.
