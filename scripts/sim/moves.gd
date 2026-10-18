@@ -134,6 +134,7 @@ const DANCER := {
 				"block": 12, "chip": 3, "group": 0}],
 			"pose": [[0, "crouch"], [6, "uppercut"], [16, "idle"]]},
 		"spin": {"name": "Spin Kick", "tab": "attack", "kind": "attack", "frames": 26, "where": "ground",
+			"cue": {"at": 4, "type": "sweep"},
 			"aim": "facing", "motion": [[2, 14, 5.0, 0.0]],
 			"hits": [{"from": 7, "to": 12, "box": [-64, -94, 128, 40], "dmg": 50, "stun": 20, "kb": [6.0, -5.0],
 				"block": 12, "chip": 4, "group": 0}],
@@ -175,6 +176,7 @@ const DANCER := {
 				"chip": 2, "group": 0}],
 			"pose": [[0, "jab_wind"], [3, "straight"], [10, "idle"]], "icon": "straight"},
 		"spinfinish": {"name": "Spin Finish", "tab": "attack", "kind": "attack", "after": ["onetwo"], "frames": 26,
+			"cue": {"at": 5, "type": "sweep"},
 			"where": "ground", "aim": "facing", "motion": [[2, 10, 6.0, 0.0]],
 			"hits": [{"from": 6, "to": 9, "box": [-30, -96, 110, 44], "dmg": 38, "stun": 24, "kb": [9.0, -7.0],
 				"block": 12, "chip": 4, "group": 0, "knockdown": true, "splat": true}],
@@ -278,6 +280,7 @@ const DANCER := {
 			"pose": [[0, "dash"], [10, "kick_hit"], [16, "spin1"], [22, "jab_hit"], [28, "spin2"], [34, "heavy_hit"],
 				[40, "crouch"], [44, "flash_kick"], [54, "fall"]], "icon": "flash_kick"},
 		"cyclone": {"name": "Cyclone", "tab": "super", "kind": "super", "frames": 50, "where": "ground",
+			"cue": [{"at": 8, "type": "sweep"}, {"at": 20, "type": "sweep"}, {"at": 32, "type": "sweep"}],
 			"aim": "facing", "cost": 250, "motion": [[6, 40, 6.0, 0.0]],
 			"hits": [
 				{"from": 8, "to": 9, "box": [-50, -96, 100, 50], "dmg": 18, "stun": 12, "kb": [2.0, -1.0], "block": 5, "chip": 2, "group": 0},
@@ -294,7 +297,7 @@ const DANCER := {
 		# ---- jade MK series" - MK is study only; our own): a gust off both fans that lifts them, a sliding kick that
 		# ---- passes under / through projectiles
 		"updraft": {"name": "Updraft", "tab": "special", "kind": "special", "frames": 30, "where": "ground",
-			"aim": "facing", "motion": [[2, 8, 4.0, 0.0]], "cue": {"at": 7, "type": "gust"},
+			"aim": "facing", "motion": [[2, 8, 4.0, 0.0]], "cue": [{"at": 7, "type": "gust"}, {"at": 7, "type": "sweep_up"}],
 			"hits": [{"from": 8, "to": 11, "box": [10, -130, 92, 130], "dmg": 14, "stun": 36, "kb": [1.5, -15.0],
 				"block": 10, "chip": 2, "group": 0}],
 			"pose": [[0, "fan_low"], [8, "fan_up"], [20, "idle"]], "icon": "fan_up"},
@@ -308,6 +311,7 @@ const DANCER := {
 		# Fans: two in hand; Fan Throw / Air Fan send one out and it comes back like a boomerang (hitting on the way
 		# back too); Recall calls them home at once; Fan Slash needs one in hand
 		"fanslash": {"name": "Fan Slash", "tab": "attack", "kind": "attack", "xf": "fans", "fans": 1, "frames": 18,
+			"cue": {"at": 3, "type": "sweep"},
 			"where": "ground", "aim": "facing", "motion": [[2, 6, 5.0, 0.0]], "proration": 1,
 			"hits": [{"from": 4, "to": 6, "box": [6, -100, 96, 64], "dmg": 26, "stun": 16, "kb": [5.0, -2.0],
 				"block": 8, "chip": 2, "group": 0}],

@@ -114,12 +114,13 @@ func on_event(type: String, at: Vector2, face: float, dmg: int, by: Color, victi
 			_add("shock", at, Vector2.ZERO, 0.18, Color.WHITE, 46.0)
 			_add("text", at + Vector2(0, -60), Vector2(0, -50), 0.5, Color.WHITE, 18.0)
 			parts[-1]["txt"] = "WHIFF CANCEL"
+		"sweep", "sweep_up":   # (a giant fan swept out in her colour - Violet's arc in the mod study; up for Updraft)
+			_add("sweep", at, Vector2.ZERO, 0.3, by, 92.0, face if type == "sweep" else 0.0)
 		"gust":   # (Updraft: wind off both fans, rushing up in front of her)
 			for k in 9:
 				var off := Vector2(face * _rng.randf_range(-20.0, 60.0), _rng.randf_range(-20.0, 30.0))
 				_add("wind", at + off, Vector2(face * _rng.randf_range(0.0, 80.0), -_rng.randf_range(650.0, 950.0)),
 						_rng.randf_range(0.35, 0.5), Color("#dff3ff"), _rng.randf_range(26.0, 44.0))
-			_add("shock", at + Vector2(0, -20), Vector2.ZERO, 0.25, Color("#dff3ff"), 60.0)
 		"beat":   # (Tempo: a beat - a pink tick)
 			_add("text", at + Vector2(0, -70), Vector2(0, -50), 0.45, Color("#ff7ab6"), 17.0)
 			parts[-1]["txt"] = "BEAT"
@@ -155,6 +156,8 @@ func on_event(type: String, at: Vector2, face: float, dmg: int, by: Color, victi
 			kick(3.0)
 		"hit", "throw", "armor":
 			var s := clampf(float(dmg) / 32.0, 0.5, 1.8)
+			if type == "throw":   # (a dark sphere closes round the two of them - the mods' grabs)
+				_add("bubble", at, Vector2.ZERO, 0.5, Color("#05060a"), 72.0)
 			# (23:05 "This is an example of the normal hit effect": a dark jagged starburst behind it, longest along
 			# the hit - the YOMI mods' look; low contrast, so the fighters and sparks read on top)
 			_add("ink", at, Vector2.ZERO, 0.42, INK, 60.0 + 26.0 * s, face)
@@ -245,13 +248,17 @@ func super_start(id: int, at: Vector2, col: Color, seed_n: int, title := "") -> 
 	_add("rays", at, Vector2.ZERO, 0.4, col.lightened(0.45), 190.0)
 	_add("glow", at, Vector2.ZERO, 0.45, col, 95.0)
 	_add("shock", at, Vector2.ZERO, 0.4, col.lightened(0.3), 170.0)
-	_add("shock", at, Vector2.ZERO, 0.3, Color.WHITE, 110.0)
-	for i in 10:
-		_add("box" if i % 2 else "ring", at, Vector2.from_angle(_rng.randf() * TAU) * _rng.randf_range(250.0, 520.0),
-				_rng.randf_range(0.35, 0.55), Color.WHITE if i % 3 == 0 else col.lightened(0.4), _rng.randf_range(5.0, 9.0))
+	_add("floorring", Vector2(at.x, 0.0), Vector2.ZERO, 1.1, col, 130.0)   # (a ring of her colour glowing on the floor -
+	# Yharim's; no confetti shapes - 23:11)
 	splash(1.0, at)
 	freeze(0.3, -1)
 	kick(3.0)
+
+
+## A stretch of ribbon along the floor (Silk Glide), from a to b (world), fading from where it was laid.
+func ribbon(a: Vector2, b: Vector2, c: Color) -> void:
+	parts.append({"k": "ribbon", "p": a, "b": b, "v": Vector2.ZERO, "age": 0.0, "life": 0.45, "c": c, "s": 9.0,
+		"r": 0.0, "w": 0.0, "x": 0.0})
 
 
 ## Dust off the ground (a landing, feet sliding): grey bits kicked out both ways, low.
@@ -469,7 +476,11 @@ func draw_trails(st: StageView) -> void:
 ## triangles (a star isn't convex).
 func draw_back(st: StageView) -> void:
 	for p: Dictionary in parts:
-		if str(p["k"]) != "ink":
+		var k := str(p["k"])
+		if k in ["bubble", "floorring", "ribbon"]:
+			_draw_back_part(st, p)
+			continue
+		if k != "ink":
 			continue
 		var t := float(p["age"]) / float(p["life"])
 		var grow := minf(1.0, t / 0.12)
@@ -486,6 +497,38 @@ func draw_back(st: StageView) -> void:
 			st.draw_colored_polygon(PackedVector2Array([at, pts[i], pts[(i + 1) % n]]), c)
 
 
+## The mod-study pieces drawn behind the fighters: a throw's dark sphere, a super's ring on the floor, a glide's ribbon.
+func _draw_back_part(st: StageView, p: Dictionary) -> void:
+	var t := float(p["age"]) / float(p["life"])
+	var c: Color = p["c"]
+	var at := st.w2s(p["p"])
+	var z := st.zoom
+	match str(p["k"]):
+		"bubble":   # (closing in fast, holding, fading - a pale rim)
+			var r := float(p["s"]) * z * (1.3 - 0.3 * minf(1.0, t / 0.15))
+			var a := 0.8 * (1.0 - maxf(0.0, (t - 0.55) / 0.45))
+			for layer in 4:   # (soft-edged: darker toward the middle, no white rim - 23:11 no big white circles)
+				c.a = a * 0.32
+				st.draw_circle(at, r * (1.0 - layer * 0.16), c, true, -1.0, true)
+		"floorring":   # (a flat glowing ring on the floor, opening out)
+			var rx := float(p["s"]) * z * (0.5 + 0.5 * minf(1.0, t / 0.3))
+			for layer in 3:
+				var cc := c.lightened(0.3 * layer)
+				cc.a = (0.5 - layer * 0.12) * (1.0 - t)
+				var pts := PackedVector2Array()
+				for n in 49:
+					var a := TAU * n / 48.0
+					pts.append(at + Vector2(cos(a) * rx * (1.0 + layer * 0.12), sin(a) * rx * 0.16 * (1.0 + layer * 0.12)))
+				st.draw_polyline(pts, cc, maxf(1.5, (5.0 - layer) * z), true)
+		"ribbon":   # (a flat band of her colour along the floor, thinning as it fades)
+			var b := st.w2s(p["b"])
+			c.a = 0.75 * (1.0 - t)
+			st.draw_line(at, b, c, maxf(2.0, float(p["s"]) * z * (1.0 - 0.6 * t)), true)
+			var hi := c.lightened(0.5)
+			hi.a = c.a * 0.8
+			st.draw_line(at, b, hi, maxf(1.0, 2.0 * z), true)
+
+
 ## Sparks, rings, shockwaves - over the fighters.
 func draw_parts(st: StageView) -> void:
 	var z := st.zoom
@@ -495,8 +538,36 @@ func draw_parts(st: StageView) -> void:
 		var c: Color = p["c"]
 		var s := float(p["s"]) * z
 		match str(p["k"]):
-			"ink":   # (behind the fighters - draw_back)
+			"ink", "bubble", "floorring", "ribbon":   # (behind the fighters - draw_back)
 				pass
+			"sweep":   # (a giant fan sweeping open: from up behind her round to the way she faces (x = facing; 0 = up))
+				var face := float(p["x"])
+				var e := 1.0 - pow(1.0 - minf(1.0, t / 0.45), 3.0)
+				var a0 := -PI / 2.0 - 0.9 if face != 0.0 else -PI / 2.0 - 1.2   # (worked out facing right, then mirrored)
+				var a1 := 0.25 if face != 0.0 else -PI / 2.0 + 1.2
+				var mx := face if face != 0.0 else 1.0
+				var reach := s * (0.85 + 0.15 * e)
+				var ins := reach * 0.28
+				var n := 14
+				var fill := c
+				fill.a = 0.32 * (1.0 - t)
+				var rib := c.lightened(0.5)
+				rib.a = 0.55 * (1.0 - t)
+				var rimc := Color(1, 1, 1, 0.85 * (1.0 - t))
+				var rim := PackedVector2Array()
+				var dirs: Array[Vector2] = []
+				for i in n + 1:
+					var d := Vector2.from_angle(lerpf(a0, a0 + (a1 - a0) * e, float(i) / n))
+					dirs.append(Vector2(d.x * mx, d.y))
+				for i in n:
+					var cc := fill if i % 2 == 0 else fill.lightened(0.15)
+					st.draw_colored_polygon(PackedVector2Array([at + dirs[i] * reach, at + dirs[i + 1] * reach,
+						at + dirs[i + 1] * ins, at + dirs[i] * ins]), cc)
+					if i % 3 == 0:
+						st.draw_line(at + dirs[i] * ins, at + dirs[i] * reach, rib, maxf(1.0, 2.0 * z), true)
+				for i in n + 1:
+					rim.append(at + dirs[i] * reach)
+				st.draw_polyline(rim, rimc, maxf(2.0, 4.0 * z * (1.0 - t)), true)
 			"star":   # (near full size the moment it lands - the freeze shows it - then it shrinks away)
 				var grow := (0.75 + 0.25 * minf(1.0, t / 0.2)) * (1.0 - maxf(0.0, (t - 0.5) / 0.5))
 				_star(st, at, s * grow, float(p["r"]), p["sp"], c)

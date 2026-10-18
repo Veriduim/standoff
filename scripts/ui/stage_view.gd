@@ -115,6 +115,8 @@ func _motion_fx(prev: Array) -> void:
 			fx.afterimage(i, r)
 		var dy := float(r[1]) - float(p[1])
 		_vx[i] = float(r[0]) - float(p[0])
+		if mv == "glide" and int(r[5]) == 0 and absf(_vx[i]) > 2.0:   # (Silk Glide: a ribbon of her colour along the
+			fx.ribbon(Vector2(float(p[0]), -16.0), Vector2(float(r[0]), -16.0), colour_of(i))   # floor - the mods' beams)
 		if float(p[1]) < -6.0 and float(r[1]) >= -0.5 and int(r[5]) != 4:   # (landed: squash, and dust if it was a drop)
 			_land[i] = LAND_TICKS
 			if dy > 6.0:
@@ -148,7 +150,7 @@ func _effect(e: Dictionary, prev: Array) -> void:
 		fx.burst_out(a, _chest(a), colour_of(a), n + a)
 		return
 	if type in ["down", "whiff", "sad", "sadness", "bounce", "splat", "ic", "beat", "onbeat", "catch", "recall",
-			"form_snap", "form_floor", "form_flow", "gust"]:   # (a = who it happened to)
+			"form_snap", "form_floor", "form_flow", "gust", "sweep", "sweep_up"]:   # (a = who it happened to)
 		var at := _chest(a) if not type in ["down", "bounce"] else Vector2(float(frame[a][0]), -6.0)
 		if type == "gust":   # (in front of her, low)
 			at = Vector2(float(frame[a][0]) + face * 50.0, -70.0)

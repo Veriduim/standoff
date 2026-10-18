@@ -1020,9 +1020,10 @@ func _spawn(f: Fighter) -> void:
 	var m := Moves.move(f.character, f.move)
 	if xf.has("fans") and m.has("recall_at") and int(m["recall_at"]) == f.frame:
 		_recall(f)
-	var cue: Dictionary = m.get("cue", {})   # (a move's own effect, on its frame - Updraft's gust)
-	if not cue.is_empty() and int(cue["at"]) == f.frame:
-		_event(str(cue["type"]), f, null)
+	var cues: Variant = m.get("cue", [])   # (a move's own effects, each on its frame - Updraft's gust, a fan sweep)
+	for cue: Dictionary in (cues if cues is Array else [cues]):
+		if int(cue["at"]) == f.frame:
+			_event(str(cue["type"]), f, null)
 	var sp: Dictionary = m.get("spawn", {})
 	if sp.is_empty() or int(sp["at"]) != f.frame:
 		return

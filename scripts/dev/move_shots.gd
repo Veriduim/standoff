@@ -24,6 +24,7 @@ func run(game: Control, arg: String) -> void:
 		game.start_local(1, "ffa", 0)
 		game.bots[1] = Still.new()
 		game.sim.fighters[1].burst = 0
+		game.sim.fighters[0].meter = Sim.METER_MAX   # (supers too)
 		game.sim.fighters[0].pos = Vector2(-gap / 2.0, 0.0)
 		game.sim.fighters[1].pos = Vector2(gap / 2.0, 0.0)
 		game.sim.fighters[0].facing = 1
