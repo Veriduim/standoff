@@ -36,6 +36,7 @@ var combos := {}             ## victim id -> {hits, dmg, by: colour, pop: 1 -> 0
 var trails := {}             ## fighter id -> {pts: [[tip, pivot], ...], c: colour, fade: -1 live / seconds}
 var flash := {}              ## fighter id -> seconds they're drawn white (the impact frame)
 var afters: Array = []       ## afterimages: {id, rec: Sim.record row, age, life}
+const BIG := 1.3              ## every effect this much bigger (22:40 "elevate this a lot")
 var dim := 0.0               ## how dark the stage goes round a super (0-1); `dim_id` is drawn over it
 var dim_id := -1
 var split := 0.0             ## the colour split (0-1, fading) - the screens' post shader reads it
@@ -270,16 +271,17 @@ func splash(amount: float, at: Vector2) -> void:
 
 ## A fading copy of a fast mover (StageView calls it every couple of ticks they're quick).
 func afterimage(id: int, rec: Array) -> void:
-	afters.append({"id": id, "rec": rec.duplicate(), "age": 0.0, "life": 0.22})
+	afters.append({"id": id, "rec": rec.duplicate(), "age": 0.0, "life": 0.32})
 
 
 func freeze(seconds: float, who: int) -> void:
-	hitstop = maxf(hitstop, seconds)
+	hitstop = maxf(hitstop, seconds * 1.35)   # (a hit holds a little longer - it lands harder)
 	if who >= 0 and not jitter.has(who):
 		jitter.append(who)
 
 
 func kick(px: float) -> void:
+	px *= 1.3
 	shake = maxf(shake, px)
 	punch = maxf(punch, clampf(px * 0.012, 0.0, 0.08))
 
@@ -303,6 +305,9 @@ func _fan(face: float, spread: float) -> Vector2:
 
 
 func _add(kind: String, at: Vector2, vel: Vector2, life: float, c: Color, size: float, extra := 0.0) -> void:
+	size *= BIG if kind != "text" else 1.12   # (22:40 "We dont do things big enough": every effect bigger)
+	life *= 1.15
+	vel *= BIG
 	var p := {"k": kind, "p": at, "v": vel, "age": 0.0, "life": life, "c": c, "s": size, "r": _rng.randf() * TAU,
 		"w": _rng.randf_range(-9.0, 9.0), "x": extra}
 	if kind == "star":

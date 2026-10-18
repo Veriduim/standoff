@@ -19,7 +19,7 @@ const WALL := Color("#2a2c36")
 const GHOST_ALPHA := 0.55
 const PAD := 170.0          ## world px kept round everyone
 const ZOOM_MIN := 0.45
-const ZOOM_MAX := 1.35
+const ZOOM_MAX := 1.8        ## (22:40 "really small": in close, the camera comes right in)
 const TIPS := ["hand_f", "hand_b", "foot_f", "foot_b"]
 const LAND_TICKS := 7        ## the landing squash
 const LEAN := 0.03           ## radians of lean per px a tick of speed (up to LEAN_MAX)
@@ -106,9 +106,9 @@ func _motion_fx(prev: Array) -> void:
 		if kind == "super" and int(r[4]) <= 1 and (str(p[3]) != mv or int(p[4]) > int(r[4])):
 			fx.super_start(i, _chest(i), colour_of(i), _tick_n * 13 + i, str(Moves.move(_char(i), mv)["name"]))
 		var speed := maxf(absf(float(r[0]) - float(p[0])), absf(float(r[1]) - float(p[1])) * 0.8)
-		var fast := int(r[5]) != 4 and (speed > 6.5 or kind in ["super", "burst"])
+		var fast := int(r[5]) != 4 and (speed > 5.5 or kind in ["super", "burst"])
 		_after_n[i] = int(_after_n.get(i, 0)) + 1 if fast else 0
-		if fast and int(_after_n[i]) % 2 == 1:
+		if fast and int(_after_n[i]) % 2 == 1:   # (a fading copy every other tick they're quick - fx keeps them longer)
 			fx.afterimage(i, r)
 		var dy := float(r[1]) - float(p[1])
 		_vx[i] = float(r[0]) - float(p[0])

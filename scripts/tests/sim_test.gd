@@ -226,10 +226,16 @@ func _test_escaping_combos() -> void:
 		s.run_segment()
 	_check("a combo goes on, but the same move used again in it stuns for less (jab %d, then again %d)"
 			% [first_stun, s.fighters[1].stun], s.fighters[1].combo == 3 and s.fighters[1].stun < first_stun - 2)
-	s = _duel("dancer", "dancer", 80.0)
-	s.apply({0: {"move": "uppercut"}, 1: {"move": "wait"}})
-	s.run_segment()
-	_check("...not every move frees you on a hit: the uppercut doesn't", s.fighters[0].move == "uppercut")
+	s = _duel("dancer", "dancer", 60.0)
+	s.apply({0: {"move": "flashkick", "x": 1.0}, 1: {"move": "wait"}})
+	var landed := false
+	for _i in 30:   # (to the tick it lands)
+		s.step()
+		if _types(s.events).has("hit"):
+			landed = true
+			break
+	_check("...not every move frees you on a hit: the Flash Kick doesn't (still in it as it lands)",
+			landed and s.fighters[0].move == "flashkick")
 	s = _duel()
 	s.apply({0: {"move": "jab"}, 1: {"move": "sidekick"}})
 	evs = _play(s, {})

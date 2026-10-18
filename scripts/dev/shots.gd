@@ -94,7 +94,11 @@ func run(game: Control, out: String) -> void:
 ## (tools/reel.sh) to show the effects moving.
 func reel(game: Control, seconds: float) -> void:
 	game.auto_me = true
-	game.start_local(3, "ffa", 0)
+	var opp := 3   # (-- --opp=N: how many bots against you)
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--opp="):
+			opp = int(arg.trim_prefix("--opp="))
+	game.start_local(opp, "ffa", 0)
 	await _wait(int(seconds * 60.0))
 	get_tree().quit()
 

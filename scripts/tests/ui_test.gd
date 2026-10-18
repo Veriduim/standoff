@@ -150,6 +150,9 @@ func _test_hit_effects() -> void:
 			% [g.stage.advantage.get(1, 0), g.banner.text], g.phase == "pick" and int(g.stage.advantage.get(1, 0)) > 0
 			and g.banner.text.ends_with("30"))
 	_check("the HP lost shows as a white chunk before it drains", seen["lag"])
+	for _i in 4:   # (the jab's combo over first)
+		if g.sim.reeling(g.sim.fighters[1]):
+			_watch(g, {"move": "wait"})
 	g.sim.fighters[0].pos.x = g.sim.fighters[1].pos.x - 70.0
 	_watch(g, {"move": "sweep", "x": 1.0})   # (a sweep leaves them reeling long enough for a jab)
 	g.sim.fighters[0].pos.x = g.sim.fighters[1].pos.x - 66.0
@@ -293,7 +296,7 @@ func _test_multiplayer_qol() -> void:
 
 func _test_hold_mid_move() -> void:
 	_section("Mid-move you can always go back to waiting it out (Timmy 22:37): Hold in Movement and on its button")
-	for cs: Array in [["walk", 600.0, "jab", "mid-walk"], ["axekick", 150.0, "dash", "stuck in an Axe Kick"]]:
+	for cs: Array in [["walk", 600.0, "jab", "mid-walk"], ["axekick", 250.0, "wait", "stuck in an Axe Kick"]]:
 		var g := _screen()
 		g.start_local(1, "ffa")
 		g.bots.clear()

@@ -129,7 +129,15 @@ one stage; each attack aims at a picked target.
   your colour; a new lobby starts with the styles switched on at home (the owner changes them in RULES); the study
   (Standoff Workshop/references/dancer, tools/dancer_refs.py) -> Outfit (scripts/ui/outfit.gd): hair (ponytail / bun /
   long), a veil, cloth panels or a skirt, sleeves, a waist - four looks on a sheet for his pick (-- --dancerlab,
-  -- --look=N to try one in game). Off until he picks.
+  -- --look=N to try one in game). Off until he picks. 22:26 "Just go no clothes just fans" / 22:30 "Just keep it as A": the outfit went.
+- 22:37-22:39 -> 0.9.5: the enemy's side always shown (mid-move: what they're doing), Hold in Movement mid-move,
+  tabs Attack / Special / Super / Movement / Defense.
+- 22:40 "We dont do things big enough or for enough frames. Our movements are really small and unexpressive. We need to
+  elevate this a lot please" -> 0.10.0: YOMI covers ground - dashes ~2x as far and faster, walking / back step / Dodge
+  faster, jumps higher and longer, air dash longer; lunges on the strikes that stood still; knockback x1.35, launches
+  higher; poses swing further from the stance (Poses.exaggerate - body and arms x1.32, legs x1.12, capped); effects
+  x1.3, hits hold longer (hitstop x1.35) and shake more; afterimages last longer and show sooner; the camera comes in to
+  x1.8. OPP=n tools/reel.sh for a 1v1 clip.
 
 ## To tune / later
 - **Match length with 6:** bot matches take 120-270 decision points with 6 fighters (50-90 with 2). At ~10 s a decision

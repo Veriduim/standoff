@@ -89,6 +89,7 @@ const REUSE_DECAY := 0.25     ## a move used again in the same combo stuns this 
 const REUSE_FLOOR := 0.3      ## ...down to this share
 const LEAN_PUSH := 2.5        ## a lean adds this much to the knockback (more as the combo grows)
 const LAUNCH_HIT := 7         ## the combo hit that always launches someone on the ground
+const KB_SCALE := 1.35        ## every hit's knockback (22:40 "We dont do things big enough" - launches that fly)
 const WALL_BOUNCE := 0.6      ## how much of their speed someone launched into a wall keeps bouncing off it
 const WALL_STUN := 3          ## ...and the stun it adds
 const DEFAULT := {"move": "wait"}   ## a pick that never came (a turn timer ran out)
@@ -1218,14 +1219,14 @@ func _hurt(a: Fighter, d: Fighter, e: Dictionary, type: String, src := "", side_
 	var side := side_dir if side_dir != 0.0 else float(a.facing)
 	if e.get("away", false):   # (a Burst blows everyone away from the one bursting, front or back)
 		side = signf(d.pos.x - a.pos.x) if absf(d.pos.x - a.pos.x) > 1.0 else float(a.facing)
-	d.vel = Vector2(float(kb[0]) * side, float(kb[1])) / weight
+	d.vel = Vector2(float(kb[0]) * side, float(kb[1])) * KB_SCALE / weight
 	if d.di != Vector2.ZERO:   # (their lean: added to the knockback - on the ground a flat hit only takes its sideways part)
 		var lean := d.di
 		if d.grounded() and float(kb[1]) >= 0.0:
 			lean.y = 0.0
 		d.vel += lean * LEAN_PUSH * (1.0 + 0.1 * d.combo)
 	if d.combo == LAUNCH_HIT and d.pos.y >= 0.0 and d.vel.y > -4.0:   # (the 7th hit on the ground always launches)
-		d.vel.y = -9.0
+		d.vel.y = -11.5
 	# combo pushback: the longer the combo, the further the hitter's pushed off (not their speed - their place)
 	if src == "":   # (combo pushback - on the hitter, when it's their own body that hit)
 		a.pos.x -= side * minf(COMBO_PUSH * float(d.combo), COMBO_PUSH_MAX) * 0.5

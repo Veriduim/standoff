@@ -179,7 +179,51 @@ static func blend(a: Dictionary, b: Dictionary, t: float) -> Dictionary:
 
 ## The pose for one recorded tick: [x, y, facing, move, frame, state, hp, meter] (Sim.record) - reeling, blocking,
 ## knocked out and the air come first; else the move's keyframes, eased between.
+## How much further than drawn a pose swings from the stance (22:40 "Our movements are really small and unexpressive"):
+## the body and arms by AMP, the legs by AMP_LEGS (a kick's foot stays near its hit's height), each bone at most
+## AMP_MAX radians more; limbs keep their lengths, a foot on the floor stays on it.
+const AMP := 1.32
+const AMP_LEGS := 1.12
+const AMP_MAX := 0.45
+const TREE := [["hip", "neck", 0], ["neck", "head", 0], ["neck", "elbow_f", 0], ["elbow_f", "hand_f", 0],
+	["neck", "elbow_b", 0], ["elbow_b", "hand_b", 0], ["hip", "knee_f", 1], ["knee_f", "foot_f", 1], ["hip", "knee_b", 1],
+	["knee_b", "foot_b", 1]]
+
+
+static func exaggerate(pose: Dictionary) -> Dictionary:
+	var base := get_pose("idle")
+	var out := {}
+	var hip: Vector2 = pose["hip"]
+	out["hip"] = hip + Vector2(0.0, (hip.y - (base["hip"] as Vector2).y) * 0.35)   # (crouches go lower, leaps higher)
+	for b: Array in TREE:
+		var p0: Vector2 = pose[b[0]]
+		var p1: Vector2 = pose[b[1]]
+		var v := p1 - p0
+		var vi := (base[b[1]] as Vector2) - (base[b[0]] as Vector2)
+		var dev := wrapf(v.angle() - vi.angle(), -PI, PI)
+		var k := AMP_LEGS if int(b[2]) == 1 else AMP
+		var more := clampf(dev * (k - 1.0), -AMP_MAX, AMP_MAX)
+		out[b[1]] = (out[b[0]] as Vector2) + Vector2.from_angle(v.angle() + more) * v.length()
+	var grounded := -INF   # (a foot that was on the floor is on it still)
+	for j: String in ["foot_f", "foot_b"]:
+		if (pose[j] as Vector2).y >= -2.0:
+			grounded = maxf(grounded, (out[j] as Vector2).y)
+	if grounded > -INF:
+		var dy := 0.0 - grounded
+		for j: String in out:
+			out[j] = (out[j] as Vector2) + Vector2(0.0, dy)
+	return out
+
+
 static func for_record(character: String, r: Array) -> Dictionary:
+	var pose := _for_record(character, r)
+	var state := int(r[5])
+	if state == 4 or state == 5 or (str(r[3]) in ["", "wait"] and state == 0):   # (lying down and standing: as drawn)
+		return pose
+	return exaggerate(pose)
+
+
+static func _for_record(character: String, r: Array) -> Dictionary:
 	var state := int(r[5])
 	var air := float(r[1]) < -2.0
 	var mv := str(r[3])

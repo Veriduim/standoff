@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # A video of bots playing a match at normal speed (the effects moving), rendered off-screen.
-#   tools/reel.sh <out.mp4> [seconds]
+#   [OPP=n] tools/reel.sh <out.mp4> [seconds]   (OPP: bots against you, default 3)
 # Renders on the GPU - not while a game is running on it. Silent (no audio track).
 cd "$(dirname "$0")/.." || exit 1
 GODOT="${GODOT:-/c/Users/ajisa/Documents/LocalTools/Godot_v4.7.2-stable_win64_console.exe}"
@@ -12,6 +12,6 @@ busy=$(nvidia-smi --query-compute-apps=process_name --format=csv,noheader 2>/dev
 if [ -n "$busy" ]; then echo "GPU IN USE by $busy - not rendering"; exit 3; fi
 TMP="$(mktemp -d)"
 timeout $((SECS * 3 + 60)) "$GODOT" --path . --position 9000,9000 --resolution 1280x720 --write-movie "$TMP/reel.avi" \
-  -- --reel="$SECS" 2>&1 | grep -E "Done recording|ERROR" | grep -v "BUG\|leaked\|Pages" | head -5
+  -- --reel="$SECS" ${OPP:+--opp=$OPP} 2>&1 | grep -E "Done recording|ERROR" | grep -v "BUG\|leaked\|Pages" | head -5
 "$FFMPEG" -v error -y -i "$TMP/reel.avi" -an -c:v libx264 -pix_fmt yuv420p -crf 22 -preset veryfast "$OUT" && echo "reel $OUT"
 rm -rf "$TMP"
