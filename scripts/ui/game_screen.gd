@@ -151,6 +151,7 @@ func _layout() -> void:
 	post.position = Vector2.ZERO   # (sized by hand - this screen's own rect isn't the viewport's)
 	post.size = vp
 	_stage_band()
+	over_panel.reset_size()   # (fits what's shown - online there's no Rematch)
 	over_panel.position = (vp - over_panel.size) / 2.0
 
 
@@ -167,30 +168,32 @@ func _stage_band() -> void:
 # ---------- the start and end ----------
 
 func _build_over() -> void:
-	over_panel = PanelContainer.new()
-	over_panel.add_theme_stylebox_override("panel", Ui.box())
-	over_panel.size = Vector2(520, 230)
+	over_panel = PanelContainer.new()   # (00:57 "its side by side instead of stacked" - stacked, like the ☰ menu)
+	var st := Ui.box(Color("#15161ef4"), 16)
+	st.set_content_margin_all(22)
+	st.border_color = Color("#3a3d4d")
+	st.set_border_width_all(2)
+	over_panel.add_theme_stylebox_override("panel", st)
 	add_child(over_panel)
 	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", 16)
+	v.add_theme_constant_override("separation", 10)
 	over_panel.add_child(v)
-	var l := Ui.label("", 40)
+	var l := Ui.label("", 36)
 	l.name = "Result"
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(l)
-	var h := HBoxContainer.new()
-	h.alignment = BoxContainer.ALIGNMENT_CENTER
-	h.add_theme_constant_override("separation", 16)
-	v.add_child(h)
-	var again := Ui.button("Rematch", func() -> void: start_local(setup_count, setup_mode, setup_colour))
+	var again := Ui.button("Rematch", func() -> void: start_local(setup_count, setup_mode, setup_colour), 22)
 	again.name = "Rematch"
-	h.add_child(again)
-	var rp := Ui.button("Replay", func() -> void: watch_replay())   # (23:59 "No replay on fight finish?")
+	for k in ["normal", "hover", "focus"]:
+		again.add_theme_stylebox_override(k, Ui.box(Color("#d63d3d"), 12))
+	again.add_theme_stylebox_override("pressed", Ui.box(Color("#a82f2f"), 12))
+	var rp := Ui.button("Replay", func() -> void: watch_replay(), 22)   # (23:59 "No replay on fight finish?")
 	rp.name = "Replay"
-	h.add_child(rp)
-	var menu := Ui.button("Menu", func() -> void: _leave_match())
+	var menu := Ui.button("Menu", func() -> void: _leave_match(), 22)
 	menu.name = "Menu"
-	h.add_child(menu)
+	for b: Button in [again, rp, menu]:
+		b.custom_minimum_size = Vector2(300, 54)
+		v.add_child(b)
 	over_panel.visible = false
 
 
@@ -529,6 +532,7 @@ func _on_net_end(reason: String) -> void:
 	(over_panel.find_child("Rematch", true, false) as Button).visible = false
 	(over_panel.find_child("Menu", true, false) as Button).text = "Back to lobby"
 	over_panel.visible = true
+	_layout()
 	banner.text = ""
 
 
@@ -716,6 +720,7 @@ func _end_replay() -> void:
 	stage.show_tick(sim.record(), [], sim.record_shots())
 	_update_cards()
 	over_panel.visible = true
+	_layout()
 
 
 ## Undo (against bots only): back to your last pick - the match as it was, everyone's ghosts and cards with it.
@@ -889,6 +894,7 @@ func _finish() -> void:
 	_menu_shown(false)
 	(over_panel.find_child("Menu", true, false) as Button).text = "Back to lobby" if net_match != null else "Menu"
 	over_panel.visible = true
+	_layout()
 	banner.text = ""
 	leave_btn.visible = false
 
