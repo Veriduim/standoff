@@ -82,6 +82,9 @@ func show_tick(rec: Array, events: Array = [], flying: Array = []) -> void:
 	var prev := frame
 	frame = rec
 	shots = flying
+	for sh: Array in flying:   # (the ground wave kicks up dust as it runs)
+		if str(sh[2]) == "ripple" and int(sh[6]) % 3 == 0:
+			fx.dust(Vector2(float(sh[0]), -2.0), 0.55, _tick_n * 7 + int(sh[6]))
 	if quiet:
 		fx.clear()
 		_spin.clear()
@@ -420,15 +423,34 @@ func _shot(s: Array, alpha: float) -> void:
 					draw_circle(at + back * k, r * (0.8 - 0.12 * k), c, true, -1.0, true)
 			Stick.fan(self, at, Vector2.from_angle(spin), r, 0.9, colour_of(int(s[3])) if alpha >= 1.0 else col,
 					alpha >= 1.0)
-		"ripple":
-			var w := 26.0 * zoom
-			var h := (12.0 + 4.0 * sin(float(s[6]) * 0.6)) * zoom
-			var pts := PackedVector2Array()
-			for k in 9:
-				var u := float(k) / 8.0
-				pts.append(at + Vector2((u - 0.5) * 2.0 * w, -sin(u * PI) * h + 10.0 * zoom))
-			draw_polyline(pts, col, maxf(2.0, 6.0 * zoom), true)
-			draw_polyline(pts, Color(1, 1, 1, alpha * 0.9), maxf(1.0, 2.0 * zoom), true)
+		"ripple":   # (22:53 "what is the ground wave?" - a shockwave running along the floor off her fans' slam)
+			var floor_y := w2s(Vector2(0, 0)).y
+			var base := Vector2(at.x, floor_y)
+			var pulse := 0.85 + 0.15 * sin(float(s[6]) * 0.9)
+			var w := 46.0 * zoom
+			var h := 52.0 * zoom * pulse
+			for layer in 3:   # (a dome of wind: three shells, the outer faint)
+				var k := 1.0 - layer * 0.22
+				var dome := PackedVector2Array([base + Vector2(-w * k, 0)])
+				for n in 13:
+					var u := float(n) / 12.0
+					var x := (u * 2.0 - 1.0) * w * k
+					var y := -h * k * pow(maxf(0.0, 1.0 - pow(u * 2.0 - 1.0, 2.0)), 0.6)
+					dome.append(base + Vector2(x + dir * h * 0.25 * (1.0 - u) * k, y))
+				dome.append(base + Vector2(w * k, 0))
+				var c := col
+				c.a = alpha * (0.16 + 0.12 * layer)
+				draw_colored_polygon(dome, c)
+				var crest := col.lightened(0.45)
+				crest.a = alpha * (0.5 + 0.25 * layer)
+				draw_polyline(dome, crest, maxf(1.5, (2.0 + layer * 1.5) * zoom), true)
+			for k in 3:   # (streaks of wind trailing it, low)
+				var y0 := -(8.0 + k * 12.0) * zoom
+				var a0 := base + Vector2(-dir * (w * 0.6 + k * 8.0 * zoom), y0)
+				var a1 := a0 + Vector2(-dir * (40.0 + k * 14.0) * zoom, 0)
+				var sc := Color(1, 1, 1, alpha * (0.55 - k * 0.15))
+				draw_line(a0, a1, sc, maxf(1.0, 2.5 * zoom), true)
+			draw_line(base + Vector2(-w, 1), base + Vector2(w, 1), Color(1, 1, 1, alpha * 0.8), maxf(1.5, 3.0 * zoom), true)
 
 
 func _free(r: Array) -> bool:

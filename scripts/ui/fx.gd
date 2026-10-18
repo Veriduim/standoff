@@ -89,8 +89,8 @@ func on_event(type: String, at: Vector2, face: float, dmg: int, by: Color, victi
 			splash(0.5, at)
 			freeze(0.18, victim)
 			kick(4.0)
-		"bounce":   # (off the ground: a flat shockwave and dust)
-			_add("shock", at, Vector2.ZERO, 0.25, Color.WHITE, 70.0)
+		"bounce":   # (off the ground: a flat shockwave and dust - small and grey, 22:57 no massive white circles)
+			_add("shock", at, Vector2.ZERO, 0.22, Color("#9a9daa"), 38.0)
 			for i in 10:
 				var side := 1.0 if i % 2 == 0 else -1.0
 				_add("chip", at, Vector2(side * _rng.randf_range(150.0, 360.0), _rng.randf_range(-260.0, -80.0)),
@@ -145,7 +145,7 @@ func on_event(type: String, at: Vector2, face: float, dmg: int, by: Color, victi
 			splash(0.6, at)
 			freeze(0.4, -1)
 		"wall":   # (launched into the wall and off it)
-			_add("shock", at, Vector2.ZERO, 0.22, Color.WHITE, 56.0)
+			_add("shock", at, Vector2.ZERO, 0.2, Color("#9a9daa"), 34.0)
 			_add("spokes", at, Vector2.ZERO, 0.14, Color.WHITE, 40.0)
 			for i in 6:
 				_add("chip", at, Vector2(-face * _rng.randf_range(150.0, 380.0), _rng.randf_range(-300.0, 80.0)),
@@ -159,9 +159,9 @@ func on_event(type: String, at: Vector2, face: float, dmg: int, by: Color, victi
 				_add("text", at + Vector2(0, -40), Vector2(0, -50), 0.42, Color("#ff5d5d"), 17.0)   # (small - they're common)
 				parts[-1]["txt"] = "COUNTER"
 				flash[victim] = 0.08
-			if dmg >= 30:   # (a hard one: the shockwave, impact lines, the one hit flashes white)
-				_add("shock", at, Vector2.ZERO, 0.24, Color.WHITE, 62.0 * s)
-				_add("spokes", at, Vector2.ZERO, 0.14, Color.WHITE, 46.0 * s)
+			if dmg >= 30:   # (a hard one: impact lines in the hitter's colour, the one hit flashes white - no big white
+				# ring any more: 22:57 "I dont love the massive white circle thing")
+				_add("spokes", at, Vector2.ZERO, 0.14, by.lightened(0.55), 34.0 * s)
 				flash[victim] = 0.06
 			if dmg >= 45:
 				splash(0.35, at)
