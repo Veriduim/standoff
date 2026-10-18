@@ -22,9 +22,9 @@ func _init(seed_value := 1) -> void:
 func choose(sim: Sim, id: int) -> Dictionary:
 	var f := sim.get_f(id)
 	var t := sim.nearest_enemy(f)
-	if sim.reeling(f):   # (in a combo: Burst when it's ready - more likely the more it's hurt - else lean away)
-		var hurt := 1.0 - float(f.hp) / float(f.max_hp)
-		if sim.can_burst(f) and rng.randf() < 0.3 + hurt * 0.5:
+	if sim.reeling(f):   # (in a combo: Burst once it's a real combo or it's low - not on every first hit - else lean away)
+		var low := float(f.hp) < 0.35 * float(f.max_hp)
+		if sim.can_burst(f) and (f.combo >= 3 or low) and rng.randf() < 0.5:
 			return {"move": "burst"}
 		var away := -signf(t.pos.x - f.pos.x) if t != null and absf(t.pos.x - f.pos.x) > 1.0 else 0.0
 		return {"move": "hold", "x": away, "y": rng.randf_range(-1.0, 0.3)}

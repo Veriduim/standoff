@@ -10,14 +10,15 @@ extends RefCounted
 ##
 ## Getting out of a stun lock (Timmy 18:37: "Burst is the move we do to get out of stun lock. I also think a certain
 ## amount of time needs to pass for the stunlock yo go away?"):
-## - Burst: everyone's gauge starts empty and fills with match time, faster when they take hits (BURST_FULL).
+## - Burst: everyone starts with one (a full gauge); once used it refills slowly with match time (BURST_FULL).
 ## - Someone reeling with a full gauge gets a pick whenever the match stops for someone else: Burst or Take It. A Burst
 ##   ends their stun, they can't be touched for a moment, and everyone near them is blown back.
 ## - 18:40: "Im pretty sure combos can last forever but the burst gauge fills up so you can burst out. Burst can also be
 ##   blocked". 18:42: "Review the ref material as it covers most of it" - the YOMI wiki (Combo Mechanics, Blocking; study
 ##   only, Standoff Workshop/references/yomi/wiki_text) has it as: the gauge fills with time and faster for damage taken
-##   OR dealt; a Burst hits on frame 2, can't be touched, does no damage and blows the attacker far back; blocking a
-##   Burst parries it (the burster is stuck and a fresh combo can start); a combo can go on forever but the same move
+##   OR dealt; a Burst hits on frame 2, can't be touched, does no damage and blows the attacker far back; guarding
+##   blocks it (safe, a short push - the Glossary) and a Parry on its frame parries it (the burster is stuck and a
+##   fresh combo can start); a combo can go on forever but the same move
 ##   used again in it stuns for less (REUSE_DECAY); and someone reeling gets a pick at every stop - lean (a direction
 ##   that nudges their knockback, LEAN_PUSH) or Burst when the gauge is full.
 
@@ -31,9 +32,12 @@ const CLASH_PUSH := 5.0
 const PARRY_STUN := 18
 const TECH_LOCK := 12
 const METER_MAX := 100
-const BURST_FULL := 600       ## ticks of match time to fill the Burst gauge (10 s)...
-const BURST_PER_DMG := 3      ## ...each point of damage taken adds this many...
-const BURST_PER_DEALT := 1    ## ...and each point dealt this many
+## The Burst gauge, in ticks of match time to fill (Timmy 19:02: "You can kind of burst a lot im seeing which is weird" -
+## it was 600 ticks + 3 per point of damage taken: bots burst 2-3 times in a 30 s match). The wiki's Glossary: "Burst
+## will slowly regenerate over time, and at an increased rate while being comboed".
+const BURST_FULL := 1500      ## 25 s of match time...
+const BURST_REELING := 2      ## ...filling this many times faster while they're reeling in a combo...
+const BURST_DEALT_DIV := 4    ## ...and a little for damage dealt (a point per this many)
 const REUSE_DECAY := 0.25     ## a move used again in the same combo stuns this much less each time...
 const REUSE_FLOOR := 0.3      ## ...down to this share
 const LEAN_PUSH := 2.5        ## a lean adds this much to the knockback (more as the combo grows)
@@ -65,6 +69,7 @@ static func create(players: Array, match_mode := "ffa") -> Sim:
 		var st := Moves.stats(f.character)
 		f.max_hp = int(st["hp"])
 		f.hp = f.max_hp
+		f.burst = BURST_FULL   # (one Burst to start - YOMI's HUD shows both gauges full at the round start)
 		var x := lerpf(-STAGE_HALF * 0.75, STAGE_HALF * 0.75, (i + 0.5) / n) if n > 1 else 0.0
 		f.pos = Vector2(x, 0.0)
 		f.facing = 1 if x <= 0.0 else -1
@@ -387,7 +392,7 @@ func _separate() -> void:
 func _count(f: Fighter) -> void:
 	if f.ko:
 		return
-	f.burst = mini(BURST_FULL, f.burst + 1)
+	f.burst = mini(BURST_FULL, f.burst + (BURST_REELING if f.stun > 0 else 1))
 	if f.stun > 0:
 		f.stun -= 1
 		if f.stun == 0:
@@ -544,19 +549,10 @@ func _strike(a: Fighter, d: Fighter, e: Dictionary, d_kind: String, d_frame: int
 			_event("parry", d, a)
 			return
 	if (d_kind == "guard" or d.blockstun > 0) and not reeling:
-		if e.get("away", false):   # (a Burst into a guard is parried: the burster's stuck, a fresh combo can start)
-			a.move = ""
-			a.stun = PARRY_STUN
-			a.vel = Vector2.ZERO
-			d.move = ""
-			d.blockstun = 0
-			d.meter += 15
-			_event("parry", d, a)
-			return
 		var chip := int(e.get("chip", 0))
 		d.hp -= chip
 		d.blockstun = int(e.get("block", 8))
-		d.vel.x = a.facing * 3.0
+		d.vel.x = (signf(d.pos.x - a.pos.x) if e.get("away", false) and absf(d.pos.x - a.pos.x) > 1.0 else float(a.facing)) * 3.0
 		a.meter += 2
 		d.meter += 3
 		_event("block", a, d, chip)
@@ -585,8 +581,7 @@ func _hurt(a: Fighter, d: Fighter, e: Dictionary, type: String) -> void:
 		used = [int(used[0]) + 1, a.instance]
 		d.combo_used[a.move] = used
 	d.stun = maxi(1, int(round(float(e["stun"]) * maxf(REUSE_FLOOR, 1.0 - REUSE_DECAY * (int(used[0]) - 1)))))
-	d.burst = mini(BURST_FULL, d.burst + dmg * BURST_PER_DMG)
-	a.burst = mini(BURST_FULL, a.burst + dmg * BURST_PER_DEALT)
+	a.burst = mini(BURST_FULL, a.burst + dmg / BURST_DEALT_DIV)
 	d.move = ""
 	d.blockstun = 0
 	d.lock = 0

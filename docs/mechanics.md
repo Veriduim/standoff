@@ -13,8 +13,8 @@ the rules of play. The names, art, characters and code are not ours to take, and
 |---|---|---|
 | Hitstun | You can only DI or Burst | You can only lean (Hold + the pad) or Burst |
 | Burst | From hitstun with a full gauge; frame-2 hit; can't be hit; no damage; launches the attacker; both back to neutral | `burst` (`Sim._burst`, Moves COMMON) |
-| Burst gauge | Fills with time, faster when taking or dealing damage | `BURST_FULL` 600 ticks, `BURST_PER_DMG` 3, `BURST_PER_DEALT` 1; starts empty |
-| Blocking a Burst | Parries it, so the attacker can start a fresh combo | A Burst into a guard counts as a parry |
+| Burst gauge | "Slowly regenerate over time, and at an increased rate while being comboed"; full at the round start (the HUD in the screenshots) | Starts full; `BURST_FULL` 1500 ticks (25 s) to refill, x2 while reeling, +1 per 4 damage dealt. Timmy 19:02 "You can kind of burst a lot" - it was 600 ticks + 3 per damage taken, so 2-3 Bursts each in a 30 s match; now about 1 each (`scripts/dev/burst_stats.gd`) |
+| Blocking a Burst | Blocked = safe, much less knockback; parried = it resets scaling and can be punished (Glossary) | Guard blocks it (a short push); Parry Early on its frame parries it (the burster is stuck) |
 | Endless combos | Combos can last forever, but reusing a move in the same combo gives less hitstun | `REUSE_DECAY` 0.25 per reuse, floor 0.3 |
 | DI | Shifts knockback; set before the hit; stronger as the combo grows | Lean: a direction picked on your reeling turn, `LEAN_PUSH` x (1 + 0.1 x combo) |
 | Hit cancel | Most melee attacks free you when they land; some limit what you can do next | Attacks free you on a hit, except `no_cancel` ones (uppercut, flash kick); the move just landed can't be picked that turn |

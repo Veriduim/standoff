@@ -124,6 +124,7 @@ func _test_directions_and_kit() -> void:
 func _test_combos_and_ko() -> void:
 	_section("Combos, knockouts and the winner")
 	var s := _duel()
+	s.fighters[1].burst = 0   # (their Burst used up)
 	s.apply({0: {"move": "jab"}, 1: {"move": "wait", "x": 40}})
 	s.run_segment()
 	var first := 450 - s.fighters[1].hp
@@ -151,9 +152,11 @@ func _test_combos_and_ko() -> void:
 func _test_escaping_combos() -> void:
 	_section("Combos and getting out of them: Burst, leaning, hit cancels, giving way, scaling, counters, walls")
 	var s := _duel()
-	_check("everyone's Burst gauge starts empty", s.fighters.all(func(f: Fighter) -> bool: return f.burst == 0))
+	_check("everyone starts with one Burst (a full gauge)", s.fighters.all(func(f: Fighter) -> bool: return f.burst == Sim.BURST_FULL))
+	for f in s.fighters:
+		f.burst = 0
 	_play(s, {0: {"move": "jab"}, 1: {"move": "wait"}})
-	_check("...and fills with time, faster for damage taken than dealt (%d / %d)" % [s.fighters[1].burst, s.fighters[0].burst],
+	_check("...and fills with time, faster while reeling in a combo (%d / %d)" % [s.fighters[1].burst, s.fighters[0].burst],
 			s.fighters[1].burst > s.fighters[0].burst and s.fighters[0].burst > 0)
 	s = _duel()
 	s.fighters[1].burst = Sim.BURST_FULL
@@ -171,7 +174,15 @@ func _test_escaping_combos() -> void:
 	s.apply({0: {"move": "jab"}, 1: {"move": "wait"}})
 	s.run_segment()
 	evs = _play(s, {0: {"move": "guard"}, 1: {"move": "burst"}})
-	_check("blocking a Burst parries it: the burster is left stuck (%s)" % [_types(evs)], _types(evs).has("parry"))
+	_check("guarding blocks a Burst - safe, a short push (%s)" % [_types(evs)], _types(evs).has("block")
+			and not _types(evs).has("parry") and s.fighters[0].pos.x > -200.0)
+	s = _duel()
+	s.fighters[1].burst = Sim.BURST_FULL
+	s.apply({0: {"move": "jab"}, 1: {"move": "wait"}})
+	s.run_segment()
+	evs = _play(s, {0: {"move": "parry_early"}, 1: {"move": "burst"}})
+	_check("...and a Parry on its frame parries it: the burster is left stuck (%s)" % [_types(evs)],
+			_types(evs).has("parry"))
 	var leans := []
 	for lean: float in [0.0, -1.0]:
 		var d := _duel()
