@@ -1,0 +1,340 @@
+class_name Fx
+extends RefCounted
+## The stage's hit effects - the first style pass (Timmy, 18 Oct 18:07: "Your suggestion looks good" - picks 4, 5, 6, 9
+## from the YOMI study; our own drawing, the study is reference only):
+##   sparks    a spiky burst where a hit lands, rings and squares flying on along the hit, chips, a white shockwave on
+##             big hits; a guard arc on a block, a glint on a parry, an orange flash on a clash, a big double ring on a KO
+##   freeze    the playback holds still a moment on contact (hitstop) - longer for harder hits; the one hit shakes in
+##             place; a small screen shake (kept small - in Life After Dark he found a big shake "way too much")
+##   combos    the hit count and damage over whoever is being comboed, in the hitter's colour
+##   arcs      the striking hand or foot leaves a pale arc while its hit is out
+## Positions are world px (StageView draws them through its camera). The screens read frozen() before playing on.
+
+const YELLOW := Color("#ffd23f")
+const HOT := Color("#fff6cf")
+const BLOCK := Color("#a6dcff")
+const ORANGE := Color("#ff9f1c")
+const TRAIL_KEEP := 7        ## ticks of a limb's path kept for its arc
+const TRAIL_FADE := 0.12     ## seconds an arc takes to fade once the hit's over
+const INNER := 0.5           ## a swoosh's inner edge, as a share of the way from the joint to the tip
+const COMBO_HOLD := 0.8      ## seconds a finished combo's count stays up, then fades over COMBO_FADE
+const COMBO_FADE := 0.4
+
+var parts: Array = []        ## {k: kind, p: world pos, v: px/s, age, life, c: colour, s: size, r: angle, w: spin, sp}
+var hitstop := 0.0           ## seconds the playback holds (frozen())
+var jitter: Array = []       ## ids shaking in place during the freeze
+var shake := 0.0             ## screen px, fading
+var offset := Vector2.ZERO   ## this frame's shake (StageView adds it to the camera)
+var combos := {}             ## victim id -> {hits, dmg, by: colour, pop: 1 -> 0, end: -1 live / seconds since it ended}
+var trails := {}             ## fighter id -> {pts: [[tip, pivot], ...], c: colour, fade: -1 live / seconds}
+var _rng := RandomNumberGenerator.new()
+static var _bold: FontVariation
+
+
+func frozen() -> bool:
+	return hitstop > 0.0
+
+
+func clear() -> void:
+	parts.clear()
+	jitter.clear()
+	combos.clear()
+	trails.clear()
+	hitstop = 0.0
+	shake = 0.0
+	offset = Vector2.ZERO
+
+
+## One sim event at a world point. `face` = the hitter's facing (sparks fly on along the hit), `reeling` = the one hit
+## was already reeling (the combo goes on).
+func on_event(type: String, at: Vector2, face: float, dmg: int, by: Color, victim: int, victim_col: Color,
+		reeling: bool, seed_n: int) -> void:
+	_rng.seed = seed_n
+	match type:
+		"hit", "throw", "armor":
+			var s := clampf(float(dmg) / 32.0, 0.5, 1.8)
+			_burst(at, face, s, by, victim_col)
+			if dmg >= 30:
+				_add("shock", at, Vector2.ZERO, 0.24, Color.WHITE, 62.0 * s)
+			freeze(clampf(0.04 + float(dmg) * 0.0018, 0.05, 0.14), victim)
+			kick(clampf(float(dmg) * 0.1, 1.5, 5.0))
+			if type != "armor":
+				_count(victim, dmg, by, reeling)
+		"block":
+			_add("guard", at, Vector2.ZERO, 0.2, BLOCK, 30.0, -face)
+			for i in 4:
+				_add("chip", at, _fan(-face, 1.3) * _rng.randf_range(160.0, 320.0), _rng.randf_range(0.2, 0.32),
+						Color.WHITE, _rng.randf_range(2.5, 4.0))
+			freeze(0.04, victim)
+			kick(1.0)
+		"parry":
+			_add("glint", at, Vector2.ZERO, 0.26, Color.WHITE, 58.0)
+			_add("shock", at, Vector2.ZERO, 0.2, BLOCK, 44.0)
+			freeze(0.12, -1)
+			kick(2.0)
+		"clash", "tech":
+			var big := type == "clash"
+			_add("star", at, Vector2.ZERO, 0.16, ORANGE, 30.0 if big else 20.0)
+			for i in (8 if big else 4):
+				var side := 1.0 if i % 2 == 0 else -1.0
+				_add("box" if i % 3 else "ring", at, _fan(side, 1.0) * _rng.randf_range(220.0, 480.0),
+						_rng.randf_range(0.25, 0.4), ORANGE if i % 2 else YELLOW, _rng.randf_range(3.0, 6.0))
+			freeze(0.08 if big else 0.05, -1)
+			kick(2.5 if big else 1.5)
+		"ko":
+			_add("shock", at, Vector2.ZERO, 0.42, victim_col.lightened(0.35), 150.0)
+			_add("shock", at, Vector2.ZERO, 0.3, Color.WHITE, 96.0)
+			for i in 14:
+				_add("chip", at, Vector2.from_angle(_rng.randf() * TAU) * _rng.randf_range(200.0, 560.0),
+						_rng.randf_range(0.4, 0.7), victim_col if i % 3 else Color.WHITE, _rng.randf_range(3.0, 6.0))
+			freeze(0.22, victim)
+			kick(6.0)
+
+
+func freeze(seconds: float, who: int) -> void:
+	hitstop = maxf(hitstop, seconds)
+	if who >= 0 and not jitter.has(who):
+		jitter.append(who)
+
+
+func kick(px: float) -> void:
+	shake = maxf(shake, px)
+
+
+## The burst where a hit lands: a spiky star, rings and squares flying on the way the hit goes, a few chips.
+func _burst(at: Vector2, face: float, s: float, by: Color, victim_col: Color) -> void:
+	_add("star", at, Vector2.ZERO, 0.15 + 0.05 * s, YELLOW, 30.0 * s)
+	for i in 5 + int(4.0 * s):
+		var c := YELLOW if i % 3 != 0 else by.lightened(0.45)
+		_add("ring" if i % 2 == 0 else "box", at, _fan(face, 1.1) * _rng.randf_range(260.0, 600.0) * (0.7 + 0.3 * s),
+				_rng.randf_range(0.28, 0.5), c, _rng.randf_range(4.5, 9.0))
+	for i in 2 + int(2.0 * s):
+		_add("chip", at, _fan(face, 0.9) * _rng.randf_range(180.0, 380.0), _rng.randf_range(0.3, 0.5), victim_col,
+				_rng.randf_range(3.0, 5.0))
+
+
+## A direction fanned round the way a hit goes (a little upward).
+func _fan(face: float, spread: float) -> Vector2:
+	var ang := Vector2(face, -0.35).angle() + _rng.randf_range(-spread, spread)
+	return Vector2.from_angle(ang)
+
+
+func _add(kind: String, at: Vector2, vel: Vector2, life: float, c: Color, size: float, extra := 0.0) -> void:
+	var p := {"k": kind, "p": at, "v": vel, "age": 0.0, "life": life, "c": c, "s": size, "r": _rng.randf() * TAU,
+		"w": _rng.randf_range(-9.0, 9.0), "x": extra}
+	if kind == "star":
+		var sp: Array = []
+		for i in 12:
+			sp.append(_rng.randf_range(0.65, 1.0) if i % 2 == 0 else 0.34)
+		p["sp"] = sp
+	parts.append(p)
+
+
+func _count(victim: int, dmg: int, by: Color, reeling: bool) -> void:
+	if victim < 0:
+		return
+	var c: Dictionary = combos.get(victim, {})
+	if reeling and not c.is_empty() and float(c["end"]) < 0.0:
+		c["hits"] = int(c["hits"]) + 1
+		c["dmg"] = int(c["dmg"]) + dmg
+		c["by"] = by
+		c["pop"] = 1.0
+	else:
+		combos[victim] = {"hits": 1, "dmg": dmg, "by": by, "pop": 1.0, "end": -1.0}
+
+
+## A combo ends when its victim stops reeling (or goes down) - the count then stays a moment and fades.
+func settle_combos(frame: Array) -> void:
+	for id: int in combos:
+		var c: Dictionary = combos[id]
+		if float(c["end"]) < 0.0 and (id >= frame.size() or int(frame[id][5]) != 1):
+			c["end"] = 0.0
+
+
+## A striking limb's tip and the joint it swings from (world), each tick its hit is out.
+func trail_point(id: int, tip: Vector2, pivot: Vector2, c: Color) -> void:
+	var t: Dictionary = trails.get(id, {})
+	if t.is_empty() or float(t["fade"]) >= 0.0:
+		t = {"pts": [], "c": c, "fade": -1.0}
+		trails[id] = t
+	var pts: Array = t["pts"]
+	pts.append([tip, pivot])
+	if pts.size() > TRAIL_KEEP:
+		pts.pop_front()
+
+
+func trail_end(id: int) -> void:
+	if trails.has(id) and float(trails[id]["fade"]) < 0.0:
+		trails[id]["fade"] = 0.0
+
+
+func update(delta: float) -> void:
+	hitstop = maxf(0.0, hitstop - delta)
+	if hitstop <= 0.0:
+		jitter.clear()
+	for p: Dictionary in parts:
+		p["age"] = float(p["age"]) + delta
+		var v: Vector2 = p["v"]
+		if p["k"] == "chip":
+			v.y += 1100.0 * delta
+			v *= pow(0.3, delta)
+		else:
+			v *= pow(0.02, delta)
+		p["v"] = v
+		p["p"] = (p["p"] as Vector2) + v * delta
+		p["r"] = float(p["r"]) + float(p["w"]) * delta
+	parts = parts.filter(func(p: Dictionary) -> bool: return float(p["age"]) < float(p["life"]))
+	shake *= pow(0.5, delta / 0.05)
+	if shake < 0.3:
+		shake = 0.0
+	offset = Vector2(_rng.randf_range(-1.0, 1.0), _rng.randf_range(-1.0, 1.0)) * shake
+	for id: int in combos.keys():
+		var c: Dictionary = combos[id]
+		c["pop"] = maxf(0.0, float(c["pop"]) - delta / 0.15)
+		if float(c["end"]) >= 0.0:
+			c["end"] = float(c["end"]) + delta
+			if float(c["end"]) > COMBO_HOLD + COMBO_FADE:
+				combos.erase(id)
+	for id: int in trails.keys():
+		if float(trails[id]["fade"]) >= 0.0:
+			trails[id]["fade"] = float(trails[id]["fade"]) + delta
+			if float(trails[id]["fade"]) > TRAIL_FADE:
+				trails.erase(id)
+
+
+# ---------- drawing (through the stage's camera) ----------
+
+## The arcs: pale, see-through, thin at the tail and widest at the limb's tip.
+func draw_trails(st: StageView) -> void:
+	for id: int in trails:
+		var t: Dictionary = trails[id]
+		var raw: Array = t["pts"]
+		if raw.size() < 2:
+			continue
+		# (between two ticks the tip swings round its joint - an arc, not a straight cut). The swoosh fills what the
+		# lower limb swept: from the tip in to a little past halfway to the joint.
+		var outer: Array[Vector2] = []
+		var inner: Array[Vector2] = []
+		for k in raw.size():
+			var a: Array = raw[k]
+			var b: Array = raw[mini(k + 1, raw.size() - 1)]
+			var ra := ((a[0] as Vector2) - (a[1] as Vector2))
+			var rb := ((b[0] as Vector2) - (b[1] as Vector2))
+			for s in (4 if k < raw.size() - 1 else 1):
+				var u := float(s) / 4.0
+				var pivot := (a[1] as Vector2).lerp(b[1], u)
+				var arm := Vector2.from_angle(lerp_angle(ra.angle(), rb.angle(), u)) * lerpf(ra.length(), rb.length(), u)
+				outer.append(st.w2s(pivot + arm))
+				inner.append(st.w2s(pivot + arm * INNER))
+		var span := 0.0
+		for k in outer.size() - 1:
+			span += outer[k].distance_to(outer[k + 1])
+		if span < 12.0:
+			continue
+		var fade := 1.0 if float(t["fade"]) < 0.0 else 1.0 - float(t["fade"]) / TRAIL_FADE
+		var col := (t["c"] as Color).lerp(Color.WHITE, 0.75)
+		var n := outer.size()
+		var cols: Array[Color] = []
+		for k in n:
+			var c := col
+			c.a = 0.85 * smoothstep(0.0, 0.55, float(k) / float(n - 1)) * fade
+			cols.append(c)
+		for k in n - 1:   # (raw triangles - a thin tail would fail draw_polygon's triangulation)
+			st.draw_primitive(PackedVector2Array([outer[k], outer[k + 1], inner[k + 1]]),
+					PackedColorArray([cols[k], cols[k + 1], cols[k + 1]]), PackedVector2Array())
+			st.draw_primitive(PackedVector2Array([outer[k], inner[k + 1], inner[k]]),
+					PackedColorArray([cols[k], cols[k + 1], cols[k]]), PackedVector2Array())
+		# a bright rim along the tip's path
+		var rim := PackedVector2Array()
+		var rim_cols := PackedColorArray()
+		for k in n:
+			rim.append(outer[k])
+			var c := Color(1, 1, 1, cols[k].a)
+			rim_cols.append(c)
+		st.draw_polyline_colors(rim, rim_cols, maxf(1.5, 3.0 * st.zoom), true)
+
+
+## Sparks, rings, shockwaves - over the fighters.
+func draw_parts(st: StageView) -> void:
+	var z := st.zoom
+	for p: Dictionary in parts:
+		var t := float(p["age"]) / float(p["life"])
+		var at := st.w2s(p["p"])
+		var c: Color = p["c"]
+		var s := float(p["s"]) * z
+		match str(p["k"]):
+			"star":   # (near full size the moment it lands - the freeze shows it - then it shrinks away)
+				var grow := (0.75 + 0.25 * minf(1.0, t / 0.2)) * (1.0 - maxf(0.0, (t - 0.5) / 0.5))
+				_star(st, at, s * grow, float(p["r"]), p["sp"], c)
+				_star(st, at, s * grow * 0.55, float(p["r"]) + 0.3, p["sp"], HOT)
+				st.draw_circle(at, s * grow * 0.22, Color.WHITE, true, -1.0, true)
+			"ring":
+				c.a = 1.0 - t * t
+				st.draw_arc(at, s, 0.0, TAU, 14, c, maxf(1.5, 3.0 * z), true)
+			"box":
+				c.a = 1.0 - t * t
+				var pts := PackedVector2Array()
+				for k in 5:
+					pts.append(at + Vector2.from_angle(float(p["r"]) + PI / 4.0 + k * PI / 2.0) * s * 1.3)
+				st.draw_polyline(pts, c, maxf(1.5, 3.0 * z), true)
+			"chip":
+				c.a = 1.0 - t * t
+				st.draw_rect(Rect2(at - Vector2(s, s) / 2.0, Vector2(s, s)), c)
+			"shock":
+				var e := 1.0 - pow(1.0 - t, 3.0)
+				c.a = 0.9 * (1.0 - t)
+				st.draw_arc(at, s * (0.35 + 0.65 * e), 0.0, TAU, 40, c, maxf(1.0, 4.5 * z * (1.0 - t)), true)
+			"guard":
+				c.a = 1.0 - t
+				var mid := 0.0 if float(p["x"]) > 0.0 else PI
+				st.draw_arc(at, s * (1.0 + 0.3 * t), mid - 1.0, mid + 1.0, 16, c, maxf(1.5, 6.0 * z * (1.0 - t)), true)
+			"glint":
+				c.a = 1.0 - t
+				var len := s * (0.6 + 0.4 * minf(1.0, t / 0.2))
+				for k in 4:
+					var dir := Vector2.from_angle(PI / 4.0 + k * PI / 2.0)
+					var side := Vector2(-dir.y, dir.x) * maxf(1.5, 4.0 * z) * (1.0 - t)
+					st.draw_colored_polygon(PackedVector2Array([at + side, at + dir * len, at - side]), c)
+				st.draw_circle(at, maxf(2.0, 7.0 * z * (1.0 - t)), c, true, -1.0, true)
+
+
+func _star(st: StageView, at: Vector2, s: float, rot: float, sp: Array, c: Color) -> void:
+	if s < 1.0:
+		return
+	var pts := PackedVector2Array()
+	for i in sp.size():
+		pts.append(at + Vector2.from_angle(rot + TAU * float(i) / float(sp.size())) * s * float(sp[i]))
+	st.draw_colored_polygon(pts, c)
+
+
+## The counts over whoever's being comboed (2 hits and up), kept inside the stage band.
+func draw_combos(st: StageView, frame: Array) -> void:
+	if _bold == null:
+		_bold = FontVariation.new()
+		_bold.base_font = ThemeDB.fallback_font
+		_bold.variation_embolden = 1.1
+	for id: int in combos:
+		var c: Dictionary = combos[id]
+		if int(c["hits"]) < 2 or id >= frame.size():
+			continue
+		var a := 1.0
+		if float(c["end"]) >= 0.0:
+			a = clampf(1.0 - (float(c["end"]) - COMBO_HOLD) / COMBO_FADE, 0.0, 1.0)
+		var r: Array = frame[id]
+		var p := st.w2s(Vector2(float(r[0]), float(r[1]) - 150.0))
+		p.x = clampf(p.x, st.view_left + 70.0, st.view_right - 70.0)
+		p.y = clampf(p.y, st.view_top + 60.0, st.view_bottom - 50.0)
+		var size := int(46.0 + 18.0 * float(c["pop"]))
+		var col: Color = c["by"]
+		col = col.lightened(0.15)
+		col.a = a
+		var ink := Color(0.02, 0.02, 0.03, a)
+		var num := str(int(c["hits"]))
+		var nw := _bold.get_string_size(num, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
+		st.draw_string_outline(_bold, p - Vector2(nw / 2.0, 0), num, HORIZONTAL_ALIGNMENT_LEFT, -1, size, 10, ink)
+		st.draw_string(_bold, p - Vector2(nw / 2.0, 0), num, HORIZONTAL_ALIGNMENT_LEFT, -1, size, col)
+		var sub := "HITS  ·  %d" % int(c["dmg"])
+		var sw := _bold.get_string_size(sub, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x
+		var white := Color(1, 1, 1, a)
+		st.draw_string_outline(_bold, p + Vector2(-sw / 2.0, 22), sub, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, 6, ink)
+		st.draw_string(_bold, p + Vector2(-sw / 2.0, 22), sub, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, white)

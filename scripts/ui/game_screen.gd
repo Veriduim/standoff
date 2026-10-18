@@ -6,6 +6,8 @@ extends Control
 
 const FONT := 22
 const SMALL := 17
+const LAG_HOLD := 0.45     ## seconds the HP lost stays showing (white) before it drains (pick 10)
+const LAG_SPEED := 0.6     ## how fast it drains, in whole bars a second
 
 var sim: Sim
 var bots := {}             ## fighter id -> Bot
@@ -30,12 +32,14 @@ var _events: Array = []
 var _first_tick := 0
 var _play_pos := 0.0
 var _shown := -1
+var _lag := {}               ## fighter id -> [HP shown by the white chunk, seconds before it drains, HP now]
 var _demo: Sim               ## the bot match behind the home screen
 var _demo_bots: Array = []
 var _demo_frames: Array = []
 var _demo_events: Array = []
 var _demo_first := 0
 var _demo_pos := 0.0
+var _demo_shown := -1
 
 
 func _ready() -> void:
@@ -139,15 +143,18 @@ func _demo_start() -> void:
 	stage.you = -1
 	stage.deciding = []
 	stage.ghost = []
+	stage.time_scale = 1.0
 	stage.show_tick(_demo.record())
 	_demo_frames = []
 	_demo_pos = 0.0
+	_demo_shown = -1
 
 
+## The match behind the home screen plays on - each tick shown once (its effects with it), held through a hit's freeze.
 func _demo_step(delta: float) -> void:
-	if _demo == null:
+	if _demo == null or stage.fx.frozen():
 		return
-	if int(_demo_pos) >= _demo_frames.size():
+	if _demo_shown >= _demo_frames.size() - 1:
 		if _demo.over():
 			_demo_start()
 			return
@@ -160,11 +167,16 @@ func _demo_step(delta: float) -> void:
 		_demo_events = seg["events"]
 		_demo_first = int(seg["end_tick"]) - _demo_frames.size() + 1
 		_demo_pos = 0.0
-	var before := int(_demo_pos)
+		_demo_shown = -1
 	_demo_pos += delta * 60.0
-	for k in range(before, mini(int(_demo_pos), _demo_frames.size() - 1) + 1):
-		var t := _demo_first + k
-		stage.show_tick(_demo_frames[k], _demo_events.filter(func(e: Dictionary) -> bool: return int(e["t"]) == t))
+	var upto := mini(int(_demo_pos), _demo_frames.size() - 1)
+	while _demo_shown < upto:
+		_demo_shown += 1
+		var t := _demo_first + _demo_shown
+		stage.show_tick(_demo_frames[_demo_shown], _demo_events.filter(func(e: Dictionary) -> bool: return int(e["t"]) == t))
+		if stage.fx.frozen():
+			_demo_pos = float(_demo_shown)
+			break
 
 
 # ---------- the match ----------
@@ -194,7 +206,9 @@ func start_local(opponents: int, mode: String, colour := 0) -> void:
 			palette.append(c)
 	stage.palette = palette
 	stage.you = me
+	stage.time_scale = speed
 	stage.show_tick(sim.record())
+	_lag.clear()
 	home.visible = false
 	fast_btn.visible = true
 	over_panel.visible = false
@@ -204,6 +218,7 @@ func start_local(opponents: int, mode: String, colour := 0) -> void:
 
 func _build_cards() -> void:
 	for c in cards.get_children():
+		cards.remove_child(c)
 		c.queue_free()
 	var vp := get_viewport_rect().size
 	var w := minf(206.0, (vp.x - 16.0 - 6.0 * (sim.fighters.size() - 1)) / sim.fighters.size())
@@ -222,10 +237,26 @@ func _build_cards() -> void:
 		var n := Ui.label(f.name, 15, Color("#e2e2ea"))
 		n.name = "Name"
 		v.add_child(n)
-		v.add_child(_bar("HP", stage.colour_of(f.id), 12))
+		v.add_child(_hp_bar(stage.colour_of(f.id)))
 		v.add_child(_bar("Meter", Color("#ffd166"), 6))
 		cards.add_child(p)
 	_update_cards()
+
+
+## HP in their colour over a white chunk: the HP just lost shows white a moment, then drains away (pick 10).
+func _hp_bar(col: Color) -> Control:
+	var stack := Control.new()
+	stack.name = "HPStack"
+	stack.custom_minimum_size = Vector2(0, 12)
+	stack.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var lag := _bar("Lag", Color(1, 1, 1, 0.85), 12)
+	var hp := _bar("HP", col, 12)
+	hp.add_theme_stylebox_override("background", StyleBoxEmpty.new())
+	for b: ProgressBar in [lag, hp]:
+		b.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		stack.add_child(b)
+		b.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	return stack
 
 
 func _bar(bar_name: String, col: Color, h: float) -> ProgressBar:
@@ -256,6 +287,15 @@ func _update_cards(rec: Array = []) -> void:
 		var hb := card.find_child("HP", true, false) as ProgressBar
 		hb.max_value = f.max_hp
 		hb.value = hp
+		var l: Array = _lag.get(f.id, [hp, 0.0, hp])
+		if hp < float(l[2]):   # (hit again: the white chunk holds - it grows through a combo)
+			l[1] = LAG_HOLD
+		l[0] = maxf(float(l[0]), hp)
+		l[2] = hp
+		_lag[f.id] = l
+		var lb := card.find_child("Lag", true, false) as ProgressBar
+		lb.max_value = f.max_hp
+		lb.value = float(l[0])
 		var mb := card.find_child("Meter", true, false) as ProgressBar
 		mb.max_value = Sim.METER_MAX
 		mb.value = meter
@@ -305,7 +345,8 @@ func _process(delta: float) -> void:
 	if phase == "menu":
 		_demo_step(delta)
 		return
-	if phase != "play":
+	_drain(delta)
+	if phase != "play" or stage.fx.frozen():   # (a hit's freeze holds the playback a moment - pick 5)
 		return
 	_play_pos += delta * 60.0 * speed
 	var i := mini(int(_play_pos), _frames.size() - 1)
@@ -313,11 +354,29 @@ func _process(delta: float) -> void:
 		_shown += 1
 		var t := _first_tick + _shown
 		stage.show_tick(_frames[_shown], _events.filter(func(e: Dictionary) -> bool: return int(e["t"]) == t))
-	_update_cards(_frames[i] if not _frames.is_empty() else [])
-	if int(_play_pos) >= _frames.size():
+		if stage.fx.frozen():
+			_play_pos = float(_shown)
+			break
+	_update_cards(_frames[maxi(_shown, 0)] if not _frames.is_empty() else [])
+	if not stage.fx.frozen() and int(_play_pos) >= _frames.size():
 		stage.show_tick(sim.record())
 		_update_cards()
 		_next()
+
+
+## The white chunk on each HP bar drains down to the HP once its moment's up.
+func _drain(delta: float) -> void:
+	if sim == null:
+		return
+	for f in sim.fighters:
+		if not _lag.has(f.id) or f.id >= cards.get_child_count():
+			continue
+		var l: Array = _lag[f.id]
+		if float(l[1]) > 0.0:
+			l[1] = float(l[1]) - delta
+		else:
+			l[0] = maxf(float(l[2]), float(l[0]) - float(f.max_hp) * LAG_SPEED * delta)
+		(cards.get_child(f.id).find_child("Lag", true, false) as ProgressBar).value = float(l[0])
 
 
 ## Play out what's left at once (the tests; a skip).
@@ -325,6 +384,7 @@ func finish_playback() -> void:
 	if phase == "play":
 		_play_pos = float(_frames.size())
 		stage.quiet = true
+		stage.fx.clear()
 		_process(0.0)
 		stage.quiet = false
 
@@ -345,4 +405,5 @@ func _finish() -> void:
 
 func _toggle_speed() -> void:
 	speed = 2.0 if speed == 1.0 else 1.0
+	stage.time_scale = speed
 	fast_btn.text = "%dx" % int(speed)

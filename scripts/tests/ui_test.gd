@@ -77,6 +77,62 @@ func _test_your_pick() -> void:
 	g.queue_free()
 
 
+## Plays the turn out frame by frame like the screen does (the stage's effects ticking too); returns what was seen.
+func _watch(g: Control, mine: Dictionary) -> Dictionary:
+	var seen := {"froze": false, "held": true, "arc": false, "star": Vector2.INF, "lag": false}
+	g._commit(mine)
+	var steps := 0
+	while g.phase == "play" and steps < 600:
+		var shown: int = g._shown
+		var was_frozen: bool = g.stage.fx.frozen()
+		g._process(1.0 / 60.0)
+		if was_frozen and g._shown != shown:
+			seen["held"] = false
+		g.stage._process(1.0 / 60.0)
+		seen["froze"] = seen["froze"] or g.stage.fx.frozen()
+		seen["arc"] = seen["arc"] or not g.stage.fx.trails.is_empty()
+		for p: Dictionary in g.stage.fx.parts:
+			if p["k"] == "star" and seen["star"] == Vector2.INF:
+				seen["star"] = p["p"]
+		var card: Node = g.cards.get_child(1)
+		var lag := (card.find_child("Lag", true, false) as ProgressBar).value
+		seen["lag"] = seen["lag"] or lag > (card.find_child("HP", true, false) as ProgressBar).value + 1.0
+		steps += 1
+	return seen
+
+
+func _test_hit_effects() -> void:
+	_section("The hit effects (first style pass): sparks where it lands, the freeze, the arc, combo counts, the HP chunk")
+	var g := _screen()
+	g.start_local(1, "ffa")
+	g.bots.clear()   # (the other one just stands there)
+	g.sim.fighters[0].pos.x = -35.0
+	g.sim.fighters[1].pos.x = 35.0
+	var seen := _watch(g, {"move": "jab", "x": 1.0})
+	var star: Vector2 = seen["star"]
+	_check("a jab that lands bursts where the fist meets the body (%.0f, %.0f)" % [star.x, star.y],
+			star.x > -10.0 and star.x < 60.0 and star.y < -60.0 and star.y > -100.0)
+	_check("the playback freezes on contact and holds that frame", seen["froze"] and seen["held"])
+	_check("the striking hand leaves an arc", seen["arc"])
+	_check("the HP lost shows as a white chunk before it drains", seen["lag"])
+	g.sim.fighters[0].pos.x = g.sim.fighters[1].pos.x - 70.0
+	_watch(g, {"move": "sweep", "x": 1.0})   # (a sweep leaves them reeling long enough for a jab)
+	g.sim.fighters[0].pos.x = g.sim.fighters[1].pos.x - 66.0
+	_watch(g, {"move": "jab", "x": 1.0})
+	var combo: Dictionary = g.stage.fx.combos.get(1, {})
+	_check("a hit while they still reel counts on as a combo - sweep, jab (%s)" % [combo],
+			not combo.is_empty() and int(combo["hits"]) == 2 and int(combo["dmg"]) > 30)
+	_watch(g, {"move": "wait"})   # (they get their feet back - the combo's over)
+	for _i in 3:
+		g._process(1.0)
+		g.stage._process(1.0)
+	var card: Node = g.cards.get_child(1)
+	_check("...and later the white chunk has drained and the count is gone",
+			is_equal_approx((card.find_child("Lag", true, false) as ProgressBar).value,
+			(card.find_child("HP", true, false) as ProgressBar).value) and g.stage.fx.combos.is_empty())
+	g.queue_free()
+
+
 func _test_full_matches() -> void:
 	_section("Whole matches through the screen (a bot playing you): free-for-all and teams")
 	for setup: Array in [[1, "ffa"], [5, "ffa"], [5, "teams"], [3, "teams"]]:

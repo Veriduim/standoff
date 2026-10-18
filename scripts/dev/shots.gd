@@ -61,4 +61,44 @@ func run(game: Control, out: String) -> void:
 		guard += 1
 	await _wait(20)
 	await _snap(out.path_join("6_result.png"))
+	await _effects(game, out)
 	get_tree().quit()
+
+
+func _until(ok: Callable, frames: int) -> void:
+	for _i in frames:
+		if ok.call():
+			return
+		await get_tree().process_frame
+
+
+## The hit effects, staged one on one: a side kick landing (the freeze, its arc), the sparks flying on a moment later,
+## then a sweep -> jab combo and its count.
+func _effects(game: Control, out: String) -> void:
+	game.auto_me = false
+	game.start_local(1, "ffa", 0)
+	game.bots.clear()   # (the other one just stands there)
+	game.sim.fighters[0].pos.x = -60.0
+	game.sim.fighters[1].pos.x = 30.0
+	game.stage.show_tick(game.sim.record())
+	await _wait(40)
+	game._commit({"move": "sidekick", "x": 1.0})
+	await _until(func() -> bool: return game.stage.fx.frozen(), 240)
+	await _snap(out.path_join("7_hit.png"))
+	await _wait(7)
+	await _snap(out.path_join("8_sparks.png"))
+	await _until(func() -> bool: return game.phase == "pick", 400)
+	game.sim.fighters[0].pos.x = game.sim.fighters[1].pos.x - 70.0
+	game._commit({"move": "sweep", "x": 1.0})
+	await _until(func() -> bool: return game.phase == "pick", 400)
+	game.sim.fighters[0].pos.x = game.sim.fighters[1].pos.x - 66.0
+	game._commit({"move": "jab", "x": 1.0})
+	await _until(func() -> bool: return int(game.stage.fx.combos.get(1, {}).get("hits", 0)) >= 2, 300)
+	await _wait(8)
+	await _snap(out.path_join("9_combo.png"))
+	await _until(func() -> bool: return game.phase == "pick", 400)
+	game.sim.fighters[0].pos.x = game.sim.fighters[1].pos.x - 150.0
+	game._commit({"move": "spin", "x": 1.0})
+	var swinging := func() -> bool: return game.stage.fx.trails.has(0) and game.stage.fx.trails[0]["pts"].size() >= 7
+	await _until(swinging, 300)
+	await _snap(out.path_join("10_arc.png"))

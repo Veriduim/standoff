@@ -36,6 +36,23 @@ one stage; each attack aims at a picked target.
 - 17:41 online: a phone can host, but players can't reach it over the internet directly (mobile CGNAT, routers) - a
   small relay with room codes is the way (his hosting call); same Wi-Fi first.
 
+- 17:52 "Just work on getting one char working and remove the other one. Also make the home screen better. Then download
+  as much reference material..." -> the Dancer only, a new home screen (0.2.1); the YOMI study (Standoff Workshop/
+  references/yomi, reference only) -> 14 numbered style options in `_study/NOTES.md`.
+- 18:07 "Your suggestion looks good so just continue working on that" -> **0.3.0, the first style pass** (picks 1, 3, 4,
+  5, 6, 9 and 10; it stays smooth, not pixel art):
+  - 1: chunky fighters (`Stick`)
+  - 3: a near-black stage with a white floor line marked every 100 px
+  - 4: layered hit sparks
+  - 5: a freeze on contact plus a small shake
+  - 6: swooshes behind the striking hand or foot
+  - 9: combo counts
+  - 10: a white HP chunk that drains
+
+  The effects live in `scripts/ui/fx.gd`, and `tools/shots.sh` takes stills of them (7_hit to 10_arc). Not picked yet:
+  2 (pixel look), 7 (speed streaks), 8 (afterimages), 11 (frame advantage line), 12 (tinted icons), 13 (colour-split
+  flash) and 14 (floor reflection).
+
 ## To tune / later
 - **Match length with 6:** bot matches take 120-270 decision points with 6 fighters (50-90 with 2). At ~10 s a decision
   that's far too long - lower HP or more damage with more players (a lobby setting), and a turn timer.
