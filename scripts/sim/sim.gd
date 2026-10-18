@@ -517,8 +517,8 @@ func _upkeep(f: Fighter) -> void:
 		return
 	var n := nearest_enemy(f)
 	var v := f.vel.x * signf(n.pos.x - f.pos.x) if n != null and absf(n.pos.x - f.pos.x) > 1.0 else 0.0
-	if v > 0.5 and f.stun == 0:   # (moving in on someone: at least 1 a tick)
-		_gain(f, maxf(1.0, v / 4.0))
+	if v > 0.5 and f.stun == 0 and tick % 2 == 0:   # (moving in on someone: the wiki's v/4 (at least 1) - every other
+		_gain(f, maxf(1.0, v / 4.0))                # tick: with up to six there's always someone to move in on)
 	if f.sadness > 0:   # (SADNESS!: a little HP lost over time, then it starts again from nothing)
 		f.sadness -= 1
 		if f.sadness % 10 == 0 and f.hp > 1:

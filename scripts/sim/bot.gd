@@ -84,7 +84,7 @@ func choose(sim: Sim, id: int) -> Dictionary:
 	if legal.has("burstcancel") and rng.randf() < 0.15:
 		return {"move": "burstcancel"}
 	var r := rng.randf()
-	if f.meter >= Sim.BAR and r < 0.08:   # (supers now and then - meter comes quickly the wiki's way)
+	if f.meter >= Sim.BAR and r < 0.04:   # (supers now and then - meter comes quickly the wiki's way)
 		c["move"] = pick.call(SUPERS)
 	elif r < 0.55:
 		c["move"] = pick.call(GROUND_HITS)
