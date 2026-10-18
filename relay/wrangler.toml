@@ -3,6 +3,7 @@
 # in each match runs it); one more keeps the list of public lobbies.
 # Free plan: SQLite-backed Durable Objects, WebSocket hibernation (no duration billed while a lobby is quiet).
 name = "standoff-relay"
+account_id = "cc628a4b259951e4fd6b9abc559227fa"   # (Timmy's account - workers.dev subdomain blissfulzephyr)
 main = "src/index.js"
 compatibility_date = "2025-06-01"
 

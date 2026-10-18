@@ -1,4 +1,4 @@
-# Online lobbies (0.8.0)
+# Online lobbies (0.8.0, live in 0.8.1)
 
 Timmy, 18 Oct 2026 20:19: "Can we work on the lobby system? Look at the steam lobby your only move is hustle has".
 YOMI's Steam lobby was studied from a video (`Standoff Workshop/references/yomi/lobby/`, frames `full_54/60/66/108/138`).
@@ -37,12 +37,19 @@ That was for study only: the screens here are our own layout, built from the sam
 - **Screens:** `--lobbyshots=<dir>` renders the list, a lobby, an invite and New match off-screen
   (`scripts/dev/lobby_shots.gd`).
 
-## To go live
-1. Timmy logs in to Cloudflare once: `! cd relay && npx wrangler login`.
-2. Deploy: `npx wrangler deploy` -> `wss://standoff-relay.<account>.workers.dev`.
-3. Set `LobbyNet.DEFAULT_URL` to that address and build.
-
-Until step 3 is done, the phone build shows "Can't reach the lobby server".
+## The live server (since 18 Oct 20:57, 0.8.1)
+- `wss://standoff-relay.blissfulzephyr.workers.dev` on Timmy's Cloudflare account. The account ID is in
+  `relay/wrangler.toml`.
+- Deploying uses the token in his user environment (`CLOUDFLARE_API_TOKEN`, set with setx):
+  1. read it into the shell;
+  2. run `npx wrangler deploy` in `relay/`;
+  3. run `node test.mjs wss://standoff-relay.blissfulzephyr.workers.dev`, which should pass 14 checks.
+- `LobbyNet.DEFAULT_URL` points at the live server. `-- --lobbies=ws://127.0.0.1:8787` uses a local `wrangler dev`
+  instead.
+- `godot --headless --path . -- --livecheck` (`scripts/dev/live_check.gd`) runs three phones over the live server:
+  - a private lobby, chat, a challenge with a bot, one phone watching;
+  - played to the end, and all three must end the same;
+  - first run 20:59: everything passed, the match took 30.6 s.
 
 ## Not done yet
 - YOMI's chess-clock timer.

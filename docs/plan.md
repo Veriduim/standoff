@@ -93,7 +93,8 @@ one stage; each attack aims at a picked target.
 
 - 20:19 "Can we work on the lobby system? Look at the steam lobby your only move is hustle has" -> 0.8.0 = online
   lobbies like YOMI's Steam ones: a list, lobbies with members / matches / owner's rules / chat, challenges for up to 6
-  with bots, spectating; a Cloudflare lobby server (relay/) - live once he logs in to Cloudflare (docs/lobby.md).
+  with bots, spectating; a Cloudflare lobby server (relay/). 20:57 deployed with his API token -> 0.8.1 plays online
+  (docs/lobby.md). 20:59 "Also upload this to a new github repo please" -> github.com/Veriduim/standoff (private).
 
 ## To tune / later
 - **Match length with 6:** bot matches take 120-270 decision points with 6 fighters (50-90 with 2). At ~10 s a decision

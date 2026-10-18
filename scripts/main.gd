@@ -11,6 +11,14 @@ func _ready() -> void:
 		get_tree().quit(code)
 		return
 	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--lobbies="):   # (another lobby server - a local one: ws://127.0.0.1:8787)
+			LobbyNet.url = arg.trim_prefix("--lobbies=")
+	if "--livecheck" in OS.get_cmdline_user_args():   # (dev: a match on the real lobby server - scripts/dev/live_check.gd)
+		var live: Node = load("res://scripts/dev/live_check.gd").new()
+		add_child(live)
+		live.call("run")
+		return
+	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--figlab="):   # (dev: body styles side by side - scripts/dev/figure_lab.gd)
 			var lab: Node2D = load("res://scripts/dev/figure_lab.gd").new()
 			add_child(lab)

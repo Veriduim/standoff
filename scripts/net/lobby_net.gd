@@ -12,8 +12,8 @@ signal channel(ch: String, from: int, msg: Dictionary)   ## a match's channel
 signal member_left(id: int)
 signal status(state: String, detail: String)     ## "open" | "closed" | "error"
 
-## The lobby server (set once it's deployed - Timmy's Cloudflare login); --lobbies=<url> overrides it for a test.
-const DEFAULT_URL := "ws://127.0.0.1:8787"
+## The lobby server: relay/ on Timmy's Cloudflare (deployed 18 Oct 20:57); --lobbies=<url> picks another (main.gd).
+const DEFAULT_URL := "wss://standoff-relay.blissfulzephyr.workers.dev"
 static var url := DEFAULT_URL
 static var use_loop := false
 var reached := true          ## the last list fetch got an answer from the server
