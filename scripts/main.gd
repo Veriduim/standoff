@@ -1,10 +1,8 @@
 extends Node
 ## The boot node: `-- --test` runs the headless tests (tools/test.sh) and quits; otherwise the game.
 
-const SUITES := [
-	preload("res://scripts/tests/sim_test.gd"),
-	preload("res://scripts/tests/ui_test.gd"),
-]
+## (loaded only when testing - the phone build leaves scripts/tests out)
+const SUITES := ["res://scripts/tests/sim_test.gd", "res://scripts/tests/ui_test.gd"]
 
 
 func _ready() -> void:
@@ -35,20 +33,20 @@ func _run_tests() -> int:
 	var failed := 0
 	var checks := 0
 	var failures := 0
-	for script: GDScript in SUITES:
-		var area: String = script.resource_path.get_file().get_basename().trim_suffix("_test")
+	for path: String in SUITES:
+		var area: String = path.get_file().get_basename().trim_suffix("_test")
 		if not areas.is_empty() and not areas.has(area):
 			continue
-		var suite: TestSuite = script.new()
+		var suite: Node = (load(path) as GDScript).new()
 		add_child(suite)
 		print("\n-- %s --" % area.capitalize())
 		var started := Time.get_ticks_msec()
-		await suite.run()
+		await suite.call("run")
 		print("   (%s: %.1f s)" % [area, (Time.get_ticks_msec() - started) / 1000.0])
-		tests += suite.tests
-		failed += suite.failed_tests
-		checks += suite.checks
-		failures += suite.failures
+		tests += int(suite.get("tests"))
+		failed += int(suite.get("failed_tests"))
+		checks += int(suite.get("checks"))
+		failures += int(suite.get("failures"))
 		suite.queue_free()
 	print("\n=== Results: %d/%d tests passed (%d/%d checks) ===" % [tests - failed, tests, checks - failures, checks])
 	return 1 if failures > 0 else 0
