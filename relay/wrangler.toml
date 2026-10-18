@@ -1,0 +1,14 @@
+# The Standoff relay (Timmy, 18 Oct 2026: "Relay + room codes" to play-test with a friend on another Wi-Fi): one Durable
+# Object per room code passes messages between the host phone (which runs the match) and up to 5 others.
+# Free plan: SQLite-backed Durable Objects, WebSocket hibernation (no duration billed while a room is quiet).
+name = "standoff-relay"
+main = "src/index.js"
+compatibility_date = "2025-06-01"
+
+[[durable_objects.bindings]]
+name = "ROOMS"
+class_name = "Room"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Room"]
