@@ -42,7 +42,7 @@ static func draw(ci: CanvasItem, pose: Dictionary, origin: Vector2, scale: float
 		var ew := maxf(1.5, thick * float(style["ink"]))
 		for b: Array in BACK + FRONT:
 			_bone(ci, pts[b[0]], pts[b[1]], thick + ew * 2.0, thick + ew * 2.0, ink)
-		_bone(ci, pts["neck"], pts["hip"], chest + ew * 2.0, hips + ew * 2.0, ink)
+		_torso(ci, pts, chest + ew * 2.0, thick * float(style.get("waist", 0.0)) + ew * 2.0, hips + ew * 2.0, ink)
 		for j: String in ["hand_f", "hand_b"]:
 			ci.draw_circle(pts[j], fist + ew, ink, true, -1.0, true)
 		if foot > 0.0:
@@ -55,7 +55,7 @@ static func draw(ci: CanvasItem, pose: Dictionary, origin: Vector2, scale: float
 	ci.draw_circle(pts["hand_b"], fist, far, true, -1.0, true)
 	if foot > 0.0:
 		_foot(ci, pts, "b", facing, foot, thick, far)
-	_bone(ci, pts["neck"], pts["hip"], chest, hips, col)
+	_torso(ci, pts, chest, thick * float(style.get("waist", 0.0)), hips, col)
 	for b: Array in FRONT:
 		_bone(ci, pts[b[0]], pts[b[1]], thick, thick, col)
 	if foot > 0.0:
@@ -63,6 +63,17 @@ static func draw(ci: CanvasItem, pose: Dictionary, origin: Vector2, scale: float
 	ci.draw_circle(pts["hand_f"], fist, col, true, -1.0, true)
 	ci.draw_circle(pts["head"], head_r, col, true, -1.0, true)
 	return pts
+
+
+## The body: neck to hip, chest-wide at the top and hips-wide at the bottom - pinched in at the waist when the style
+## has one (waist > 0: its width in limbs, 22:12 "I want their model to be better").
+static func _torso(ci: CanvasItem, pts: Dictionary, chest: float, waist: float, hips: float, c: Color) -> void:
+	if waist <= 0.0 or float(style.get("waist", 0.0)) <= 0.0:
+		_bone(ci, pts["neck"], pts["hip"], chest, hips, c)
+		return
+	var mid: Vector2 = (pts["neck"] as Vector2).lerp(pts["hip"], 0.62)
+	_bone(ci, pts["neck"], mid, chest, waist, c)
+	_bone(ci, mid, pts["hip"], waist, hips, c)
 
 
 ## The pose's joints on screen: the legs squashed toward the hip by `squash` (the body rides lower), then scaled,

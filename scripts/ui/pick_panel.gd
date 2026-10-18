@@ -336,7 +336,7 @@ func _tab(tid: String) -> void:
 		var pick := func() -> void:
 			select(mid)
 			_close_drawer()
-		var icon := MoveIcon.make(f.character, mid, MoveIcon.tab_colour(f.character, mid), pick)
+		var icon := MoveIcon.make(f.character, mid, stage.colour_of(who), pick)   # (in their colour - 22:12)
 		if mid == f.cancelled:   # (the move just landed: again = an Instant Cancel, a bar)
 			icon.note = "IC"
 		icon.selected = mid == str(_c().get("move", ""))

@@ -535,23 +535,21 @@ func _figure(i: int, r: Array, alpha: float) -> void:
 			var k := 0.5 + 0.5 * sin(_time * 1.9 + i * 1.1)
 			pose = Poses.blend(pose, Poses.get_pose("idle2"), k * (1.0 if alpha >= 1.0 else 0.0))
 		var pre := Stick._place(pose, w2s(base), sc, face)
-		if alpha >= 1.0:
+		var cloth: bool = Outfit.look.get("panels", false) or Outfit.look.get("skirt", false)
+		if alpha >= 1.0 and not cloth:   # (the sash - her cloth panels / skirt take its place)
 			_sash(i, pre, face, col, sc)
+		Outfit.back(self, pre, sc, face, col, head_r, _time + i * 0.7, float(_vx.get(i, 0.0)) if alpha >= 1.0 else 0.0,
+				alpha >= 1.0)
 		if fans >= 2:
 			Stick.fan_at(self, pre, "b", face, sc, open, col, alpha >= 1.0, Stick.STEEL if alpha >= 1.0 else col)
 	var pts := Stick.draw(self, pose, w2s(base), sc, face, col, Stick.limb(sc), head_r, alpha >= 1.0)
+	if dancer:   # (her look over the body - Outfit, 22:12)
+		Outfit.front(self, pts, sc, face, col, head_r, _time + i * 0.7, float(_vx.get(i, 0.0)) if alpha >= 1.0 else 0.0,
+				alpha >= 1.0)
 	if dancer and fans >= 1:   # (ghosts and afterimages: their fans in their own faded colour, not bright steel)
 		Stick.fan_at(self, pts, "f", face, sc, open, col, alpha >= 1.0, Stick.STEEL if alpha >= 1.0 else col)
 	if alpha < 1.0:
 		return
-	if ch == "dancer":   # (her headband - two short tails off the back of the head)
-		var back := Vector2(-face, 0.0)
-		var knot: Vector2 = pts["head"] + back * head_r * 0.85
-		for k in 2:
-			var wave := sin(_time * 8.0 + i + k * 1.7) * 2.5
-			var mid := knot + (back * 9.0 + Vector2(0, 2.0 + k * 4.0)) * zoom
-			var end := knot + (back * (17.0 - k * 4.0) + Vector2(0, 5.0 + k * 8.0 + wave)) * zoom
-			draw_polyline(PackedVector2Array([knot, mid, end]), col.lightened(0.4), maxf(2.0, 3.5 * zoom), true)
 	if deciding.has(i):
 		var pulse := 0.5 + 0.5 * sin(_time * 6.0)
 		draw_arc(pts["head"], head_r + (7.0 + 3.0 * pulse) * zoom, 0, TAU, 24, Color(1, 1, 1, 0.5 + 0.4 * pulse), 2.0)

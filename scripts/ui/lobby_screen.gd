@@ -274,6 +274,12 @@ func _on_status(state: String, detail: String) -> void:
 		"open":
 			note.text = ""
 			net.set_member({"status": "idle", "colour": my_colour, "match": ""})
+			if net.is_owner() and not (net.lobby.get("rules", {}) as Dictionary).has("xf"):   # (a new lobby: the
+				var cfg := ConfigFile.new()                                                 # styles switched on at home)
+				if cfg.load(SETTINGS) == OK and str(cfg.get_value("trial", "xf", "")) != "":
+					var rules := rules_now()
+					rules["xf"] = str(cfg.get_value("trial", "xf", ""))
+					_set_rules(rules)
 			_show("room")
 		"error", "closed":
 			note.text = detail

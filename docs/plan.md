@@ -123,6 +123,13 @@ one stage; each attack aims at a picked target.
   sash; a fan-dance stance that sways; Updraft (a gust off both fans that lifts them - a wind effect, the first move
   "cue") and Silk Glide (a sliding kick through projectiles); Fan Throw aimed any way. MK's Jade / Kitana: study only.
   -- --moveshots=<dir>:<moves> snaps any move as it plays.
+- 22:12 "I want their model to be better as well as I dont like the headband. Maybe investigate pixel art for dancers to
+  help? Then for attack select it should show your char colours again ... im giing to send this to two friends to test
+  with so im hoping we have the option to still select a combo of styles?" -> 0.9.4: headband gone; drawer icons in
+  your colour; a new lobby starts with the styles switched on at home (the owner changes them in RULES); the study
+  (Standoff Workshop/references/dancer, tools/dancer_refs.py) -> Outfit (scripts/ui/outfit.gd): hair (ponytail / bun /
+  long), a veil, cloth panels or a skirt, sleeves, a waist - four looks on a sheet for his pick (-- --dancerlab,
+  -- --look=N to try one in game). Off until he picks.
 
 ## To tune / later
 - **Match length with 6:** bot matches take 120-270 decision points with 6 fighters (50-90 with 2). At ~10 s a decision
