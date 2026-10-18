@@ -378,6 +378,7 @@ func _draw() -> void:
 					_ready_label(i, g[i])
 			elif not ghost_play:   # (held: where everyone else would be on that frame)
 				_figure(i, g[i], GHOST_ALPHA * 0.6)
+	fx.draw_back(self)   # (the dark starbursts of hits, behind everyone)
 	for a: Dictionary in fx.afters:   # (afterimages - fading copies behind fast movers)
 		var id := int(a["id"])
 		if id < frame.size():

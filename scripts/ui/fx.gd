@@ -37,6 +37,7 @@ var trails := {}             ## fighter id -> {pts: [[tip, pivot], ...], c: colo
 var flash := {}              ## fighter id -> seconds they're drawn white (the impact frame)
 var afters: Array = []       ## afterimages: {id, rec: Sim.record row, age, life}
 const BIG := 1.3              ## every effect this much bigger (22:40 "elevate this a lot")
+const INK := Color("#3b3f52")    ## the dark starburst behind a hit (23:05)
 var dim := 0.0               ## how dark the stage goes round a super (0-1); `dim_id` is drawn over it
 var dim_id := -1
 var split := 0.0             ## the colour split (0-1, fading) - the screens' post shader reads it
@@ -154,6 +155,9 @@ func on_event(type: String, at: Vector2, face: float, dmg: int, by: Color, victi
 			kick(3.0)
 		"hit", "throw", "armor":
 			var s := clampf(float(dmg) / 32.0, 0.5, 1.8)
+			# (23:05 "This is an example of the normal hit effect": a dark jagged starburst behind it, longest along
+			# the hit - the YOMI mods' look; low contrast, so the fighters and sparks read on top)
+			_add("ink", at, Vector2.ZERO, 0.42, INK, 60.0 + 26.0 * s, face)
 			_burst(at, face, s, by, victim_col)
 			if counter:   # (they were mid-attack: a red COUNTER and a harder flash)
 				_add("text", at + Vector2(0, -40), Vector2(0, -50), 0.42, Color("#ff5d5d"), 17.0)   # (small - they're common)
@@ -315,6 +319,17 @@ func _add(kind: String, at: Vector2, vel: Vector2, life: float, c: Color, size: 
 		for i in 12:
 			sp.append(_rng.randf_range(0.65, 1.0) if i % 2 == 0 else 0.34)
 		p["sp"] = sp
+	if kind == "ink":   # (spikes: long and uneven, the longest along the hit's way (extra = facing) and up / down)
+		var sp: Array = []
+		var n := 18
+		for i in n * 2:
+			var ang := float(p["r"]) + i * PI / n
+			if i % 2 == 1:
+				sp.append(_rng.randf_range(0.22, 0.38))
+				continue
+			var along := absf(cos(ang - (0.0 if extra >= 0.0 else PI)))
+			sp.append(_rng.randf_range(0.45, 0.8) + 0.35 * along * (1.0 if cos(ang) * extra > 0.0 else 0.6))
+		p["sp"] = sp
 	parts.append(p)
 
 
@@ -455,6 +470,27 @@ func draw_trails(st: StageView) -> void:
 		st.draw_polyline_colors(rim, rim_cols, maxf(1.5, 3.0 * st.zoom), true)
 
 
+## Behind the fighters: the dark starbursts of hits - quick to full size, holding, then fading; drawn as a fan of
+## triangles (a star isn't convex).
+func draw_back(st: StageView) -> void:
+	for p: Dictionary in parts:
+		if str(p["k"]) != "ink":
+			continue
+		var t := float(p["age"]) / float(p["life"])
+		var grow := minf(1.0, t / 0.12)
+		var c: Color = p["c"]
+		c.a = 0.95 * (1.0 - maxf(0.0, (t - 0.5) / 0.5))
+		var at := st.w2s(p["p"])
+		var s := float(p["s"]) * st.zoom * (0.6 + 0.4 * grow) * (1.0 + 0.08 * t)
+		var sp: Array = p["sp"]
+		var n := sp.size()
+		var pts: Array[Vector2] = []
+		for i in n:
+			pts.append(at + Vector2.from_angle(float(p["r"]) + i * TAU / n) * s * float(sp[i]))
+		for i in n:
+			st.draw_colored_polygon(PackedVector2Array([at, pts[i], pts[(i + 1) % n]]), c)
+
+
 ## Sparks, rings, shockwaves - over the fighters.
 func draw_parts(st: StageView) -> void:
 	var z := st.zoom
@@ -464,6 +500,8 @@ func draw_parts(st: StageView) -> void:
 		var c: Color = p["c"]
 		var s := float(p["s"]) * z
 		match str(p["k"]):
+			"ink":   # (behind the fighters - draw_back)
+				pass
 			"star":   # (near full size the moment it lands - the freeze shows it - then it shrinks away)
 				var grow := (0.75 + 0.25 * minf(1.0, t / 0.2)) * (1.0 - maxf(0.0, (t - 0.5) / 0.5))
 				_star(st, at, s * grow, float(p["r"]), p["sp"], c)

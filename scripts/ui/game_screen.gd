@@ -269,7 +269,10 @@ func _build_cards() -> void:
 		cards.remove_child(c)
 		c.queue_free()
 	var vp := get_viewport_rect().size
-	var w := minf(206.0, (vp.x - 16.0 - 6.0 * (sim.fighters.size() - 1)) / sim.fighters.size())
+	# (23:05 "Depending on the amount of players we should expand the health, burst and level gauges": the cards share
+	# the top bar - one on one, half each)
+	var w := (vp.x - 16.0 - 6.0 * (sim.fighters.size() - 1)) / sim.fighters.size()
+	var mirror := sim.fighters.size() == 2   # (one on one: the right one's bars fill from the right, as YOMI's)
 	for f in sim.fighters:
 		var p := PanelContainer.new()
 		p.custom_minimum_size = Vector2(w, Ui.CARD_H - 8)
@@ -299,7 +302,8 @@ func _build_cards() -> void:
 		extras.add_theme_font_size_override("normal_font_size", 13)
 		extras.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		head.add_child(extras)
-		v.add_child(_hp_bar(stage.colour_of(f.id)))
+		var hpb := _hp_bar(stage.colour_of(f.id))
+		v.add_child(hpb)
 		var mb := _bar("Meter", Color("#ffd166"), 6)
 		for k in [1, 2]:   # (meter in three bars: two dividers)
 			var cut := ColorRect.new()
@@ -314,6 +318,9 @@ func _build_cards() -> void:
 		v.add_child(mb)
 		v.add_child(_bar("Burst", Color("#6fd3ff"), 4))
 		cards.add_child(p)
+		if mirror and f.id == 1:
+			for b in p.find_children("*", "ProgressBar", true, false):
+				(b as ProgressBar).fill_mode = ProgressBar.FILL_END_TO_BEGIN
 	_update_cards()
 
 
