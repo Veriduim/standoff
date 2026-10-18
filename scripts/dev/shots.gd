@@ -48,6 +48,22 @@ func run(game: Control, out: String) -> void:
 		p._close_drawer()
 		await _wait(40)
 		await _snap(out.path_join("3_pick.png"))
+		p.select("dash")
+		p.dist_slider.value = 40.0
+		await _wait(30)
+		await _snap(out.path_join("3b_distance.png"))
+		var foe := -1
+		for id in game.sim.deciders():
+			if id != game.me and game.sim.enemies(game.sim.fighters[game.me], game.sim.fighters[id]):
+				foe = id
+				break
+		if foe >= 0:
+			p.select("jab")
+			p._on_tap(foe)
+			await _wait(40)
+			await _snap(out.path_join("3c_guess.png"))
+			p.guess(game.me)
+		p.select("sidekick" if game.sim.legal_moves(game.me).has("sidekick") else "jab")
 		p.boxes_btn.button_pressed = true
 		p._toggle_boxes()
 		await _wait(6)

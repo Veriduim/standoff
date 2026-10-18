@@ -78,7 +78,7 @@ func _test_your_pick() -> void:
 			p.who == foe and p.back_btn.visible and g.stage.guessing == foe and p.guesses.has(foe))
 	p.select("sidekick")
 	_check("...guessing their side kick plays their ghost against yours", str(p.guesses[foe]["move"]) == "sidekick"
-			and g.stage.ghost_only == -1 and str(p.choice["move"]) == "jab")
+			and g.stage.ghost_ids.has(foe) and g.stage.ghost_ids.has(g.me) and str(p.choice["move"]) == "jab")
 	p.guess(g.me)
 	_check("...and back to you, your pick as it was", p.who == g.me and not p.back_btn.visible
 			and str(p.choice["move"]) == "jab")

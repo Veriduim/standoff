@@ -30,6 +30,7 @@ var names: Array = []
 var frame: Array = []        ## the tick shown (Sim.record)
 var ghost: Array = []        ## a preview's ticks, looped
 var ghost_only := -1         ## draw only this fighter's ghost (-1 = all that move)
+var ghost_ids: Array = []    ## or only these (you and the ones you're guessing for)
 var you := -1                ## this phone's fighter (a marker over them)
 var deciding: Array = []     ## who's choosing now (a pulse over them)
 var fx := Fx.new()           ## sparks, the freeze, the shake, combo counts, arcs
@@ -312,7 +313,7 @@ func _draw() -> void:
 		for i in g.size():
 			if int(g[i][5]) == 4:
 				continue
-			if ghost_only < 0 or i == ghost_only:
+			if (ghost_ids.is_empty() and (ghost_only < 0 or i == ghost_only)) or ghost_ids.has(i):
 				_figure(i, g[i], GHOST_ALPHA)
 				if _free(g[i]) and ghost_index() > 0:   # (the ghost starts in its move - free again = READY)
 					_ready_label(i, g[i])

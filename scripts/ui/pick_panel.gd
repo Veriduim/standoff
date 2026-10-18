@@ -210,6 +210,7 @@ func close() -> void:
 	_close_drawer()
 	if stage != null:
 		stage.ghost = []
+		stage.ghost_ids = []
 		stage.show_boxes = false
 		stage.guessing = -1
 		boxes_btn.set_pressed_no_signal(false)
@@ -299,7 +300,8 @@ static func frame_data(m: Dictionary) -> String:
 			parts.append("stops a strike on f%d-%d" % [int(m["window"][0]), int(m["window"][1])])
 		"grab":
 			parts.append("beats guard")
-	parts.append("%df" % int(m["frames"]))
+	parts.append("%d-%df by distance" % [int(m["dist"][0]), int(m["dist"][1])] if m.has("dist")
+			and int(m["dist"][0]) != int(m["dist"][1]) else "%df" % int(m["frames"]))
 	if m.has("armor"):
 		parts.append("armour f%d-%d" % [int(m["armor"][0]), int(m["armor"][1])])
 	if m.has("invuln"):
@@ -396,7 +398,8 @@ func refresh() -> void:
 	var pv := sim.preview(picks, 80)
 	preview_events = pv["events"]
 	stage.ghost = pv["frames"]
-	stage.ghost_only = me if guesses.is_empty() else -1   # (guessing: their ghosts play against yours)
+	stage.ghost_only = me
+	stage.ghost_ids = [me] + guesses.keys()   # (guessing: their ghosts play against yours)
 	stage.ghost_play = true
 	stage.guessing = who if who != me else -1
 	var c := _c()
