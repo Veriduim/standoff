@@ -6,7 +6,7 @@ extends RefCounted
 
 const GROUND_HITS := ["jab", "straight", "lowkick", "sidekick", "uppercut", "spin", "sweep", "axekick", "kneedash",
 	"flashkick"]
-const AIR := ["divekick", "airkick", "airknee", "airspin", "airdash", "fastfall", "guard", "wait"]
+const AIR := ["divekick", "airkick", "airknee", "airspin", "airdash", "fastfall", "block", "wait"]
 const GRABS := ["grab", "hiptoss"]
 const SUPERS := ["flurry", "cyclone"]
 const CLOSE_IN := ["walk", "dash", "roll", "kneedash"]
@@ -17,6 +17,16 @@ var rng := RandomNumberGenerator.new()
 
 func _init(seed_value := 1) -> void:
 	rng.seed = seed_value
+
+
+## What the enemy's running attack will do next: {frame: how many ticks until its next hit is out, height}.
+func _read(t: Fighter) -> Dictionary:
+	if t.move == "":
+		return {}
+	for e: Dictionary in Moves.move(t.character, t.move).get("hits", []):
+		if int(e["from"]) > t.frame:
+			return {"frame": int(e["from"]) - t.frame, "height": str(e.get("height", "mid"))}
+	return {}
 
 
 func choose(sim: Sim, id: int) -> Dictionary:
@@ -64,6 +74,11 @@ func choose(sim: Sim, id: int) -> Dictionary:
 		else:
 			c["move"] = pick.call(CLOSE_IN)
 		return c
+	if t.down > 0 and legal.has("stomp") and dist < 90.0 and rng.randf() < 0.6:   # (they're down: stomp them)
+		c["move"] = "stomp"
+		return c
+	if legal.has("burstcancel") and rng.randf() < 0.15:
+		return {"move": "burstcancel"}
 	var r := rng.randf()
 	if f.meter >= Sim.BAR and r < 0.08:   # (supers now and then - meter comes quickly the wiki's way)
 		c["move"] = pick.call(SUPERS)
@@ -71,10 +86,12 @@ func choose(sim: Sim, id: int) -> Dictionary:
 		c["move"] = pick.call(GROUND_HITS)
 	elif r < 0.68:
 		c["move"] = pick.call(GRABS)
-	elif r < 0.8:
-		c["move"] = "guard"
-	elif r < 0.9:
-		c["move"] = pick.call(["parry_early", "parry_late"])
+	elif r < 0.86:   # (a block - the height their move calls for; often reading the frame it lands on to parry)
+		c["move"] = "block" if r < 0.8 else "pushblock"
+		var read := _read(t)
+		c["y"] = 1.0 if str(read.get("height", "mid")) == "low" else -1.0
+		if rng.randf() < 0.5:
+			c["pf"] = int(read.get("frame", 0))
 	else:
 		c["move"] = pick.call(BACK_OFF)
 		if c["move"] != "backstep":

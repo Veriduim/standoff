@@ -17,6 +17,7 @@ var character := "dancer"
 var move_id := ""
 var colour := Color.WHITE
 var selected := false
+var note := ""               ## a tag top left (IC: picking it again is an Instant Cancel - a bar)
 
 
 static func make(ch: String, mid: String, col: Color, on: Callable) -> MoveIcon:
@@ -59,4 +60,7 @@ func _draw() -> void:
 	if badge != "":
 		draw_string(font, Vector2(size.x - 20, 18), badge, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#a7a7b8"))
 	if int(m.get("cost", 0)) > 0:
-		draw_string(font, Vector2(5, 18), str(int(m["cost"])), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("#ffd166"))
+		draw_string(font, Vector2(5, 18), "%d bar" % int(int(m["cost"]) / Sim.BAR), HORIZONTAL_ALIGNMENT_LEFT, -1, 13,
+				Color("#ffd166"))
+	if note != "":
+		draw_string(font, Vector2(5, 18), note, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("#c58bff"))

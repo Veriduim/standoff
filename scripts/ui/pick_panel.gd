@@ -40,7 +40,8 @@ var bar: PanelContainer
 var picked_icon: MoveIcon
 var picked_label: Label
 var pad: GridContainer
-var dist_row: HBoxContainer
+var dist_row: HBoxContainer   ## a dash / jump's Distance, or a Block's parry frame
+var dist_name: Label
 var dist_slider: HSlider
 var dist_label: Label
 var free_btn: Button
@@ -127,7 +128,8 @@ func _ready() -> void:
 	dist_row = HBoxContainer.new()
 	dist_row.add_theme_constant_override("separation", 10)
 	mid.add_child(dist_row)
-	dist_row.add_child(Ui.label("Distance", 15, Color("#a7a7b8")))
+	dist_name = Ui.label("Distance", 15, Color("#a7a7b8"))
+	dist_row.add_child(dist_name)
 	dist_slider = HSlider.new()
 	dist_slider.min_value = 0.0
 	dist_slider.max_value = 100.0
@@ -271,6 +273,8 @@ func _tab(tid: String) -> void:
 			select(mid)
 			_close_drawer()
 		var icon := MoveIcon.make(f.character, mid, MoveIcon.tab_colour(f.character, mid), pick)
+		if mid == f.cancelled:   # (the move just landed: again = an Instant Cancel, a bar)
+			icon.note = "IC"
 		icon.selected = mid == str(_c().get("move", ""))
 		drawer_grid.add_child(icon)
 	drawer.visible = true
@@ -295,11 +299,14 @@ static func frame_data(m: Dictionary) -> String:
 		parts.append("%d dmg" % dmg)
 	match str(m["kind"]):
 		"guard":
-			parts.append("blocks strikes, loses to grabs")
-		"parry":
-			parts.append("stops a strike on f%d-%d" % [int(m["window"][0]), int(m["window"][1])])
+			parts.append("both heights, no chip, shoves them off" if m.get("push", false)
+					else "↑ high / ↓ low · parries on its frame")
 		"grab":
-			parts.append("beats guard")
+			parts.append("beats blocks")
+	if not hits.is_empty() and str(hits[0].get("height", "mid")) != "mid":
+		parts.append("block it " + str(hits[0]["height"]))
+	if not hits.is_empty() and hits[0].get("guardbreak", false):
+		parts.append("guard break")
 	parts.append("%d-%df by distance" % [int(m["dist"][0]), int(m["dist"][1])] if m.has("dist")
 			and int(m["dist"][0]) != int(m["dist"][1]) else "%df" % int(m["frames"]))
 	if m.has("armor"):
@@ -343,6 +350,8 @@ func select(mid: String) -> void:
 			d = Vector2(toward, 1.0)
 		"none", "lean":
 			d = Vector2.ZERO
+		"height":
+			d = Vector2(0.0, -1.0)
 	picked_icon.character = f.character
 	picked_icon.move_id = mid
 	picked_icon.colour = MoveIcon.tab_colour(f.character, mid) if who == me else stage.colour_of(who)
@@ -373,6 +382,8 @@ func set_dir(d: Vector2) -> void:
 				usable = dk.y < 0.0
 			"down":
 				usable = dk.y > 0.0
+			"height":
+				usable = dk.x == 0.0
 			"dir8", "lean":
 				usable = true
 		b.disabled = not usable
@@ -396,6 +407,10 @@ func refresh() -> void:
 	var picks := guesses.duplicate()
 	picks[me] = choice
 	var pv := sim.preview(picks, 80)
+	var pf := _parry_frame(pv["events"])
+	if pf > 0 and pf != int(choice.get("pf", 0)):   # (a Block: parry on the frame the first hit would land)
+		choice["pf"] = pf
+		pv = sim.preview(picks, 80)
 	preview_events = pv["events"]
 	stage.ghost = pv["frames"]
 	stage.ghost_only = me
@@ -404,9 +419,16 @@ func refresh() -> void:
 	stage.guessing = who if who != me else -1
 	var c := _c()
 	var cm := Moves.move(sim.fighters[who].character, str(c.get("move", "")))
-	dist_row.visible = cm.has("dist")
-	dist_slider.set_value_no_signal(float(c.get("dist", 100.0)))
-	dist_label.text = str(int(dist_slider.value))
+	var parrying := bool(cm.get("parry_frame", false))
+	dist_row.visible = cm.has("dist") or parrying
+	dist_name.text = "Parry on frame" if parrying else "Distance"
+	dist_slider.set_block_signals(true)   # (a new range clamps the value - not a pick)
+	dist_slider.max_value = 20.0 if parrying else 100.0
+	dist_slider.step = 1.0 if parrying else 5.0
+	dist_slider.value = float(c.get("pf", 0)) if parrying else float(c.get("dist", 100.0))
+	dist_slider.set_block_signals(false)
+	dist_label.text = ("off" if int(dist_slider.value) == 0 else str(int(dist_slider.value))) if parrying \
+			else str(int(dist_slider.value))
 	var fw := sim.fighters[who]
 	free_btn.visible = str(cm.get("kind", "")) == "attack"
 	free_btn.disabled = fw.fc == 0 and fw.meter < Sim.BAR
@@ -437,13 +459,15 @@ func _outcome() -> String:
 		if a == me and type in ["hit", "throw"]:
 			dealt[d] = int(dealt.get(d, 0)) + int(e["dmg"])
 		elif a == me and type == "block":
-			line = "%s blocks it" % other
+			var adv := -int(e.get("adv", 0))
+			line = "%s blocks it%s (you're %s%d)" % [other, " (worse - wrong height)" if e.get("worse", false) else "",
+					"+" if adv >= 0 else "", adv]
 		elif a == me and type == "armor":
 			line = "%s's armour soaks it (%d)" % [other, int(e["dmg"])]
 		elif d == me and type == "parry":
 			line = "⚠ %s parries you" % other
 		elif a == me and type == "parry":
-			line = "You parry %s" % other
+			line = "You parry %s - free at once" % other
 		elif (a == me or d == me) and type == "clash":
 			line = "Clashes with %s - both stopped" % other
 		elif (a == me or d == me) and type == "tech":
@@ -451,7 +475,9 @@ func _outcome() -> String:
 		elif d == me and type in ["hit", "throw"]:
 			line = "⚠ You get hit by %s" % other
 		elif d == me and type == "block":
-			line = "You block %s" % other
+			var adv2 := int(e.get("adv", 0))
+			line = "You block %s%s (%s%d)" % [other, " - wrong height!" if e.get("worse", false) else "",
+					"+" if adv2 >= 0 else "", adv2]
 		if line != "" and not lines.has(line):
 			lines.append(line)
 	for id in dealt:
@@ -459,8 +485,24 @@ func _outcome() -> String:
 	return "" if lines.is_empty() else "\n" + "\n".join(lines)
 
 
+## The Block frame the first hit coming at you lands on (0 = none, or you've set it by hand) - from the preview.
+func _parry_frame(evs: Array) -> int:
+	if str(choice.get("move", "")) != "block" or bool(choice.get("pf_set", false)):
+		return 0
+	for e: Dictionary in evs:
+		if int(e["d"]) == me and str(e["type"]) in ["block", "hit", "parry", "throw"]:
+			var k := int(e["t"]) - sim.tick - 1
+			return k if k >= 1 and k <= 20 else 0
+	return 0
+
+
 func _on_dist(v: float) -> void:
-	_c()["dist"] = v
+	var c := _c()
+	if bool(Moves.move(sim.fighters[who].character, str(c.get("move", ""))).get("parry_frame", false)):
+		c["pf"] = int(v)
+		c["pf_set"] = true   # (picked by hand - no more filling it in from the preview)
+	else:
+		c["dist"] = v
 	refresh()
 
 

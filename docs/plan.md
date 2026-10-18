@@ -82,6 +82,11 @@ one stage; each attack aims at a picked target.
 - 19:32 / 19:38 visual pass: body A kept ("I actually like option A"), weight added (0.5.2). 19:41 "What is with the
   white line streak things ... They kind of look like rain. Remove those" -> the speed streaks (pick 7) are gone (0.5.3).
 
+- 19:46 "Whats next to make it as like for like as we can besides art? I want to have better effects and much
+  cooler moves but im cool wjth it taking longer if thier is more mechanics missing" -> the plan: 1 defence the YOMI
+  way, 2 combo depth, 3 much cooler moves, 4 effects per move (+ sound, replays, lobby rules). 19:48 "Continue working
+  on that please" -> 0.6.0 = steps 1 and 2 (docs/mechanics.md).
+
 ## To tune / later
 - **Match length with 6:** bot matches take 120-270 decision points with 6 fighters (50-90 with 2). At ~10 s a decision
   that's far too long - lower HP or more damage with more players (a lobby setting), and a turn timer.

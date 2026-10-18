@@ -42,6 +42,14 @@ var sad := 0             ## Sadness (Sim.SAD_MAX = SADNESS!) - builds while they
 var sadness := 0         ## ticks of SADNESS! left
 var sad_warned := false  ## SAD! shown for this build-up
 var dist := 1.0          ## how far the running dash / jump goes (0-1, the Distance slider)
+var parry_at := 0        ## the Block's parry frame (0 = just blocking)
+var pushed := 0          ## ticks a Push Block's shove keeps their own move from pushing them
+var prorate := 0         ## the combo on them started this many hits in (the starter's proration)
+var bounce_due := false  ## the hit on them bounces them off the ground when they land
+var bounced := false     ## ...used up for this combo
+var splat_due := false   ## the hit on them sticks them to the wall if they reach it
+var splats := 0          ## wall splats this combo (3 at most)
+var splat := 0           ## ticks left stuck to the wall
 var ko := false
 
 
@@ -50,6 +58,18 @@ func grounded() -> bool:
 
 
 ## Free to choose: alive, not reeling, not in a move.
+## The combo on them is over: everything it was counting starts again.
+func combo_over() -> void:
+	combo = 0
+	combo_used.clear()
+	di = Vector2.ZERO
+	prorate = 0
+	bounce_due = false
+	bounced = false
+	splat_due = false
+	splats = 0
+
+
 func actionable() -> bool:
 	return not ko and stun == 0 and blockstun == 0 and lock == 0 and down == 0 and move == ""
 
@@ -69,7 +89,8 @@ func to_dict() -> Dictionary:
 		"hit_done": hit_done.keys(), "stun": stun, "blockstun": blockstun, "lock": lock, "combo": combo,
 		"air_moves": air_moves, "burst": burst, "di": [di.x, di.y], "combo_used": combo_used.duplicate(true),
 		"cancelled": cancelled, "cancel_frame": cancel_frame, "fc": fc, "freed": freed, "whiffed": whiffed, "down": down, "down_pick": down_pick,
-		"kd": kd, "sad": sad, "sadness": sadness, "sad_warned": sad_warned, "dist": dist, "ko": ko}
+		"kd": kd, "sad": sad, "sadness": sadness, "sad_warned": sad_warned, "dist": dist, "parry_at": parry_at, "pushed": pushed, "prorate": prorate, "bounce_due": bounce_due, "bounced": bounced,
+		"splat_due": splat_due, "splats": splats, "splat": splat, "ko": ko}
 
 
 static func from_dict(d: Dictionary) -> Fighter:
@@ -113,5 +134,13 @@ static func from_dict(d: Dictionary) -> Fighter:
 	f.sadness = int(d.get("sadness", 0))
 	f.sad_warned = bool(d.get("sad_warned", false))
 	f.dist = float(d.get("dist", 1.0))
+	f.parry_at = int(d.get("parry_at", 0))
+	f.pushed = int(d.get("pushed", 0))
+	f.prorate = int(d.get("prorate", 0))
+	f.bounce_due = bool(d.get("bounce_due", false))
+	f.bounced = bool(d.get("bounced", false))
+	f.splat_due = bool(d.get("splat_due", false))
+	f.splats = int(d.get("splats", 0))
+	f.splat = int(d.get("splat", 0))
 	f.ko = bool(d["ko"])
 	return f

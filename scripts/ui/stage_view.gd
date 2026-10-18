@@ -138,8 +138,11 @@ func _effect(e: Dictionary, prev: Array) -> void:
 	if type == "burst":   # (a = the one bursting out)
 		fx.burst_out(a, _chest(a), colour_of(a), n + a)
 		return
-	if type in ["down", "whiff", "sad", "sadness"]:   # (a = who it happened to)
-		var at := _chest(a) if type != "down" else Vector2(float(frame[a][0]), -6.0)
+	if type in ["down", "whiff", "sad", "sadness", "bounce", "splat", "ic"]:   # (a = who it happened to)
+		var at := _chest(a) if not type in ["down", "bounce"] else Vector2(float(frame[a][0]), -6.0)
+		if type == "splat":   # (at the wall they hit)
+			at = Vector2(signf(float(frame[a][0])) * (Sim.STAGE_HALF - 4.0), _chest(a).y)
+			face = signf(float(frame[a][0]))
 		fx.on_event(type, at, face, 0, colour_of(a), a, colour_of(a), false, n + a)
 		return
 	if type == "time":
@@ -155,7 +158,7 @@ func _effect(e: Dictionary, prev: Array) -> void:
 	var at := _contact(a, d) if type in ["hit", "throw", "armor", "block"] else (_chest(a) + _chest(d)) / 2.0
 	var reeling := d < prev.size() and int(prev[d][5]) == 1
 	fx.on_event(type, at, face, int(e.get("dmg", 0)), colour_of(a), d, colour_of(d), reeling, n + d,
-			bool(e.get("counter", false)))
+			bool(e.get("counter", false)) or bool(e.get("worse", false)), bool(e.get("push", false)))
 
 
 func _char(i: int) -> String:

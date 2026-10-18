@@ -68,7 +68,7 @@ func clear() -> void:
 ## One sim event at a world point. `face` = the hitter's facing (sparks fly on along the hit), `reeling` = the one hit
 ## was already reeling (the combo goes on).
 func on_event(type: String, at: Vector2, face: float, dmg: int, by: Color, victim: int, victim_col: Color,
-		reeling: bool, seed_n: int, counter := false) -> void:
+		reeling: bool, seed_n: int, counter := false, push := false) -> void:
 	_rng.seed = seed_n
 	match type:
 		"down":   # (floored: dust both ways along the ground)
@@ -78,6 +78,26 @@ func on_event(type: String, at: Vector2, face: float, dmg: int, by: Color, victi
 						_rng.randf_range(0.25, 0.45), Color("#9a9daa"), _rng.randf_range(3.0, 6.0))
 			_add("shock", at, Vector2.ZERO, 0.2, Color("#c9ccd8"), 40.0)
 			kick(2.0)
+		"bounce":   # (off the ground: a flat shockwave and dust)
+			_add("shock", at, Vector2.ZERO, 0.25, Color.WHITE, 70.0)
+			for i in 10:
+				var side := 1.0 if i % 2 == 0 else -1.0
+				_add("chip", at, Vector2(side * _rng.randf_range(150.0, 360.0), _rng.randf_range(-260.0, -80.0)),
+						_rng.randf_range(0.3, 0.5), Color("#b9bcc8"), _rng.randf_range(3.0, 6.0))
+			freeze(0.07, victim)
+			kick(4.0)
+		"splat":   # (stuck to the wall: a big impact on it)
+			_add("spokes", at, Vector2.ZERO, 0.22, Color.WHITE, 70.0)
+			_add("shock", at, Vector2.ZERO, 0.3, victim_col.lightened(0.4), 90.0)
+			_add("text", at + Vector2(-face * 70.0, -60), Vector2(0, -30), 0.7, Color.WHITE, 26.0)
+			parts[-1]["txt"] = "WALL SPLAT"
+			splash(0.4, at)
+			freeze(0.12, victim)
+			kick(6.0)
+		"ic":   # (an Instant Cancel: a purple snap)
+			_add("shock", at, Vector2.ZERO, 0.18, Color("#c58bff"), 50.0)
+			_add("text", at + Vector2(0, -64), Vector2(0, -40), 0.5, Color("#c58bff"), 18.0)
+			parts[-1]["txt"] = "INSTANT CANCEL"
 		"whiff":   # (a Whiff Cancel: a quick white ring off them)
 			_add("shock", at, Vector2.ZERO, 0.18, Color.WHITE, 46.0)
 			_add("text", at + Vector2(0, -60), Vector2(0, -50), 0.5, Color.WHITE, 18.0)
@@ -119,8 +139,12 @@ func on_event(type: String, at: Vector2, face: float, dmg: int, by: Color, victi
 			kick(clampf(float(dmg) * 0.1, 1.5, 5.0))
 			if type != "armor":
 				_count(victim, dmg, by, reeling)
-		"block":
-			_add("guard", at, Vector2.ZERO, 0.2, BLOCK, 30.0, -face)
+		"block":   # (a guard arc - red when blocked at the wrong height; a big one and PUSH for a Push Block)
+			_add("guard", at, Vector2.ZERO, 0.2 if not push else 0.3, Color("#ff7a7a") if counter else BLOCK,
+					30.0 if not push else 48.0, -face)
+			if push:
+				_add("text", at + Vector2(0, -50), Vector2(0, -40), 0.5, BLOCK, 18.0)
+				parts[-1]["txt"] = "PUSH"
 			for i in 4:
 				_add("chip", at, _fan(-face, 1.3) * _rng.randf_range(160.0, 320.0), _rng.randf_range(0.2, 0.32),
 						Color.WHITE, _rng.randf_range(2.5, 4.0))
@@ -128,6 +152,8 @@ func on_event(type: String, at: Vector2, face: float, dmg: int, by: Color, victi
 			kick(1.0)
 		"parry":
 			_add("glint", at, Vector2.ZERO, 0.26, Color.WHITE, 58.0)
+			_add("text", at + Vector2(0, -56), Vector2(0, -40), 0.55, Color.WHITE, 22.0)
+			parts[-1]["txt"] = "PARRY"
 			_add("shock", at, Vector2.ZERO, 0.2, BLOCK, 44.0)
 			freeze(0.12, -1)
 			kick(2.0)

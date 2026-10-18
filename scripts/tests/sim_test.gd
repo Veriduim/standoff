@@ -42,9 +42,9 @@ func _test_turns() -> void:
 			and s.fighters[0].pos.x < s.fighters[1].pos.x and s.fighters[2].pos.x > s.fighters[1].pos.x
 			and s.fighters[0].facing == 1 and s.fighters[2].facing == -1)
 	_check("at the start everyone picks", s.deciders() == [0, 1, 2])
-	s.apply({0: {"move": "wait"}, 1: {"move": "guard"}, 2: {"move": "guard"}})
+	s.apply({0: {"move": "wait"}, 1: {"move": "block"}, 2: {"move": "block"}})
 	var seg := s.run_segment()
-	_check("a 10-frame wait stops the run after 10 ticks; the two guarding may pick again or Hold - guard gives way (%d ticks, %s)"
+	_check("a 10-frame wait stops the run after 10 ticks; the two blocking may pick again or Hold - a Block gives way (%d ticks, %s)"
 			% [seg["frames"].size(), s.deciders()], seg["frames"].size() == 10 and s.deciders() == [0, 1, 2]
 			and s.legal_moves(1).has("hold") and s.legal_moves(1).has("jab") and not s.legal_moves(0).has("hold"))
 	var fresh := Sim.create([{"character": "dancer"}, {"character": "dancer"}])
@@ -71,26 +71,43 @@ func _test_rules() -> void:
 	var evs := _play(s, {0: {"move": "jab"}, 1: {"move": "wait", "x": 30}})
 	_check("a jab hits someone standing still (%s)" % [_types(evs)], _types(evs).has("hit") and s.fighters[1].hp < 450)
 	s = _duel()
-	evs = _play(s, {0: {"move": "jab"}, 1: {"move": "guard", "x": 30}})
-	_check("guard blocks it - only chip damage (%s, hp %d)" % [_types(evs), s.fighters[1].hp],
+	evs = _play(s, {0: {"move": "jab"}, 1: {"move": "block"}})
+	_check("a Block takes it - only chip damage (%s, hp %d)" % [_types(evs), s.fighters[1].hp],
 			_types(evs).has("block") and s.fighters[1].hp == 449)
 	s = _duel("dancer", "dancer", 50.0)
-	evs = _play(s, {0: {"move": "grab"}, 1: {"move": "guard", "x": 30}})
-	_check("a grab goes through guard (%s)" % [_types(evs)], _types(evs).has("throw"))
+	evs = _play(s, {0: {"move": "grab"}, 1: {"move": "block"}})
+	_check("a grab goes through a Block (%s)" % [_types(evs)], _types(evs).has("throw"))
 	s = _duel("dancer", "dancer", 50.0)
 	evs = _play(s, {0: {"move": "grab"}, 1: {"move": "jab"}})
 	_check("a strike beats a grab (%s)" % [_types(evs)], _types(evs).has("hit") and not _types(evs).has("throw")
 			and s.fighters[0].hp < 450)
 	s = _duel()
-	evs = _play(s, {0: {"move": "jab"}, 1: {"move": "parry_early"}})
-	_check("Parry Early (frames 1-6) stops a jab landing on frame 6 and stuns the jabber (%s)" % [_types(evs)],
+	evs = _play(s, {0: {"move": "jab"}, 1: {"move": "block", "pf": 3}})
+	_check("a Block set to the frame the jab lands on (3) parries it - no damage (%s)" % [_types(evs)],
 			_types(evs).has("parry") and s.fighters[1].hp == 450)
 	s = _duel()
-	evs = _play(s, {0: {"move": "jab"}, 1: {"move": "parry_late"}})
-	_check("...Parry Late (frames 7-13) is too late for it (%s)" % [_types(evs)], _types(evs).has("hit"))
+	evs = _play(s, {0: {"move": "jab"}, 1: {"move": "block", "pf": 5}})
+	_check("...a frame off is just a block (%s)" % [_types(evs)], _types(evs).has("block") and not _types(evs).has("parry"))
 	s = _duel("dancer", "dancer", 80.0)
-	evs = _play(s, {0: {"move": "straight"}, 1: {"move": "parry_late"}})
-	_check("...but catches a straight landing on frame 7 (%s)" % [_types(evs)], _types(evs).has("parry"))
+	evs = _play(s, {0: {"move": "straight"}, 1: {"move": "block", "pf": 7}})
+	_check("...and a straight landing on frame 7 is parried on 7 (%s)" % [_types(evs)], _types(evs).has("parry"))
+	s = _duel("dancer", "dancer", 70.0)
+	evs = _play(s, {0: {"move": "lowkick"}, 1: {"move": "block", "y": -1.0}})
+	var worse := evs.filter(func(e: Dictionary) -> bool: return e["type"] == "block" and e.get("worse", false))
+	_check("a low kick blocked high is blocked worse - double chip (hp %d)" % s.fighters[1].hp, not worse.is_empty()
+			and s.fighters[1].hp == 448)
+	s = _duel("dancer", "dancer", 70.0)
+	evs = _play(s, {0: {"move": "lowkick"}, 1: {"move": "block", "y": 1.0}})
+	_check("...blocked low it's clean (hp %d)" % s.fighters[1].hp, _types(evs).has("block") and s.fighters[1].hp == 449)
+	s = _duel("dancer", "dancer", 80.0)
+	var x0 := s.fighters[0].pos.x
+	evs = _play(s, {0: {"move": "straight"}, 1: {"move": "pushblock"}})
+	_check("a Push Block: no chip, and the striker's shoved back (hp %d, x %.0f -> %.0f)" % [s.fighters[1].hp, x0,
+			s.fighters[0].pos.x], _types(evs).has("block") and s.fighters[1].hp == 450 and s.fighters[0].pos.x < x0 - 20.0)
+	s = _duel("dancer", "dancer", 90.0)
+	evs = _play(s, {0: {"move": "kneedash"}, 1: {"move": "block"}})
+	_check("a Guard Break (the knee dash) goes straight through a Block (%s)" % [_types(evs)], _types(evs).has("hit")
+			and not _types(evs).has("block"))
 	s = _duel("dancer", "dancer", 80.0)
 	evs = _play(s, {0: {"move": "roll", "x": 1.0}, 1: {"move": "jab"}})
 	_check("a roll's invulnerable frames let the jab pass through (%s, hp %d)" % [_types(evs), s.fighters[0].hp],
@@ -112,7 +129,7 @@ func _test_directions_and_kit() -> void:
 	_check("picking ← turns you round and dashes that way (x %.0f, facing %d)" % [s.fighters[0].pos.x, s.fighters[0].facing],
 			s.fighters[0].pos.x < -150.0 and s.fighters[0].facing == -1)
 	var t := _duel("dancer", "dancer", 300.0)
-	t.apply({0: {"move": "taunt"}, 1: {"move": "guard"}})
+	t.apply({0: {"move": "taunt"}, 1: {"move": "block"}})
 	_play(t, {})
 	_check("a taunt gives a bar of meter when it finishes (%d)" % t.fighters[0].meter, t.fighters[0].meter >= Sim.BAR - 10)
 	var kit := Moves.of("dancer")
@@ -175,14 +192,14 @@ func _test_escaping_combos() -> void:
 	s.fighters[1].burst = Sim.BURST_FULL
 	s.apply({0: {"move": "jab"}, 1: {"move": "wait"}})
 	s.run_segment()
-	evs = _play(s, {0: {"move": "guard"}, 1: {"move": "burst"}})
+	evs = _play(s, {0: {"move": "block"}, 1: {"move": "burst"}})
 	_check("guarding blocks a Burst - safe, a short push (%s)" % [_types(evs)], _types(evs).has("block")
 			and not _types(evs).has("parry") and s.fighters[0].pos.x > -200.0)
 	s = _duel()
 	s.fighters[1].burst = Sim.BURST_FULL
 	s.apply({0: {"move": "jab"}, 1: {"move": "wait"}})
 	s.run_segment()
-	evs = _play(s, {0: {"move": "parry_early"}, 1: {"move": "burst"}})
+	evs = _play(s, {0: {"move": "block", "pf": 2}, 1: {"move": "burst"}})
 	_check("...and a Parry on its frame parries it: the burster is left stuck (%s)" % [_types(evs)],
 			_types(evs).has("parry"))
 	var leans := []
@@ -266,7 +283,7 @@ func _test_wiki_more() -> void:
 	s.run_segment()
 	_check("...it cuts the move, costs 3/4 of the gauge, and that pick is attacks only (%s)" % [s.legal_moves(0).slice(0, 4)],
 			s.fighters[0].actionable() and s.fighters[0].burst < Sim.WHIFF_COST and s.legal_moves(0).has("jab")
-			and not s.legal_moves(0).has("dash") and not s.legal_moves(0).has("guard"))
+			and not s.legal_moves(0).has("dash") and not s.legal_moves(0).has("block"))
 	s = _duel("dancer", "dancer", 70.0)
 	s.fighters[1].burst = 0
 	s.apply({0: {"move": "sweep"}, 1: {"move": "wait"}})
@@ -312,7 +329,7 @@ func _test_wiki_more() -> void:
 			break
 	_check("Sadness: hanging back too long - SADNESS!: meter gone, no guard or parry (%s)" % [_types(evs)],
 			_types(evs).has("sadness") and s.fighters[0].sadness > 0 and s.fighters[0].meter == 0
-			and not s.legal_moves(0).has("guard") and not s.legal_moves(0).has("parry_early"))
+			and not s.legal_moves(0).has("block") and not s.legal_moves(0).has("pushblock"))
 	s = _duel("dancer", "dancer", 400.0)
 	s.fighters[0].pos.y = -150.0
 	_check("two air options: an air jump and an air dash, then no more until they land",
@@ -328,6 +345,73 @@ func _test_wiki_more() -> void:
 		far.append(d.fighters[0].pos.x - (-300.0))
 	_check("a dash goes as far as its distance says (15: %.0f px, 100: %.0f px)" % [far[0], far[1]],
 			float(far[0]) > 10.0 and float(far[1]) > float(far[0]) * 2.0)
+
+
+## Step 2 of "as like for like as we can" (Timmy 19:46 / 19:48): the wiki's combo depth.
+func _test_combo_depth() -> void:
+	_section("Combo depth: proration, OTG, ground bounce, wall splat, Instant and Burst Cancels")
+	var second := []
+	for starter: String in ["jab", "sweep"]:   # (a jab starter scales the rest more than a sweep starter)
+		var s := _duel("dancer", "dancer", 70.0)
+		s.fighters[1].burst = 0
+		s.apply({0: {"move": starter}, 1: {"move": "wait"}})
+		s.run_segment()
+		var hp := s.fighters[1].hp
+		s.fighters[1].vel = Vector2.ZERO
+		s.fighters[0].pos.x = s.fighters[1].pos.x - 70.0
+		s.apply({0: {"move": "straight"}, 1: {"move": "hold"}})
+		s.run_segment()
+		second.append(hp - s.fighters[1].hp)
+	_check("proration: a straight after a jab starter does less than after a sweep starter (%d / %d)" % second,
+			int(second[0]) < int(second[1]))
+	var s := _duel("dancer", "dancer", 70.0)
+	s.fighters[1].burst = 0
+	s.fighters[1].down = 15
+	s.apply({0: {"move": "stomp"}})
+	var evs: Array = s.run_segment()["events"]
+	_check("a Stomp hits someone lying down (OTG) and picks them up into the combo (%s)" % [_types(evs)],
+			_types(evs).has("hit") and s.fighters[1].down == 0 and s.fighters[1].stun > 0)
+	s = _duel("dancer", "dancer", 80.0)
+	s.fighters[1].burst = 0
+	s.apply({0: {"move": "axekick"}, 1: {"move": "wait"}})
+	evs = []
+	for _i in 4:
+		evs.append_array(s.run_segment()["events"])
+		if _types(evs).has("bounce"):
+			break
+		s.apply({1: {"move": "hold"}})
+	_check("the axe kick bounces them off the ground (once a combo) (%s)" % [_types(evs)],
+			_types(evs).has("bounce") and s.fighters[1].bounced and s.fighters[1].vel.y < 0.0)
+	s = _duel("dancer", "dancer", 70.0)
+	s.fighters[0].pos.x = Sim.STAGE_HALF - 110.0
+	s.fighters[1].pos.x = Sim.STAGE_HALF - 40.0
+	s.fighters[1].burst = 0
+	s.apply({0: {"move": "sidekick"}, 1: {"move": "wait"}})
+	evs = []
+	for _i in 4:
+		evs.append_array(s.run_segment()["events"])
+		if _types(evs).has("splat"):
+			break
+		s.apply({1: {"move": "hold"}})
+	_check("a side kick into the wall splats them there (%s)" % [_types(evs)], _types(evs).has("splat"))
+	s = _duel()
+	s.fighters[1].burst = 0
+	s.apply({0: {"move": "jab"}, 1: {"move": "wait"}})
+	s.run_segment()
+	_check("an Instant Cancel: the move just landed is there again only with a bar", not s.legal_moves(0).has("jab"))
+	s.fighters[0].meter = Sim.BAR
+	_check("...with a bar it is", s.legal_moves(0).has("jab"))
+	s.apply({0: {"move": "jab"}, 1: {"move": "hold"}})
+	_check("...and it costs the bar", s.fighters[0].meter == 0 and s.fighters[0].move == "jab")
+	s = _duel()
+	s.fighters[1].burst = 0
+	s.apply({0: {"move": "jab"}, 1: {"move": "wait"}})
+	s.run_segment()
+	_check("with a full Burst gauge mid-combo the attacker may Burst Cancel", s.legal_moves(0).has("burstcancel"))
+	s.apply({0: {"move": "burstcancel"}, 1: {"move": "hold"}})
+	s.run_segment()
+	_check("...it spends the gauge and leaves them well ahead (+%d)" % (s.fighters[1].busy() - s.fighters[0].busy()),
+			s.fighters[0].burst < Sim.BURST_FULL and s.fighters[1].busy() - s.fighters[0].busy() > 10)
 
 
 func _test_snapshots() -> void:

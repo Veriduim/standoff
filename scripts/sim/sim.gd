@@ -5,8 +5,9 @@ extends RefCounted
 ## no randomness: the same state and the same picks always play out the same, so the host's sim is the match and the
 ## phones replay the segments it sends for show.
 ##
-## Who beats what: a strike beats a grab, a grab beats guard and parry, guard takes a strike (chip damage), a parry at
-## the right frame stuns the striker, two strikes meeting clash (both stopped), armour soaks strikes but not grabs.
+## Who beats what: a strike beats a grab, a grab beats a block, a block takes a strike (chip damage) - parried if it
+## lands on the Block's picked frame at the right height (the blocker's free at once) - two strikes meeting clash (both
+## stopped), armour soaks strikes but not grabs, a Guard Break goes through a block.
 ##
 ## Getting out of a stun lock (Timmy 18:37: "Burst is the move we do to get out of stun lock. I also think a certain
 ## amount of time needs to pass for the stunlock yo go away?"):
@@ -57,6 +58,16 @@ const METER_MAX := BAR * 3    ## ...three of them
 const METER_PER_DMG := 3      ## meter for each point of damage dealt (a third of it for damage taken)
 const WHIFF_METER := 9        ## an attack that hits nothing
 const PARRY_METER := 50       ## a parry (a block gives each side a third)
+const WRONG_HEIGHT := 4       ## blocked at the wrong height: this much more blockstun, and double chip
+const AIR_BLOCK := 2          ## blocking in the air: this much more blockstun
+const PUSH_BACK := 9.0        ## Push Block shoves the striker back this hard...
+const PUSH_TICKS := 10        ## ...and their move can't carry them forward for this long
+const COMBO_PUSH := 0.7       ## each hit in a combo pushes the hitter back this much more (px, up to COMBO_PUSH_MAX)
+const COMBO_PUSH_MAX := 10.0
+const BOUNCE_UP := 9.0        ## a ground bounce sends them back up this fast...
+const BOUNCE_STUN := 6        ## ...with this much more stun
+const SPLAT_TICKS := 30       ## stuck to the wall (each splat after the first lets go 8 sooner)
+const SPLATS_MAX := 3
 const FC_MAX := 2             ## Free Cancels
 const WHIFF_COST := 1125      ## a Whiff Cancel takes this much of the Burst gauge (3/4 of BURST_FULL)
 const WHIFF_LOCK := 2         ## ...and they're free this many ticks later
@@ -193,6 +204,16 @@ func interruptible(f: Fighter) -> bool:
 	return bool(Moves.move(f.character, f.move).get("interrupt", false)) or (f.freed and _kind(f) == "attack")
 
 
+## A Burst Cancel: a full gauge, free, with someone in a combo close by.
+func _can_burst_cancel(f: Fighter) -> bool:
+	if f.burst < BURST_FULL:
+		return false
+	for g in alive():
+		if enemies(f, g) and reeling(g) and absf(g.pos.x - f.pos.x) < 200.0:
+			return true
+	return false
+
+
 ## Stuck in a committed move with 3/4 of the Burst gauge: they may Whiff Cancel when the match stops for someone else.
 func can_whiff(f: Fighter) -> bool:
 	return f != null and not f.ko and f.stun == 0 and f.blockstun == 0 and f.lock == 0 and f.down == 0 \
@@ -236,17 +257,19 @@ func legal_moves(id: int) -> Array[String]:
 		if (air and where == "ground") or (not air and where == "air"):
 			continue
 		var kind := str(m["kind"])
-		if kind in ["burst", "hold", "whiff", "getup"]:   # (only offered in their own moments)
+		if kind in ["burst", "hold", "whiff", "getup"] and mid != "burstcancel":   # (only offered in their own moments)
 			continue
 		if int(m.get("cost", 0)) > f.meter:
 			continue
 		if bool(m.get("air_option", false)) and f.air_moves >= AIR_OPTIONS:
 			continue
-		if f.sadness > 0 and kind in ["guard", "parry"]:   # (SADNESS!: no defensive options)
+		if f.sadness > 0 and kind == "guard":   # (SADNESS!: no defensive options)
 			continue
 		if f.whiffed and not kind in ["attack", "grab"]:   # (just Whiff Cancelled: attacks only)
 			continue
-		if mid == f.cancelled:   # (just landed it and cancelled out - something else this turn)
+		if mid == f.cancelled and f.meter < BAR:   # (just landed it - again only with an Instant Cancel: a bar)
+			continue
+		if mid == "burstcancel" and not _can_burst_cancel(f):
 			continue
 		out.append(mid)
 	if interruptible(f):
@@ -337,8 +360,8 @@ func _burst(f: Fighter) -> void:
 	f.combo = 0
 	f.vel = Vector2.ZERO
 	f.burst = 0
-	f.di = Vector2.ZERO
-	f.combo_used.clear()
+	f.splat = 0
+	f.combo_over()
 	f.move = "burst"
 	f.length = int(Moves.move(f.character, "burst")["frames"])
 	f.frame = 0
@@ -357,11 +380,17 @@ func _start(f: Fighter, c: Dictionary) -> void:
 	if absf(f.param.x) > 0.2:
 		f.facing = 1 if f.param.x > 0.0 else -1   # (aimed left or right - they turn that way)
 	f.dist = clampf(float(c.get("dist", 100.0)) / 100.0, 0.0, 1.0)
+	f.parry_at = int(c.get("pf", 0)) if bool(m.get("parry_frame", false)) else 0
 	f.length = int(m["frames"])
 	if m.has("dist"):   # (a short dash / jump is over sooner)
 		var d: Array = m["dist"]
 		f.length = int(round(lerpf(float(d[0]), float(d[1]), f.dist)))
 	f.meter -= int(m.get("cost", 0))
+	if mid != "" and mid == f.cancelled:   # (an Instant Cancel: the move they just landed, again, for a bar)
+		f.meter -= BAR
+		_event("ic", f, null)
+	if mid == "burstcancel":
+		f.burst = 0
 	if bool(m.get("air_option", false)):
 		f.air_moves += 1
 	f.freed = false
@@ -397,6 +426,8 @@ static func aim(kind: String, d: Vector2, facing: int) -> Vector2:
 			return d.normalized() if d.length() > 0.01 else Vector2(float(facing), 0.0)
 		"lean":   # (reeling: any of 8, or none)
 			return d.normalized() if d.length() > 0.01 else Vector2.ZERO
+		"height":   # (a block: ↓ = low, anything else = high)
+			return Vector2(0.0, 1.0) if d.y > 0.2 else Vector2(0.0, -1.0)
 	return Vector2.ZERO
 
 
@@ -439,7 +470,7 @@ func preview(choices: Dictionary, ticks := 90) -> Dictionary:
 func step() -> void:
 	tick += 1
 	for f in fighters:
-		if f.move == "burst" and f.frame == 0:   # (a Burst's first tick - the screens' flash)
+		if f.move in ["burst", "burstcancel"] and f.frame == 0:   # (a Burst's first tick - the screens' flash)
 			_event("burst", f, null)
 		_motion(f)
 	for f in fighters:
@@ -501,6 +532,9 @@ func _val(v: Variant, f: Fighter) -> float:
 
 
 func _motion(f: Fighter) -> void:
+	if f.pushed > 0:   # (shoved off a Push Block - their move doesn't carry them on)
+		f.pushed -= 1
+		return
 	if f.ko or f.stun > 0 or f.blockstun > 0 or f.lock > 0 or f.move == "":
 		return
 	var m := Moves.move(f.character, f.move)
@@ -517,6 +551,17 @@ func _floating(f: Fighter) -> bool:
 
 
 func _physics(f: Fighter) -> void:
+	if f.splat > 0:   # (stuck to the wall: sliding down it, then off - or floored if they reach the ground)
+		f.splat -= 1
+		f.vel = Vector2(0.0, 1.2)
+		f.pos += f.vel
+		if f.pos.y >= 0.0:
+			f.pos.y = 0.0
+			f.splat = 0
+			_floor(f)
+		elif f.splat == 0:
+			f.vel = Vector2(-signf(f.pos.x) * 4.0, -3.0)
+		return
 	var was_air := f.pos.y < 0.0
 	if not _floating(f) and (f.pos.y < 0.0 or f.vel.y < 0.0):
 		f.vel.y = minf(f.vel.y + (GRAVITY if f.vel.y < 0.0 else GRAVITY_FALL), MAX_FALL)
@@ -527,7 +572,9 @@ func _physics(f: Fighter) -> void:
 			f.vel.y = 0.0
 		if was_air:
 			f.air_moves = 0
-			if f.stun > 0 and f.kd:   # (a knockdown hit: floored on landing)
+			if f.stun > 0 and f.bounce_due and not f.bounced:   # (a ground bounce: back up instead of down)
+				_bounce(f)
+			elif f.stun > 0 and f.kd:   # (a knockdown hit: floored on landing)
 				_floor(f)
 			f.kd = false
 			if f.move != "" and bool(Moves.move(f.character, f.move).get("land_ends", false)):
@@ -541,12 +588,28 @@ func _physics(f: Fighter) -> void:
 	var half := float(Moves.stats(f.character)["width"]) / 2.0
 	if absf(f.pos.x) > STAGE_HALF - half:
 		f.pos.x = signf(f.pos.x) * (STAGE_HALF - half)
-		if f.stun > 0 and f.pos.y < -2.0 and absf(f.vel.x) > 2.0:   # (launched into the wall: off it, a bit more stun)
+		if f.stun > 0 and f.splat_due and f.pos.y < -2.0 and f.splats < SPLATS_MAX:   # (a wall splat: stuck there)
+			f.splat = SPLAT_TICKS - 8 * f.splats
+			f.splats += 1
+			f.splat_due = false
+			f.vel = Vector2.ZERO
+			f.stun = maxi(f.stun, f.splat + 2)
+			_event("splat", f, null)
+		elif f.stun > 0 and f.pos.y < -2.0 and absf(f.vel.x) > 2.0:   # (launched into the wall: off it, a bit more stun)
 			f.vel.x = -f.vel.x * WALL_BOUNCE
 			f.stun += WALL_STUN
 			_event("wall", f, null)
 		else:
 			f.vel.x = 0.0
+
+
+## Off the ground and back up (once a combo), a bit more stun.
+func _bounce(f: Fighter) -> void:
+	f.vel.y = -BOUNCE_UP
+	f.stun += BOUNCE_STUN
+	f.bounced = true
+	f.bounce_due = false
+	_event("bounce", f, null)
 
 
 ## Knocked down: out of the stun, lying there untouchable; the match stops for their getting-up pick.
@@ -593,10 +656,8 @@ func _count(f: Fighter) -> void:
 	f.burst = mini(BURST_FULL, f.burst + (BURST_REELING if f.stun > 0 else 1))
 	if f.stun > 0:
 		f.stun -= 1
-		if f.stun == 0:
-			f.combo = 0
-			f.combo_used.clear()
-			f.di = Vector2.ZERO
+		if f.stun == 0 and f.splat == 0:
+			f.combo_over()
 	elif f.blockstun > 0:
 		f.blockstun -= 1
 	elif f.lock > 0:
@@ -609,8 +670,7 @@ func _count(f: Fighter) -> void:
 			if str(m["kind"]) == "attack" and f.hit_done.is_empty():   # (it hit nothing)
 				_gain(f, WHIFF_METER)
 			if str(m["kind"]) == "getup":   # (up again - the combo's over)
-				f.combo = 0
-				f.combo_used.clear()
+				f.combo_over()
 			f.move = ""
 			f.frame = 0
 			f.freed = false
@@ -707,7 +767,8 @@ func _resolve_hits() -> Dictionary:
 			for e: Dictionary in live[a.id]:
 				var box := hitbox(a, e)
 				for d in fighters:
-					if d.ko or not enemies(a, d) or not box.intersects(hurtbox(d)) or invulnerable(d):
+					var otg := d.down > 0 and bool(e.get("otg", false))   # (an OTG hit reaches someone lying down)
+					if d.ko or not enemies(a, d) or not box.intersects(hurtbox(d)) or (invulnerable(d) and not otg):
 						continue
 					var key := "%d:%d" % [int(e.get("group", 0)), d.id]
 					if a.hit_done.has(key):
@@ -747,25 +808,29 @@ func _strike(a: Fighter, d: Fighter, e: Dictionary, d_kind: String, d_frame: int
 	var dmg := int(e["dmg"])
 	var dm := Moves.move(d.character, d.move) if d.move != "" else {}
 	var reeling := d.stun > 0
-	if d_kind == "parry" and not reeling:
-		var win: Array = dm.get("window", [0, 0])
-		if d_frame >= int(win[0]) and d_frame <= int(win[1]):
-			a.move = ""
-			a.stun = PARRY_STUN
-			a.vel = Vector2.ZERO
+	if (d_kind == "guard" or d.blockstun > 0) and not reeling and not e.get("guardbreak", false):
+		var push := bool(dm.get("push", false))
+		var height := str(e.get("height", "mid"))
+		var right := push or height == "mid" or (height == "low") == (d.param.y > 0.0)
+		if d.move == "block" and d.parry_at > 0 and d_frame == d.parry_at and right:   # (parried: free at once)
 			d.move = ""
+			d.frame = 0
+			d.blockstun = 0
 			_gain(d, PARRY_METER)
 			_event("parry", d, a)
 			return
-	if (d_kind == "guard" or d.blockstun > 0) and not reeling:
-		var chip := int(e.get("chip", 0))
+		var chip := 0 if push else int(e.get("chip", 0)) * (1 if right else 2)
 		d.hp -= chip
-		d.blockstun = int(e.get("block", 8))
-		d.vel.x = (signf(d.pos.x - a.pos.x) if e.get("away", false) and absf(d.pos.x - a.pos.x) > 1.0 else float(a.facing)) * 3.0
+		d.blockstun = int(e.get("block", 8)) + (0 if right else WRONG_HEIGHT) + (0 if d.grounded() else AIR_BLOCK)
+		var away := signf(d.pos.x - a.pos.x) if absf(d.pos.x - a.pos.x) > 1.0 else float(a.facing)
+		d.vel.x = away * 3.0
+		if push:   # (Push Block: the striker's shoved back)
+			a.vel.x = -away * PUSH_BACK / float(Moves.stats(a.character)["weight"])
+			a.pushed = PUSH_TICKS
 		_gain(a, PARRY_METER / 3.0)
 		_gain(d, PARRY_METER / 3.0)
 		a.fc = mini(FC_MAX, a.fc + 1)
-		_event("block", a, d, chip)
+		_event("block", a, d, chip, {"adv": a.busy() - d.blockstun, "worse": not right, "push": push})
 		return
 	if d.move != "" and dm.has("armor") and not reeling:
 		var arm: Array = dm["armor"]
@@ -779,18 +844,28 @@ func _strike(a: Fighter, d: Fighter, e: Dictionary, d_kind: String, d_frame: int
 
 func _hurt(a: Fighter, d: Fighter, e: Dictionary, type: String) -> void:
 	# combo scaling: full on the first hit, about 0.9x each hit after, 20% from the 15th on
-	var c := float(mini(d.combo, 15))
+	if d.combo == 0:   # (the starter's proration: a jab starts the scaling further in than a sweep)
+		d.prorate = int(Moves.move(a.character, a.move).get("proration", 0)) if a.move != "" else 0
+	var c := 0.0 if d.combo == 0 else float(clampi(d.combo + d.prorate, 0, 15))   # (the starter itself is unscaled)
 	var scale := 0.8 * pow((15.0 - c) / 15.0, 2.0) + 0.2
 	# a counter hit (they were mid-attack) does 10% more
 	var counter := type == "hit" and int(e["dmg"]) > 0 and d.move != "" and _kind(d) in ["attack", "super", "grab"]
-	var dmg := int(round(float(e["dmg"]) * scale * (1.1 if counter else 1.0) * (1.5 if d.sadness > 0 else 1.0)))
+	var dmg := maxi(int(e.get("min_dmg", 0)),
+			int(round(float(e["dmg"]) * scale * (1.1 if counter else 1.0) * (1.5 if d.sadness > 0 else 1.0))))
 	d.hp -= dmg
+	var in_air := d.pos.y < -1.0
+	if d.down > 0:   # (an OTG hit: picked up off the floor, the combo goes on)
+		d.down = 0
+		d.down_pick = false
+	d.splat = 0
 	# (the same move again in this combo stuns for less - a combo can last forever, but not on one move)
 	var used: Array = d.combo_used.get(a.move, [0, -1])
 	if int(used[1]) != a.instance:
 		used = [int(used[0]) + 1, a.instance]
 		d.combo_used[a.move] = used
 	d.stun = maxi(1, int(round(float(e["stun"]) * maxf(REUSE_FLOOR, 1.0 - REUSE_DECAY * (int(used[0]) - 1)))))
+	if in_air:   # (one more frame of hitstun in the air)
+		d.stun += 1
 	a.burst = mini(BURST_FULL, a.burst + dmg / BURST_DEALT_DIV)
 	d.move = ""
 	d.blockstun = 0
@@ -809,6 +884,15 @@ func _hurt(a: Fighter, d: Fighter, e: Dictionary, type: String) -> void:
 		d.vel += lean * LEAN_PUSH * (1.0 + 0.1 * d.combo)
 	if d.combo == LAUNCH_HIT and d.pos.y >= 0.0 and d.vel.y > -4.0:   # (the 7th hit on the ground always launches)
 		d.vel.y = -9.0
+	# combo pushback: the longer the combo, the further the hitter's pushed off (not their speed - their place)
+	a.pos.x -= side * minf(COMBO_PUSH * float(d.combo), COMBO_PUSH_MAX) * 0.5
+	if e.get("bounce", false) and not d.bounced:   # (a ground bounce - once a combo)
+		if d.pos.y >= 0.0 and float(kb[1]) >= 0.0:
+			_bounce(d)
+		else:
+			d.bounce_due = true
+	if e.get("splat", false) and d.splats < SPLATS_MAX:
+		d.splat_due = true
 	d.facing = -int(side)
 	_gain(a, dmg * METER_PER_DMG, d.combo)
 	_gain(d, dmg * METER_PER_DMG / 3.0, d.combo)
@@ -844,7 +928,7 @@ func _grab(a: Fighter, d: Fighter, e: Dictionary, kind: Dictionary, live: Dictio
 
 
 ## One tick's picture of every fighter, for playback: [x, y, facing, move, frame, state, hp, meter, burst gauge, Free
-## Cancels, air options left, sad (0, 1 SAD!, 2 SADNESS!), free to act (1 / 0)].
+## Cancels, air options left, sad (0, 1 SAD!, 2 SADNESS!), free to act (1 / 0), blocking low (1 / 0)].
 ## state: 0 free / in a move, 1 hit, 2 blocking, 3 locked, 4 KO, 5 lying down. Someone free after a hit cancel is
 ## recorded in the move they landed, on its frame (they hold the strike until they pick - as YOMI draws it).
 func record() -> Array:
@@ -858,8 +942,9 @@ func record() -> Array:
 		if mv == "" and f.cancelled != "" and f.actionable():
 			mv = f.cancelled
 			fr = f.cancel_frame
+		var low := 1 if (f.move == "block" or f.blockstun > 0) and f.param.y > 0.0 else 0
 		out.append([f.pos.x, f.pos.y, f.facing, mv, fr, state, f.hp, f.meter, f.burst, f.fc,
-			AIR_OPTIONS - f.air_moves, sad, 1 if f.actionable() else 0])
+			AIR_OPTIONS - f.air_moves, sad, 1 if f.actionable() else 0, low])
 	return out
 
 

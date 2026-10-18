@@ -63,6 +63,11 @@ func run(game: Control, out: String) -> void:
 			await _wait(40)
 			await _snap(out.path_join("3c_guess.png"))
 			p.guess(game.me)
+			p.select("block")   # (your guess of their jab is still in: the parry frame fills itself in)
+			p._tab("defend")
+			await _wait(30)
+			await _snap(out.path_join("3d_block.png"))
+			p._close_drawer()
 		p.select("sidekick" if game.sim.legal_moves(game.me).has("sidekick") else "jab")
 		p.boxes_btn.button_pressed = true
 		p._toggle_boxes()

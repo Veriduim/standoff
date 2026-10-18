@@ -38,7 +38,7 @@ func _test_your_pick() -> void:
 	var names := p.menu_moves()
 	_check("on the ground the tabs hold %d moves - ground attacks, grabs, moves, defence; no air moves, no supers yet"
 			% names.size(), names.size() >= 20 and names.has("sweep") and names.has("hiptoss") and names.has("roll")
-			and names.has("parry_late") and not names.has("divekick") and not names.has("cyclone"))
+			and names.has("block") and names.has("pushblock") and not names.has("divekick") and not names.has("cyclone"))
 	_check("...the Air and Super tabs are greyed out", (p.tabs_box.get_node("air") as Button).disabled
 			and (p.tabs_box.get_node("super") as Button).disabled)
 	p._tab("attack")
@@ -159,6 +159,26 @@ func _test_hit_effects() -> void:
 	_check("...and later the white chunk has drained and the count is gone",
 			is_equal_approx((card.find_child("Lag", true, false) as ProgressBar).value,
 			(card.find_child("HP", true, false) as ProgressBar).value) and g.stage.fx.combos.is_empty())
+	g.queue_free()
+
+
+func _test_block_reads_guess() -> void:
+	_section("Block: guess their move and the parry frame fills itself in")
+	var g := _screen()
+	g.start_local(1, "ffa")
+	g.bots.clear()
+	g.sim.fighters[0].pos.x = -40.0
+	g.sim.fighters[1].pos.x = 40.0
+	g.sim.fighters[0].burst = 0
+	g.pick.open(g.sim, g.me, g.stage)
+	var p: PickPanel = g.pick
+	p._on_tap(1)
+	p.select("straight")
+	p.guess(g.me)
+	p.select("block")
+	_check("guessing their straight sets your Block to parry on frame 7 (%s)" % [p.choice.get("pf", 0)],
+			int(p.choice.get("pf", 0)) == 7 and p.dist_row.visible and p.dist_name.text.begins_with("Parry"))
+	_check("...and the preview says you parry it (%s)" % p.info.text.replace("\n", " "), p.info.text.contains("You parry"))
 	g.queue_free()
 
 

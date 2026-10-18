@@ -43,13 +43,28 @@ the rules of play. The names, art, characters and code are not ours to take, and
 | Predictions | Click the opponent's moves to see what happens | Tap an opponent who's picking: pick their move; their ghost plays against yours (19:14) |
 | Ready | Ghosts labelled when they're actionable | READY over your ghost once it's free again |
 
+## Built (0.6.0 - Timmy 19:46 "as like for like as we can besides art", 19:48 "Continue working on that please")
+| Mechanic | The wiki | Standoff |
+|---|---|---|
+| Block | Block high or low; the frame the hit lands picked = a parry (actionable at once); filled in when you click the opponent's move | Block (↑ high / ↓ low) with "Parry on frame" (the slider) - filled in from the preview when a hit's coming; Guard and Parry Early / Late are gone |
+| Wrong height | Blocked worse: more chip, more block advantage | Double chip, +4 blockstun (`WRONG_HEIGHT`); low kick / sweep / stomp are low, the axe kick is high |
+| Push Block | Both heights, no chip, a big push on the striker | Push Block (not interruptible, never parries) |
+| Air block | Worse: +2 block advantage | +2 blockstun (`AIR_BLOCK`) |
+| Block advantage | The prediction says how far ahead / behind | "(+N / -N)" on blocks in the info line |
+| Guard Break | Beats Block | The knee dash |
+| Proration | A starter's proration adds to the combo count from the 2nd hit; negative = the 2nd hit unscaled | Jab +2, straight / low kick / air kick / air knee +1, sweep -1 |
+| Air hitstun | +1 frame | The same |
+| Combo pushback | Both pushed apart more as scaling grows | The hitter's pushed back a little more each hit (`COMBO_PUSH`) |
+| Minimum damage | Some moves never do less | The supers' last hits (12) |
+| Ground bounce | Once a combo | The axe kick |
+| Wall splat | Slide down the wall; floored at the bottom, off after 30 frames; 3 a combo, faster each time | The side kick, Flurry's last hit |
+| OTG | Hits the floored | A new Stomp (low) |
+| Instant Cancel | A bar: full moveset 1 frame later | A bar: the move you just landed, again ("IC" on its icon) |
+| Burst Cancel | The whole Burst gauge: an offensive burst, +24 on hit | Burst Cancel (full gauge, someone in a combo close by) |
+
 ## Later
-- **Predict the others:** pick what you think an enemy will do and the ghost plays against it.
-- **Parry on a picked frame:** instead of the Early / Late windows.
-- **Guard height:** high or low. The wrong one blocks worse (more chip and block advantage).
-- **Pushblock:** no chip, pushes the attacker back.
-- **Block advantage:** a blocked hit delays your next move by the frames shown.
-- **Proration:** per-move starting scaling.
-- **Initiative:** some moves gain invulnerability against someone not yet committed.
-- **Burst Cancel:** an attacker spends the whole gauge to cancel into an offensive burst.
-- **OTG, restands, ground bounces, wall splats.**
+- **Initiative:** some moves gain invulnerability / speed against someone not yet committed.
+- **Restands** (a hit as they land from an air combo puts them back in a grounded combo).
+- **Burst Cancel's** slower Burst refill for the rest of the combo; parry lock-out after a missed block.
+- Step 3 - much cooler moves (projectiles, a stance with its own moves, rekka chains, a command grab, a launcher route,
+  a counter stance, supers with their own animation); step 4 - effects per move; sound; replays; lobby rules.

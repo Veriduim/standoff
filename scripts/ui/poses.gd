@@ -37,6 +37,9 @@ const P := {
 	"guard": {"head": [0, -88], "neck": [0, -76], "hip": [-2, -44], "elbow_f": [10, -66], "hand_f": [14, -88],
 		"elbow_b": [6, -62], "hand_b": [10, -84], "knee_f": [12, -22], "foot_f": [16, 0], "knee_b": [-12, -22],
 		"foot_b": [-18, 0]},
+	"guard_low": {"head": [4, -70], "neck": [2, -58], "hip": [-4, -30], "elbow_f": [14, -44], "hand_f": [18, -26],
+		"elbow_b": [8, -42], "hand_b": [12, -22], "knee_f": [16, -16], "foot_f": [18, 0], "knee_b": [-12, -14],
+		"foot_b": [-20, 0]},
 	"parry": {"head": [6, -90], "neck": [4, -78], "hip": [0, -45], "elbow_f": [24, -78], "hand_f": [40, -84],
 		"elbow_b": [-6, -62], "hand_b": [6, -70], "knee_f": [14, -24], "foot_f": [20, 0], "knee_b": [-10, -24],
 		"foot_b": [-16, 0]},
@@ -145,8 +148,9 @@ static func for_record(character: String, r: Array) -> Dictionary:
 		return get_pose("down")
 	if state == 1:
 		return get_pose("hurt")
-	if state == 2:
-		return get_pose("guard")
+	var low := r.size() > 13 and int(r[13]) == 1
+	if state == 2 or (mv == "block" and state == 0):
+		return get_pose("guard_low" if low else "guard")
 	if mv == "":
 		return get_pose("fall" if air else ("crouch" if state == 3 else "idle"))
 	var keys: Array = Moves.move(character, mv).get("pose", [[0, "idle"]])
