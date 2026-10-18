@@ -1,6 +1,7 @@
 extends Node
-## Dev: screenshots of a match in progress (tools/shots.sh) - the start menu, a few turns in, your pick with a ghost,
-## mid-playback, the result. Saved as PNGs to the folder given; then it quits.
+## Dev: screenshots of a match in progress (tools/shots.sh) - the start menu, a few turns in, a tab's drawer open, your
+## pick with its ghost, the scrubber held with the boxes on, mid-playback, the result. Saved as PNGs to the folder
+## given; then it quits.
 
 
 func _snap(path: String) -> void:
@@ -28,15 +29,28 @@ func run(game: Control, out: String) -> void:
 	while game.phase == "play":
 		game.finish_playback()
 	if game.phase == "pick":
-		game._select("divekick" if game.sim.legal_moves(game.me).has("divekick") else "dash")
+		var p: PickPanel = game.pick
+		p._tab("attack")
+		await _wait(20)
+		await _snap(out.path_join("2_drawer.png"))
+		p._tab("move")
+		await _wait(10)
+		await _snap(out.path_join("2b_drawer_move.png"))
+		p._tab("defend")
+		await _wait(10)
+		await _snap(out.path_join("2c_drawer_defend.png"))
+		p.select("sidekick" if game.sim.legal_moves(game.me).has("sidekick") else "jab")
+		p._close_drawer()
 		await _wait(40)
-		await _snap(out.path_join("2_pick.png"))
-		game._select("spin" if game.sim.legal_moves(game.me).has("spin") else "kick")
-		await _wait(25)
-		await _snap(out.path_join("3_pick_spin.png"))
-		game._confirm()
+		await _snap(out.path_join("3_pick.png"))
+		p.scrub.value = 9.0
+		p.boxes_btn.button_pressed = true
+		p._toggle_boxes()
+		await _wait(6)
+		await _snap(out.path_join("4_scrub_boxes.png"))
+		p._confirm()
 		await _wait(16)
-		await _snap(out.path_join("4_playing.png"))
+		await _snap(out.path_join("5_playing.png"))
 	game.auto_me = true
 	var guard := 0
 	while game.phase != "over" and guard < 4000:
@@ -46,5 +60,5 @@ func run(game: Control, out: String) -> void:
 			game._commit({})
 		guard += 1
 	await _wait(20)
-	await _snap(out.path_join("5_result.png"))
+	await _snap(out.path_join("6_result.png"))
 	get_tree().quit()

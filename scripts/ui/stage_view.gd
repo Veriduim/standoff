@@ -10,7 +10,6 @@ const COLOURS := [Color("#e5484d"), Color("#3e8ed0"), Color("#46a758"), Color("#
 	Color("#f7782a")]
 const BG_TOP := Color("#1b1c24")
 const BG_FLOOR := Color("#262833")
-const LINE := Color("#0b0b0f")
 const GHOST_ALPHA := 0.38
 const PAD := 170.0          ## world px kept round everyone
 const ZOOM_MIN := 0.45
@@ -21,13 +20,16 @@ var names: Array = []
 var frame: Array = []        ## the tick shown (Sim.record)
 var ghost: Array = []        ## a preview's ticks, looped
 var ghost_only := -1         ## draw only this fighter's ghost (-1 = all that move)
-var target := -1             ## the picked target (a marker over them)
 var you := -1                ## this phone's fighter (a marker under them)
 var deciding: Array = []     ## who's choosing now (a pulse over them)
 var sparks: Array = []       ## [world pos, age, colour]
 var cam := Vector2(0, -120)
-var view_top := 70.0        ## the screen band the stage may use (under the cards, above the menu - GameScreen sets it)
-var view_bottom := 680.0
+var view_top := 70.0        ## the screen area the stage may use (under the cards, above the bar, left of the tabs -
+var view_bottom := 680.0    ## the screens set it)
+var view_left := 0.0
+var view_right := 1280.0
+var ghost_play := true      ## the ghost loops; false = held on the scrubbed frame, everyone's predicted spot shown
+var show_boxes := false     ## hurt boxes (outlines) and live hit boxes (red) - testing the frames
 var quiet := false          ## no sparks (skipping ahead)
 var zoom := 0.8
 var _ghost_i := 0
@@ -66,7 +68,7 @@ func show_tick(rec: Array, events: Array = []) -> void:
 
 func _process(delta: float) -> void:
 	_time += delta
-	if not ghost.is_empty():
+	if not ghost.is_empty() and ghost_play:
 		_ghost_i = (_ghost_i + 1) % (ghost.size() + 20)   # (a short hold on the last pose before it loops)
 	for s: Array in sparks:
 		s[1] = float(s[1]) + delta
@@ -92,7 +94,7 @@ func _follow(delta: float) -> void:
 	var vp := get_viewport_rect().size
 	var span := maxf(hi - lo + PAD * 2.0, 400.0)
 	var tall := absf(top) + 260.0
-	var want_zoom := clampf(minf(vp.x / span, (view_bottom - view_top) / tall), ZOOM_MIN, ZOOM_MAX)
+	var want_zoom := clampf(minf((view_right - view_left) / span, (view_bottom - view_top) / tall), ZOOM_MIN, ZOOM_MAX)
 	var want := Vector2((lo + hi) / 2.0, top * 0.5 - 70.0)
 	var k := 1.0 - pow(0.02, delta)
 	cam = cam.lerp(want, k)
@@ -101,7 +103,7 @@ func _follow(delta: float) -> void:
 
 ## The camera's centre sits a little above the band's middle (the floor near its foot).
 func _anchor() -> Vector2:
-	return Vector2(get_viewport_rect().size.x / 2.0, view_top + (view_bottom - view_top) * 0.6)
+	return Vector2((view_left + view_right) / 2.0, view_top + (view_bottom - view_top) * 0.6)
 
 
 func w2s(p: Vector2) -> Vector2:
@@ -136,12 +138,20 @@ func _draw() -> void:
 		draw_circle(Vector2.ZERO, 30.0 * zoom * (1.0 - lift), Color(0, 0, 0, 0.35))
 		draw_set_transform(Vector2.ZERO)
 	if not ghost.is_empty():
-		var g: Array = ghost[mini(_ghost_i, ghost.size() - 1)]
+		var g: Array = ghost[ghost_index()]
 		for i in g.size():
-			if (ghost_only < 0 or i == ghost_only) and int(g[i][5]) != 4:
+			if int(g[i][5]) == 4:
+				continue
+			if ghost_only < 0 or i == ghost_only:
 				_figure(i, g[i], GHOST_ALPHA)
+			elif not ghost_play:   # (held: where everyone else would be on that frame)
+				_figure(i, g[i], GHOST_ALPHA * 0.6)
 	for i in frame.size():
 		_figure(i, frame[i], 1.0)
+	if show_boxes:
+		var rows: Array = ghost[ghost_index()] if not ghost.is_empty() else frame
+		for i in rows.size():
+			_boxes(i, rows[i])
 	for s: Array in sparks:
 		var t := float(s[1]) / 0.35
 		var c: Color = s[2]
@@ -149,42 +159,58 @@ func _draw() -> void:
 		draw_arc(w2s(s[0]), (12.0 + 50.0 * t) * zoom, 0, TAU, 20, c, 4.0)
 
 
-func _figure(i: int, r: Array, alpha: float) -> void:
+## The ghost frame on show.
+func ghost_index() -> int:
+	return mini(_ghost_i, ghost.size() - 1) if not ghost.is_empty() else 0
+
+
+func scrub_to(i: int) -> void:
+	_ghost_i = clampi(i, 0, maxi(0, ghost.size() - 1))
+	queue_redraw()
+
+
+## A fighter's hurt box (outline) and any hit box live on this frame (red) - the same maths as Sim.
+func _boxes(i: int, r: Array) -> void:
+	if int(r[5]) == 4:
+		return
 	var ch := str(characters[i]) if i < characters.size() else "bruiser"
 	var st := Moves.stats(ch)
-	var h := float(st["height"]) / 100.0
-	var thick := 7.0 if ch == "bruiser" else 5.0
-	var pose := Poses.for_record(ch, r)
+	var w := float(st["width"])
+	var h := float(st["height"])
+	var pos := Vector2(float(r[0]), float(r[1]))
+	var face := int(r[2])
+	var a := w2s(pos + Vector2(-w / 2.0, -h))
+	draw_rect(Rect2(a, Vector2(w, h) * zoom), Color(1, 1, 1, 0.55), false, 1.5)
+	if str(r[3]) == "" or int(r[5]) != 0:
+		return
+	var m := Moves.move(ch, str(r[3]))
+	for e: Dictionary in m.get("hits", []):
+		if int(r[4]) >= int(e["from"]) and int(r[4]) <= int(e["to"]):
+			var b: Array = e["box"]
+			var left := pos.x + float(b[0]) if face == 1 else pos.x - float(b[0]) - float(b[2])
+			var top_left := w2s(Vector2(left, pos.y + float(b[1])))
+			var rect := Rect2(top_left, Vector2(float(b[2]), float(b[3])) * zoom)
+			draw_rect(rect, Color(1.0, 0.2, 0.25, 0.35))
+			draw_rect(rect, Color(1.0, 0.3, 0.35, 0.9), false, 2.0)
+
+
+func _figure(i: int, r: Array, alpha: float) -> void:
+	var ch := str(characters[i]) if i < characters.size() else "bruiser"
+	var h := float(Moves.stats(ch)["height"]) / 100.0
 	var base := Vector2(float(r[0]), float(r[1]))
 	var face := float(r[2])
-	var pts := {}
-	for j: String in Poses.JOINTS:
-		var v: Vector2 = pose[j]
-		pts[j] = w2s(base + Vector2(v.x * face * h, v.y * h))
 	var col: Color = COLOURS[i % COLOURS.size()]
-	var ko := int(r[5]) == 4
-	if ko:
+	if int(r[5]) == 4:
 		col = col.darkened(0.55)
 	col.a = alpha
-	var edge := LINE
-	edge.a = alpha
-	var w := thick * zoom
-	for b: Array in Poses.BONES:   # a dark edge under each bone keeps them readable over each other
-		draw_line(pts[b[0]], pts[b[1]], edge, w + 4.0 * zoom, true)
-	for b: Array in Poses.BONES:
-		draw_line(pts[b[0]], pts[b[1]], col, w, true)
 	var head_r := (12.0 if ch == "bruiser" else 10.0) * h * zoom
-	draw_circle(pts["head"], head_r + 2.0 * zoom, edge)
-	draw_circle(pts["head"], head_r, col)
+	var pts := Stick.draw(self, Poses.for_record(ch, r), w2s(base), h * zoom, face, col,
+			(7.0 if ch == "bruiser" else 5.0) * zoom, head_r)
 	if alpha < 1.0:
 		return
-	if ch == "dancer":   # (her scarf - two lines trailing behind the neck)
+	if ch == "dancer":   # (her scarf - a line trailing behind the neck)
 		var back := Vector2(-face, 0.0)
 		draw_line(pts["neck"], pts["neck"] + (back * 26.0 + Vector2(0, 6)) * zoom, col.lightened(0.35), 3.0 * zoom)
-	var over: Vector2 = pts["head"] + Vector2(0, -head_r - 18.0 * zoom)
-	if i == target:
-		draw_colored_polygon(PackedVector2Array([over + Vector2(-9, -12), over + Vector2(9, -12), over + Vector2(0, 0)]),
-				Color("#ff5d73"))
 	if deciding.has(i):
 		var pulse := 0.5 + 0.5 * sin(_time * 6.0)
 		draw_arc(pts["head"], head_r + (6.0 + 3.0 * pulse) * zoom, 0, TAU, 24, Color(1, 1, 1, 0.5 + 0.4 * pulse), 2.0)

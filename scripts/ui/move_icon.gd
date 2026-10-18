@@ -1,0 +1,56 @@
+class_name MoveIcon
+extends Button
+## A move as an icon (17:37: "see how we get that to fit with icons"): the character's own stick figure in the move's
+## key pose (Moves.icon_pose), its name under it, a badge for the direction it takes and the meter it costs. Drawn from
+## the move data - no art to make for a new move.
+
+const AIM_BADGE := {"facing": "↔", "dir8": "✣", "up": "↑", "down": "↓", "none": ""}
+
+var character := "dancer"
+var move_id := ""
+var colour := Color.WHITE
+var selected := false
+
+
+static func make(ch: String, mid: String, col: Color, on: Callable) -> MoveIcon:
+	var b := MoveIcon.new()
+	b.character = ch
+	b.move_id = mid
+	b.colour = col
+	if mid != "":
+		b.name = mid
+	b.custom_minimum_size = Vector2(88, 96)
+	b.pressed.connect(on)
+	var st := Ui.box(Color("#22242e"), 10)
+	b.add_theme_stylebox_override("normal", st)
+	b.add_theme_stylebox_override("hover", st)
+	b.add_theme_stylebox_override("pressed", Ui.box(Color("#2c2f3c"), 10))
+	b.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	return b
+
+
+func _draw() -> void:
+	var m := Moves.move(character, move_id)
+	if m.is_empty():
+		return
+	if selected:
+		draw_rect(Rect2(Vector2.ZERO, size), colour.darkened(0.55), true)
+		draw_rect(Rect2(Vector2(1, 1), size - Vector2(2, 2)), colour, false, 2.0)
+	var pose := Poses.get_pose(Moves.icon_pose(m))
+	var head_r := 11.0 if character == "bruiser" else 9.5
+	var bb := Stick.bounds(pose, head_r)
+	var area := Rect2(Vector2(8, 6), Vector2(size.x - 16, size.y - 30))
+	# (one figure size for every icon - a curled-up roll isn't blown up to fill the box)
+	var sc := minf(minf(area.size.x / maxf(bb.size.x, 1.0), area.size.y / maxf(bb.size.y, 1.0)) * 0.95, area.size.y / 108.0)
+	var origin := area.get_center() - bb.get_center() * sc
+	var col := colour if not disabled else colour.darkened(0.6)
+	Stick.draw(self, pose, origin, sc, 1.0, col, maxf(2.0, (5.0 if character == "bruiser" else 3.6) * sc),
+			head_r * sc)
+	var font := get_theme_default_font()
+	var text_col := Color("#e8e8f0") if not disabled else Color("#6b6b78")
+	draw_string(font, Vector2(2, size.y - 7), str(m["name"]), HORIZONTAL_ALIGNMENT_CENTER, size.x - 4, 13, text_col)
+	var badge := str(AIM_BADGE.get(str(m.get("aim", "none")), ""))
+	if badge != "":
+		draw_string(font, Vector2(size.x - 20, 18), badge, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#a7a7b8"))
+	if int(m.get("cost", 0)) > 0:
+		draw_string(font, Vector2(5, 18), str(int(m["cost"])), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("#ffd166"))

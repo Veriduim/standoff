@@ -26,6 +26,16 @@ one stage; each attack aims at a picked target.
    its end; phones replay it for show and take the snapshot as the truth.
 5. **Android build** to try with friends.
 
+## His calls so far (18 Oct)
+- 17:29 "for actions move them to the tabs that we pop up or from the side so we can test the frames" -> side tabs that
+  slide out the moves (PickPanel), a frame scrubber over the ghost with hit / hurt boxes.
+- 17:37 "I dont like target ... one char that has as many moves as what a YOMIH char would have ... fit with icons.
+  Just have the direction functionality" -> no targets; a DIRECTION is the only thing picked with a move (Moves `aim`:
+  facing / dir8 / up / down / none); the Dancer has 31 moves; icons are drawn from her own stick figure in each move's
+  key pose (MoveIcon); parry timing became Parry Early (frames 1-6) / Parry Late (7-13).
+- 17:41 online: a phone can host, but players can't reach it over the internet directly (mobile CGNAT, routers) - a
+  small relay with room codes is the way (his hosting call); same Wi-Fi first.
+
 ## To tune / later
 - **Match length with 6:** bot matches take 120-270 decision points with 6 fighters (50-90 with 2). At ~10 s a decision
   that's far too long - lower HP or more damage with more players (a lobby setting), and a turn timer.

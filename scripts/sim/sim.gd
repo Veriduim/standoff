@@ -18,7 +18,7 @@ const CLASH_PUSH := 5.0
 const PARRY_STUN := 18
 const TECH_LOCK := 12
 const METER_MAX := 100
-const DEFAULT := {"move": "wait", "x": 8.0}   ## a pick that never came (a turn timer ran out)
+const DEFAULT := {"move": "wait"}   ## a pick that never came (a turn timer ran out)
 
 var fighters: Array[Fighter] = []
 var mode := "ffa"        ## "ffa" | "teams"
@@ -119,8 +119,8 @@ func nearest_enemy(f: Fighter) -> Fighter:
 	return best
 
 
-## Start the picked moves: choices = {fighter id: {move, target, x, y}} - x / y carry the move's param (a direction,
-## a distance -1..1, a length or a parry frame in x). A pick that isn't legal becomes a short wait.
+## Start the picked moves: choices = {fighter id: {move, x, y}} - (x, y) is the picked direction (Sim.aim fits it to
+## the move). A pick that isn't legal becomes a wait.
 func apply(choices: Dictionary) -> void:
 	for id in choices:
 		var f := get_f(int(id))
@@ -135,35 +135,10 @@ func _start(f: Fighter, c: Dictionary) -> void:
 		c = DEFAULT
 		mid = "wait"
 	var m := Moves.move(f.character, mid)
-	# who they face: the picked target if it's a standing enemy, else the nearest one
-	var t := get_f(int(c.get("target", -1)))
-	if t == null or t.ko or not enemies(f, t):
-		t = nearest_enemy(f)
-	f.target = t.id if t != null else -1
-	if t != null and absf(t.pos.x - f.pos.x) > 1.0:
-		f.facing = 1 if t.pos.x > f.pos.x else -1
-	var x := float(c.get("x", 0.0))
-	var y := float(c.get("y", 0.0))
-	f.length = int(m["frames"])
-	match str(m.get("param", "")):
-		"dist":
-			f.param = Vector2(clampf(x, -1.0, 1.0), 0.0)
-		"dir":
-			var d := Vector2(x, y)
-			if mid == "jump":
-				d.y = minf(d.y, -0.2)   # (a jump goes up)
-			f.param = d.normalized() if d.length() > 0.01 else Vector2(0.0, -1.0)
-		"frames":
-			var r: Array = m["range"]
-			f.length = clampi(int(x), int(r[0]), int(r[1]))
-			f.param = Vector2(f.length, 0.0)
-		"frame":
-			var r2: Array = m["range"]
-			f.param = Vector2(clampi(int(x), int(r2[0]), int(r2[1])), 0.0)
-		_:
-			f.param = Vector2.ZERO
-	if str(m.get("param", "")) == "dir" and absf(f.param.x) > 0.2:
+	f.param = aim(str(m.get("aim", "none")), Vector2(float(c.get("x", 0.0)), float(c.get("y", 0.0))), f.facing)
+	if absf(f.param.x) > 0.2:
 		f.facing = 1 if f.param.x > 0.0 else -1   # (aimed left or right - they turn that way)
+	f.length = int(m["frames"])
 	f.meter -= int(m.get("cost", 0))
 	if mid == "airdash":
 		f.air_moves += 1
@@ -171,6 +146,24 @@ func _start(f: Fighter, c: Dictionary) -> void:
 	f.frame = 0
 	f.instance += 1
 	f.hit_done.clear()
+
+
+## A picked direction made to fit the move (17:37 Timmy: "Just have the direction functionality"): "facing" -> ← or →
+## (straight up / down or nothing keeps the way they face), "up" / "down" -> only those halves, "dir8" -> as picked,
+## "none" -> nothing. A unit vector (or zero).
+static func aim(kind: String, d: Vector2, facing: int) -> Vector2:
+	match kind:
+		"facing":
+			return Vector2(signf(d.x) if absf(d.x) > 0.2 else float(facing), 0.0)
+		"up":
+			var u := Vector2(d.x, minf(d.y, -0.3)) if d.length() > 0.01 else Vector2(0.0, -1.0)
+			return u.normalized()
+		"down":
+			var w := Vector2(d.x, maxf(d.y, 0.3)) if d.length() > 0.01 else Vector2(float(facing) * 0.7, 0.7)
+			return w.normalized()
+		"dir8":
+			return d.normalized() if d.length() > 0.01 else Vector2(float(facing), 0.0)
+	return Vector2.ZERO
 
 
 ## Run until someone has to choose (or it's over): every tick's picture for playback and what happened.
@@ -192,7 +185,7 @@ func preview(choices: Dictionary, ticks := 90) -> Dictionary:
 	var copy := Sim.from_dict(to_dict())
 	var all := {}
 	for id in copy.deciders():
-		all[id] = choices.get(id, {"move": "wait", "x": 40.0})
+		all[id] = choices.get(id, {"move": "wait"})
 	copy.apply(all)
 	var frames: Array = []
 	for _i in ticks:
@@ -202,7 +195,7 @@ func preview(choices: Dictionary, ticks := 90) -> Dictionary:
 		if not free.is_empty():   # (whoever's free again stands still - the preview keeps going)
 			var hold := {}
 			for id in free:
-				hold[id] = {"move": "wait", "x": 40.0}
+				hold[id] = {"move": "wait"}
 			copy.apply(hold)
 	return {"frames": frames, "events": copy.events}
 
@@ -241,10 +234,7 @@ func _motion(f: Fighter) -> void:
 	for seg: Array in m.get("motion", []):
 		if f.frame >= int(seg[0]) and f.frame <= int(seg[1]):
 			var vx := _val(seg[2], f)
-			if str(m.get("param", "")) == "dir" and seg[2] is Array:
-				f.vel.x = vx   # (a picked direction is already left / right)
-			else:
-				f.vel.x = vx * f.facing
+			f.vel.x = vx if seg[2] is Array else vx * f.facing   # (a picked direction is already left / right)
 			f.vel.y = _val(seg[3], f)
 
 
@@ -318,6 +308,7 @@ func _count(f: Fighter) -> void:
 	elif f.move != "":
 		f.frame += 1
 		if f.frame >= f.length:
+			f.meter = mini(METER_MAX, f.meter + int(Moves.move(f.character, f.move).get("meter_gain", 0)))
 			f.move = ""
 			f.frame = 0
 
@@ -348,6 +339,14 @@ func active_hits(f: Fighter) -> Array:
 		if f.frame >= int(e["from"]) and f.frame <= int(e["to"]):
 			out.append(e)
 	return out
+
+
+## In a move's invulnerable frames (a roll, a flash kick's start) - nothing touches them.
+func invulnerable(f: Fighter) -> bool:
+	if f.move == "" or f.stun > 0:
+		return false
+	var inv: Array = Moves.move(f.character, f.move).get("invuln", [])
+	return not inv.is_empty() and f.frame >= int(inv[0]) and f.frame <= int(inv[1])
 
 
 func _kind(f: Fighter) -> String:
@@ -400,7 +399,7 @@ func _resolve_hits() -> Dictionary:
 			for e: Dictionary in live[a.id]:
 				var box := hitbox(a, e)
 				for d in fighters:
-					if d.ko or not enemies(a, d) or not box.intersects(hurtbox(d)):
+					if d.ko or not enemies(a, d) or not box.intersects(hurtbox(d)) or invulnerable(d):
 						continue
 					var key := "%d:%d" % [int(e.get("group", 0)), d.id]
 					if a.hit_done.has(key):
@@ -433,8 +432,8 @@ func _strike(a: Fighter, d: Fighter, e: Dictionary, d_kind: String, d_frame: int
 	var dm := Moves.move(d.character, d.move) if d.move != "" else {}
 	var reeling := d.stun > 0
 	if d_kind == "parry" and not reeling:
-		var w0 := int(d.param.x)
-		if d_frame >= w0 and d_frame < w0 + int(dm.get("window", 3)):
+		var win: Array = dm.get("window", [0, 0])
+		if d_frame >= int(win[0]) and d_frame <= int(win[1]):
 			a.move = ""
 			a.stun = PARRY_STUN
 			a.vel = Vector2.ZERO

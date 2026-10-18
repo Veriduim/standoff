@@ -42,9 +42,9 @@ func _test_turns() -> void:
 			and s.fighters[0].pos.x < s.fighters[1].pos.x and s.fighters[2].pos.x > s.fighters[1].pos.x
 			and s.fighters[0].facing == 1 and s.fighters[2].facing == -1)
 	_check("at the start everyone picks", s.deciders() == [0, 1, 2])
-	s.apply({0: {"move": "wait", "x": 10}, 1: {"move": "wait", "x": 20}, 2: {"move": "wait", "x": 30}})
+	s.apply({0: {"move": "wait"}, 1: {"move": "guard"}, 2: {"move": "guard"}})
 	var seg := s.run_segment()
-	_check("a 10-frame wait stops the run after 10 ticks with only that fighter free (got %d ticks, %s)"
+	_check("a 10-frame wait (the others guarding for 20) stops the run after 10 ticks with only that fighter free (got %d ticks, %s)"
 			% [seg["frames"].size(), s.deciders()], seg["frames"].size() == 10 and s.deciders() == [0])
 	var fresh := Sim.create([{"character": "bruiser"}, {"character": "dancer"}])
 	_check("ground and air menus differ: a jump on the ground, a dive kick only in the air",
@@ -76,12 +76,19 @@ func _test_rules() -> void:
 	_check("a strike beats a grab (%s)" % [_types(evs)], _types(evs).has("hit") and not _types(evs).has("throw")
 			and s.fighters[0].hp < 600)
 	s = _duel()
-	evs = _play(s, {0: {"move": "jab"}, 1: {"move": "parry", "x": 6}})
-	_check("a parry on the right frame stops the jab and stuns the jabber (%s)" % [_types(evs)],
+	evs = _play(s, {0: {"move": "jab"}, 1: {"move": "parry_early"}})
+	_check("Parry Early (frames 1-6) stops a jab landing on frame 6 and stuns the jabber (%s)" % [_types(evs)],
 			_types(evs).has("parry") and s.fighters[1].hp == 600)
 	s = _duel()
-	evs = _play(s, {0: {"move": "jab"}, 1: {"move": "parry", "x": 13}})
-	_check("...a parry on the wrong frame doesn't (%s)" % [_types(evs)], _types(evs).has("hit"))
+	evs = _play(s, {0: {"move": "jab"}, 1: {"move": "parry_late"}})
+	_check("...Parry Late (frames 7-13) is too late for it (%s)" % [_types(evs)], _types(evs).has("hit"))
+	s = _duel("bruiser", "bruiser", 100.0)
+	evs = _play(s, {0: {"move": "haymaker"}, 1: {"move": "parry_late"}})
+	_check("...but catches the haymaker's frame-12 swing (%s)" % [_types(evs)], _types(evs).has("parry"))
+	s = _duel("dancer", "bruiser", 80.0)
+	evs = _play(s, {0: {"move": "roll", "x": 1.0}, 1: {"move": "jab"}})
+	_check("a roll's invulnerable frames let the jab pass through (%s, hp %d)" % [_types(evs), s.fighters[0].hp],
+			not _types(evs).has("hit") and s.fighters[0].hp == 450)
 	s = _duel("bruiser", "bruiser", 60.0)
 	evs = _play(s, {0: {"move": "jab"}, 1: {"move": "jab"}})
 	_check("two jabs meeting clash (%s)" % [_types(evs)], _types(evs).has("clash") and s.fighters[0].hp == 600)
@@ -89,6 +96,29 @@ func _test_rules() -> void:
 	evs = _play(s, {0: {"move": "jab"}, 1: {"move": "haymaker"}})
 	_check("the haymaker's armour soaks a jab and lands anyway (%s)" % [_types(evs)],
 			_types(evs).has("armor") and _types(evs).has("hit") and s.fighters[0].hp < 600)
+
+
+func _test_directions_and_kit() -> void:
+	_section("A direction is the only pick; the Dancer's full kit")
+	_check("Sim.aim fits a direction to the move: facing -> left or right, up / down halves, dir8 as is, none = nothing",
+			Sim.aim("facing", Vector2(-1, -1), 1) == Vector2(-1, 0) and Sim.aim("facing", Vector2(0, -1), -1) == Vector2(-1, 0)
+			and Sim.aim("up", Vector2(1, 1), 1).y < 0.0 and Sim.aim("down", Vector2(0, -1), 1).y > 0.0
+			and Sim.aim("dir8", Vector2(0, 1), 1) == Vector2(0, 1) and Sim.aim("none", Vector2(1, 0), 1) == Vector2.ZERO)
+	var s := _duel("dancer", "bruiser", 200.0)
+	s.apply({0: {"move": "dash", "x": -1.0}, 1: {"move": "wait"}})
+	s.run_segment()
+	_check("picking ← turns you round and dashes that way (x %.0f, facing %d)" % [s.fighters[0].pos.x, s.fighters[0].facing],
+			s.fighters[0].pos.x < -150.0 and s.fighters[0].facing == -1)
+	var t := _duel("dancer", "bruiser", 300.0)
+	t.apply({0: {"move": "taunt"}, 1: {"move": "guard"}})
+	_play(t, {})
+	_check("a taunt gives 25 meter when it finishes (meter %d)" % t.fighters[0].meter, t.fighters[0].meter == 25)
+	var kit := Moves.of("dancer")
+	var tabs := {}
+	for mid: String in kit:
+		tabs[str(kit[mid].get("tab", "?"))] = int(tabs.get(str(kit[mid].get("tab", "?")), 0)) + 1
+	_check("the Dancer has a full kit (%d moves: %s), every move in a tab and with an aim" % [kit.size(), tabs],
+			kit.size() >= 28 and not tabs.has("?") and kit.values().all(func(m: Dictionary) -> bool: return m.has("aim")))
 
 
 func _test_combos_and_ko() -> void:
