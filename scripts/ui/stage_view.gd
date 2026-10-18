@@ -435,16 +435,17 @@ func _shot(s: Array, alpha: float) -> void:
 	var dir := signf(float(s[4])) if absf(float(s[4])) > 0.1 else 1.0
 	var spin := float(s[6]) * 0.55 * dir
 	match str(s[2]):
-		"fan":   # (a folding fan spinning - the same as the ones in her hands)
-			var r := 19.0 * zoom
+		"fan":   # (a folding fan spinning - the same size as the ones in her hands: 00:43 "why the fans [are] so small?")
+			var r := Stick.FAN_R * float(Moves.stats(_char(int(s[3])))["height"]) / 100.0 * zoom
 			if alpha >= 1.0:   # (the trail - a few fading copies behind)
 				var back := Vector2(-float(s[4]), -float(s[5])).normalized() * 9.0 * zoom
 				for k in range(3, 0, -1):
 					var c := col
 					c.a = 0.18 * (4 - k)
 					draw_circle(at + back * k, r * (0.8 - 0.12 * k), c, true, -1.0, true)
-			Stick.fan(self, at, Vector2.from_angle(spin), r, 0.9, colour_of(int(s[3])) if alpha >= 1.0 else col,
-					alpha >= 1.0)
+			var turn := Vector2.from_angle(spin)
+			Stick.fan(self, at - turn * r * 0.5, turn, r, 0.9, colour_of(int(s[3])) if alpha >= 1.0 else col,
+					alpha >= 1.0)   # (spun round its middle, the way a thrown fan turns)
 		"ripple":   # (22:53 "what is the ground wave?" - a shockwave running along the floor off her fans' slam)
 			var floor_y := w2s(Vector2(0, 0)).y
 			var base := Vector2(at.x, floor_y)
