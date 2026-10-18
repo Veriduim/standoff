@@ -11,6 +11,7 @@ const BACK := [["neck", "elbow_b"], ["elbow_b", "hand_b"], ["hip", "knee_b"], ["
 const FRONT := [["hip", "knee_f"], ["knee_f", "foot_f"], ["neck", "elbow_f"], ["elbow_f", "hand_f"]]
 const FAR := 0.3             ## how much darker the far arm and leg are
 const STEEL := Color("#dfe4ee")   ## the Dancer's war fans: steel ribs and edge (21:59 "proper fans")
+const FAN_R := 27.0               ## ...their reach, for a fighter 100 tall - her signature prop, big (23:01 the mods' props)
 
 ## limb / head: for a fighter 100 tall; body: the torso's thickness at the chest, in limbs (hips: `hips`); fist: a
 ## fist's radius in limbs; foot: a foot's length in limbs (0 = none); squash: the legs' length (1 = as posed); ink: the
@@ -182,7 +183,7 @@ static func fan_at(ci: CanvasItem, pts: Dictionary, side: String, facing: float,
 	var elbow: Vector2 = pts["elbow_" + side]
 	var dir := (hand - elbow).normalized() if hand.distance_to(elbow) > 0.5 else Vector2(facing, 0.0)
 	dir = dir.rotated(-0.3 * facing)
-	fan(ci, hand - dir * 2.0 * scale, dir, 21.0 * scale, open, col.darkened(FAR) if side == "b" else col, edge,
+	fan(ci, hand - dir * 2.0 * scale, dir, FAN_R * scale, open, col.darkened(FAR) if side == "b" else col, edge,
 			metal.darkened(FAR) if side == "b" else metal)
 
 

@@ -21,9 +21,9 @@ const YELLOW := Color("#ffd23f")
 const HOT := Color("#fff6cf")
 const BLOCK := Color("#a6dcff")
 const ORANGE := Color("#ff9f1c")
-const TRAIL_KEEP := 7        ## ticks of a limb's path kept for its arc
+const TRAIL_KEEP := 10       ## ticks of a limb's path kept for its arc (a longer sweep)
 const TRAIL_FADE := 0.12     ## seconds an arc takes to fade once the hit's over
-const INNER := 0.5           ## a swoosh's inner edge, as a share of the way from the joint to the tip
+const INNER := 0.38          ## a swoosh's inner edge, as a share of the way from the joint to the tip (a fuller crescent)
 const COMBO_HOLD := 0.8      ## seconds a finished combo's count stays up, then fades over COMBO_FADE
 const COMBO_FADE := 0.4
 
@@ -433,7 +433,7 @@ func draw_trails(st: StageView) -> void:
 		if span < 12.0:
 			continue
 		var fade := 1.0 if float(t["fade"]) < 0.0 else 1.0 - float(t["fade"]) / TRAIL_FADE
-		var col := (t["c"] as Color).lerp(Color.WHITE, 0.75)
+		var col := (t["c"] as Color).lerp(Color.WHITE, 0.55)
 		var n := outer.size()
 		var cols: Array[Color] = []
 		for k in n:

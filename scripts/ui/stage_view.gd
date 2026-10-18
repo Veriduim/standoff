@@ -242,7 +242,12 @@ func _arcs() -> void:
 			continue
 		var pose := Poses.for_record(_char(i), r)
 		var pivot := "hip" if tip.begins_with("foot") else "neck"
-		fx.trail_point(i, _world(i, r, pose[tip]), _world(i, r, pose[pivot]), colour_of(i))
+		var tip_w := _world(i, r, pose[tip])
+		if tip.begins_with("hand") and _char(i) == "dancer":   # (her fan's edge, not her hand: the slash a fan leaves -
+			var elbow := _world(i, r, pose["elbow_" + tip.trim_prefix("hand_")])   # Colossus's sword arcs, 23:01)
+			if tip_w.distance_to(elbow) > 0.5:
+				tip_w += (tip_w - elbow).normalized() * Stick.FAN_R * float(Moves.stats(_char(i))["height"]) / 100.0
+		fx.trail_point(i, tip_w, _world(i, r, pose[pivot]), colour_of(i))
 
 
 ## A pose point (Poses units) in the world for fighter i on record r.
@@ -258,7 +263,7 @@ func _striking(i: int, mv: String, f: int) -> String:
 	var hits: Array = Moves.move(ch, mv).get("hits", [])
 	for k in hits.size():
 		var e: Dictionary = hits[k]
-		if f < int(e["from"]) - 3 or f > int(e["to"]) + 1:
+		if f < int(e["from"]) - 5 or f > int(e["to"]) + 3:   # (a longer sweep either side of the hit)
 			continue
 		var key := "%s:%s:%d" % [ch, mv, k]
 		if not _tip_of.has(key):

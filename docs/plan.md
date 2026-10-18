@@ -138,6 +138,12 @@ one stage; each attack aims at a picked target.
   higher; poses swing further from the stance (Poses.exaggerate - body and arms x1.32, legs x1.12, capped); effects
   x1.3, hits hold longer (hitstop x1.35) and shake more; afterimages last longer and show sooner; the camera comes in to
   x1.8. OPP=n tools/reel.sh for a 1v1 clip.
+- 22:53 "what is the ground wave? ... you can see a ton of how animations can be done from videos. Just a graphical
+  improvement overall"; 22:57 "I dont love the massive white circle thing"; 23:01 the mods (Colossus, Yharim - videos
+  in Standoff Workshop/references/yomi_mods/video, study only) -> 0.10.1: YOMI-style extreme key poses, the Ground
+  Ripple a shockwave along the floor, the big white impact ring gone; 0.10.2: her fans bigger (Stick.FAN_R 27 - the
+  prop that makes her, as Colossus's sword makes him) and her hand strikes leave crescent slashes off the fan's edge,
+  longer and fuller.
 
 ## To tune / later
 - **Match length with 6:** bot matches take 120-270 decision points with 6 fighters (50-90 with 2). At ~10 s a decision
