@@ -683,6 +683,26 @@ func _test_beating_backdash() -> void:
 			and t.interruptible(t.fighters[0]))
 
 
+func _test_steer_fans() -> void:
+	_section("Steerable fans (the research: Cowboy's bullets take DI): Recall with a direction flings them that way")
+	var s := _duel("dancer", "dancer", 700.0)
+	s.apply({0: {"move": "fan", "x": 1.0}, 1: {"move": "wait"}})
+	_steps(s, 40, func() -> bool: return s.fighters[0].actionable())
+	s.apply({0: {"move": "recall", "x": 0.0, "y": -1.0}})
+	for _i in 6:
+		s.step()
+	var v: Vector2 = s.shots[0]["vel"] if not s.shots.is_empty() else Vector2.ZERO
+	var t := _duel("dancer", "dancer", 700.0)
+	t.apply({0: {"move": "fan", "x": 1.0}, 1: {"move": "wait"}})
+	_steps(t, 40, func() -> bool: return t.fighters[0].actionable())
+	t.apply({0: {"move": "recall"}})
+	for _i in 6:
+		t.step()
+	var w: Vector2 = t.shots[0]["vel"] if not t.shots.is_empty() else Vector2.ZERO
+	_check("flung up it flies up (%s); with no direction it heads home (%s)" % [v, w], v.y < -5.0 and absf(v.x) < 1.0
+			and w.x < -5.0)
+
+
 ## Two Dancers with these x-factors on (Sim RULES "xf"), gap apart, facing each other.
 func _xf(rule: String, gap := 300.0) -> Sim:
 	var s := Sim.create([{"character": "dancer"}, {"character": "dancer"}], "ffa", {"xf": rule})

@@ -88,8 +88,11 @@ func choose(sim: Sim, id: int) -> Dictionary:
 	if legal.has("encore") and dist < 130.0 and rng.randf() < 0.6:
 		c["move"] = "encore"
 		return c
-	if legal.has("recall") and rng.randf() < 0.25:
-		return {"move": "recall"}
+	if legal.has("recall") and rng.randf() < 0.25:   # (home, or flung at the nearest enemy)
+		if rng.randf() < 0.5:
+			return {"move": "recall"}
+		var to := (t.pos + Vector2(0, -60) - f.pos).normalized()
+		return {"move": "recall", "x": to.x, "y": to.y}
 	if rng.randf() < 0.07 and FORM_SWITCH.any(func(m: String) -> bool: return legal.has(m)):
 		return {"move": pick.call(FORM_SWITCH)}
 	if f.form == "floor" and legal.has("windmill"):   # (on the floor: its own moves)

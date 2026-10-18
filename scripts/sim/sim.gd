@@ -104,6 +104,7 @@ const FAN_OUT := 24           ## ...a thrown one flies out this long, then turns
 const FAN_BACK := 13.0        ## ...coming back this fast (Recall: FAN_RECALL)
 const FAN_RECALL := 20.0
 const FAN_LIFE := 240         ## ...and is back in hand after this long whatever happens
+const FAN_FLING := 16         ## ...Recall with a direction flings them that way this long before they head home
 const TEMPO_MAX := 4          ## Tempo: beats; Encore at four
 const TEMPO_DMG := 0.06       ## ...each beat: this much more damage
 const TEMPO_FADE := 300       ## ...a beat fades after this long without a new one
@@ -1159,11 +1160,17 @@ func _spawn(f: Fighter) -> void:
 
 ## Fans: Recall - every fan of hers in the air turns for home at once, fast, and may hit anyone again on the way.
 func _recall(f: Fighter) -> void:
+	var steer := f.param.length() > 0.1   # (a direction picked: fling them that way first - Cowboy's bullets take DI)
 	for s: Dictionary in shots:
 		if int(s["owner"]) == f.id and bool(s.get("ret", false)):
-			s["leg"] = 1
 			s["spd"] = FAN_RECALL
 			s["hits"] = []
+			if steer:
+				s["leg"] = 0
+				s["out"] = FAN_FLING
+				s["vel"] = f.param.normalized() * FAN_RECALL
+			else:
+				s["leg"] = 1
 	_event("recall", f, null)
 
 

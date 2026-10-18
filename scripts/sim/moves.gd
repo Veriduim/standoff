@@ -325,7 +325,7 @@ const DANCER := {
 			"frames": 16, "where": "both", "aim": "none", "float": true, "invuln": [0, 8],
 			"pose": [[0, "crouch"], [5, "dash"], [10, "idle"]], "icon": "dash"},
 		"recall": {"name": "Recall", "tab": "special", "kind": "special", "xf": "fans", "recall_at": 3, "frames": 12,
-			"where": "both", "aim": "none", "float": true,
+			"where": "both", "aim": "lean", "float": true,   # (no direction: home; a direction: fling them that way first)
 			"pose": [[0, "throw_out"], [3, "throw_wind"], [9, "idle"]], "icon": "throw_wind"},
 		# Tempo: a beat for landing or having a move blocked, or dodging through a hit; four = Encore (spends them)
 		"encore": {"name": "Encore", "tab": "special", "kind": "attack", "xf": "tempo", "tempo": 4, "no_cancel": true,

@@ -37,8 +37,8 @@ to a projectile** (Fan Step).
 - **Her limit:** no fan, no guard; ✓ like Wizard unprepared.
 
 **Lessons for her:**
-- **Steer the fans.** Cowboy's bullets bounce and take DI. Her fans could take the lean on their way back, so the
-  return path can be aimed. (Later.)
+- **Steer the fans.** Cowboy's bullets bounce and take DI. ✓ 0.15.0: Recall takes a direction and flings her fans
+  that way before they come home, so the return path can be aimed.
 - **A stall in the air.** Ninja's shuriken stalls him mid-air. Timmy chose "we should fall" (00:09); the two fans
   limit it anyway, so a short stall can come back if wanted.
 - **Not armour.** Robot's armour is the opposite of her; she should never trade hits.

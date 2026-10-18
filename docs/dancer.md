@@ -17,7 +17,8 @@ are study only.
 - **Zoning tools:**
   - Fan Throw (8 directions) and Air Fan are boomerangs that hit on the way out and back;
   - Ground Ripple runs along the floor (low, can't be parried);
-  - Recall turns her fans home;
+  - Recall turns her fans home - or, with a direction on the pad, flings them that way first (`Sim.FAN_FLING` 16
+    ticks, fast, hitting again) before they head home (like Cowboy's bullets taking DI);
   - Fan Step blinks her to a thrown fan.
 - **Sadness:** as for anyone (00:06-00:09: YOMI's universal rules stay faithful; its zoners, Cowboy and Wizard, live
   with it too). Her fan's edge rewards spacing instead.
