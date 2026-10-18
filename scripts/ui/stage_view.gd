@@ -527,7 +527,8 @@ func _figure(i: int, r: Array, alpha: float) -> void:
 	var sc := h * zoom
 	var open := 0.0
 	var fans := 0
-	if dancer:   # (21:59 "feel like a dancer. With proper fans": her fans, a sash, a sway while she stands)
+	if dancer:   # (21:59 "feel like a dancer. With proper fans": her fans and a sway while she stands - 22:26 "Just go
+		# no clothes just fans")
 		var mvk := str(Moves.move(ch, str(r[3])).get("kind", "")) if str(r[3]) != "" else ""
 		open = Stick.fan_open(int(r[5]), mvk)
 		fans = int(r[16]) if r.size() > 16 else 2
@@ -535,17 +536,9 @@ func _figure(i: int, r: Array, alpha: float) -> void:
 			var k := 0.5 + 0.5 * sin(_time * 1.9 + i * 1.1)
 			pose = Poses.blend(pose, Poses.get_pose("idle2"), k * (1.0 if alpha >= 1.0 else 0.0))
 		var pre := Stick._place(pose, w2s(base), sc, face)
-		var cloth: bool = Outfit.look.get("panels", false) or Outfit.look.get("skirt", false)
-		if alpha >= 1.0 and not cloth:   # (the sash - her cloth panels / skirt take its place)
-			_sash(i, pre, face, col, sc)
-		Outfit.back(self, pre, sc, face, col, head_r, _time + i * 0.7, float(_vx.get(i, 0.0)) if alpha >= 1.0 else 0.0,
-				alpha >= 1.0)
 		if fans >= 2:
 			Stick.fan_at(self, pre, "b", face, sc, open, col, alpha >= 1.0, Stick.STEEL if alpha >= 1.0 else col)
 	var pts := Stick.draw(self, pose, w2s(base), sc, face, col, Stick.limb(sc), head_r, alpha >= 1.0)
-	if dancer:   # (her look over the body - Outfit, 22:12)
-		Outfit.front(self, pts, sc, face, col, head_r, _time + i * 0.7, float(_vx.get(i, 0.0)) if alpha >= 1.0 else 0.0,
-				alpha >= 1.0)
 	if dancer and fans >= 1:   # (ghosts and afterimages: their fans in their own faded colour, not bright steel)
 		Stick.fan_at(self, pts, "f", face, sc, open, col, alpha >= 1.0, Stick.STEEL if alpha >= 1.0 else col)
 	if alpha < 1.0:
@@ -563,31 +556,6 @@ func _figure(i: int, r: Array, alpha: float) -> void:
 		var s := maxf(6.0, 9.0 * zoom)
 		draw_colored_polygon(PackedVector2Array([tip, tip + Vector2(-s, -s * 1.1), tip + Vector2(s, -s * 1.1)]),
 				Color.WHITE)
-
-
-## The Dancer's sash: a knot at the back of her waist and two silk tails streaming out behind - longer when she moves.
-func _sash(i: int, pts: Dictionary, face: float, col: Color, sc: float) -> void:
-	var neck: Vector2 = pts["neck"]
-	var hip: Vector2 = pts["hip"]
-	var waist := hip.lerp(neck, 0.18) + Vector2(-face * 4.0 * sc, 0.0)
-	var vx := float(_vx.get(i, 0.0))
-	var ink := Color(0.02, 0.02, 0.03)
-	for k in 2:
-		var line: Array[Vector2] = [waist]
-		for s in range(1, 7):
-			var t := float(s) / 6.0
-			var x := (-face * (10.0 + 30.0 * t) - vx * 3.0 * t) * sc
-			var y := (2.0 + (18.0 + 9.0 * k) * t) * sc - absf(vx) * 1.2 * t * sc
-			var wave := sin(_time * 6.0 + i * 1.3 + s * 0.8 + k * 1.9) * 4.5 * t * sc
-			line.append(waist + Vector2(x, y + wave))
-		for s in line.size() - 1:   # (tapering to the tip)
-			var w := maxf(1.5, (7.0 - k * 1.5) * sc * (1.0 - 0.7 * float(s) / line.size()))
-			draw_line(line[s], line[s + 1], ink, w + 3.0, true)
-		for s in line.size() - 1:
-			var w := maxf(1.5, (7.0 - k * 1.5) * sc * (1.0 - 0.7 * float(s) / line.size()))
-			draw_line(line[s], line[s + 1], col.lightened(0.35 + 0.12 * k), w, true)
-	draw_circle(waist, 4.5 * sc, ink, true, -1.0, true)
-	draw_circle(waist, 3.2 * sc, col.lightened(0.45), true, -1.0, true)
 
 
 func _unhandled_input(event: InputEvent) -> void:

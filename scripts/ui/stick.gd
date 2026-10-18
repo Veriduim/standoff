@@ -14,7 +14,9 @@ const STEEL := Color("#dfe4ee")   ## the Dancer's war fans: steel ribs and edge 
 
 ## limb / head: for a fighter 100 tall; body: the torso's thickness at the chest, in limbs (hips: `hips`); fist: a
 ## fist's radius in limbs; foot: a foot's length in limbs (0 = none); squash: the legs' length (1 = as posed); ink: the
-## outline, in limbs.
+## outline, in limbs. Optional (22:26 "Look into stick figure designs"): waist (the torso pinched, in limbs); gap (the
+## head floating off the neck, in limbs - Animator vs Animation's); ring (1 = a hollow ring head, its band this many
+## limbs thick); taper (0-1: limbs thinning toward the hands and feet); toe (pointed toes this many limbs long).
 ## A - the figure lab's first row (Timmy 19:38: "I actually like option A"; B-D stay in the lab).
 static var style := {"limb": 9.0, "head": 11.5, "body": 1.45, "hips": 1.45, "fist": 0.62, "foot": 0.0, "squash": 1.0,
 	"ink": 0.3}
@@ -33,6 +35,13 @@ static func head(scale: float) -> float:
 static func draw(ci: CanvasItem, pose: Dictionary, origin: Vector2, scale: float, facing: float, col: Color,
 		thick: float, head_r: float, edge := true) -> Dictionary:
 	var pts := _place(pose, origin, scale, facing)
+	var gap := float(style.get("gap", 0.0)) * thick
+	if gap > 0.0:   # (the head floats a little off the body)
+		var up := ((pts["head"] as Vector2) - (pts["neck"] as Vector2)).normalized()
+		pts["head"] = (pts["head"] as Vector2) + up * gap
+	var taper := float(style.get("taper", 0.0))
+	var toe := float(style.get("toe", 0.0)) * thick
+	var ring := float(style.get("ring", 0.0)) * thick
 	var chest := thick * float(style["body"])
 	var hips := thick * float(style["hips"])
 	var fist := thick * float(style["fist"])
@@ -41,28 +50,62 @@ static func draw(ci: CanvasItem, pose: Dictionary, origin: Vector2, scale: float
 		var ink := Color(0.02, 0.02, 0.03, col.a)
 		var ew := maxf(1.5, thick * float(style["ink"]))
 		for b: Array in BACK + FRONT:
-			_bone(ci, pts[b[0]], pts[b[1]], thick + ew * 2.0, thick + ew * 2.0, ink)
+			_bone(ci, pts[b[0]], pts[b[1]], _w(b, 0, thick, taper) + ew * 2.0, _w(b, 1, thick, taper) + ew * 2.0, ink)
+		if toe > 0.0:
+			for s: String in ["f", "b"]:
+				_toe(ci, pts, s, facing, toe + ew, thick * (1.0 - 0.55 * taper) + ew * 2.0, ink)
 		_torso(ci, pts, chest + ew * 2.0, thick * float(style.get("waist", 0.0)) + ew * 2.0, hips + ew * 2.0, ink)
 		for j: String in ["hand_f", "hand_b"]:
 			ci.draw_circle(pts[j], fist + ew, ink, true, -1.0, true)
 		if foot > 0.0:
 			for s: String in ["f", "b"]:
 				_foot(ci, pts, s, facing, foot, thick + ew * 2.0, ink)
-		ci.draw_circle(pts["head"], head_r + ew, ink, true, -1.0, true)
+		if ring > 0.0:   # (a ring head: inked inside and out)
+			ci.draw_arc(pts["head"], head_r - ring / 2.0, 0.0, TAU, 40, ink, ring + ew * 2.0, true)
+		else:
+			ci.draw_circle(pts["head"], head_r + ew, ink, true, -1.0, true)
 	var far := col.darkened(FAR)
 	for b: Array in BACK:
-		_bone(ci, pts[b[0]], pts[b[1]], thick, thick, far)
-	ci.draw_circle(pts["hand_b"], fist, far, true, -1.0, true)
+		_bone(ci, pts[b[0]], pts[b[1]], _w(b, 0, thick, taper), _w(b, 1, thick, taper), far)
+	if toe > 0.0:
+		_toe(ci, pts, "b", facing, toe, thick * (1.0 - 0.55 * taper), far)
+	ci.draw_circle(pts["hand_b"], fist * (1.0 - 0.6 * taper), far, true, -1.0, true)
 	if foot > 0.0:
 		_foot(ci, pts, "b", facing, foot, thick, far)
 	_torso(ci, pts, chest, thick * float(style.get("waist", 0.0)), hips, col)
 	for b: Array in FRONT:
-		_bone(ci, pts[b[0]], pts[b[1]], thick, thick, col)
+		_bone(ci, pts[b[0]], pts[b[1]], _w(b, 0, thick, taper), _w(b, 1, thick, taper), col)
 	if foot > 0.0:
 		_foot(ci, pts, "f", facing, foot, thick, col)
-	ci.draw_circle(pts["hand_f"], fist, col, true, -1.0, true)
-	ci.draw_circle(pts["head"], head_r, col, true, -1.0, true)
+	if toe > 0.0:
+		_toe(ci, pts, "f", facing, toe, thick * (1.0 - 0.55 * taper), col)
+	ci.draw_circle(pts["hand_f"], fist * (1.0 - 0.6 * taper), col, true, -1.0, true)
+	if ring > 0.0:
+		ci.draw_arc(pts["head"], head_r - ring / 2.0, 0.0, TAU, 40, col, ring, true)
+	else:
+		ci.draw_circle(pts["head"], head_r, col, true, -1.0, true)
 	return pts
+
+
+## A limb's width at its start (end 0) or end (1): with taper, upper arms / thighs start a little thicker and the
+## forearms / shins thin out toward the hands and feet.
+static func _w(b: Array, end: int, thick: float, taper: float) -> float:
+	if taper <= 0.0:
+		return thick
+	var upper := str(b[0]) in ["neck", "hip"]
+	if upper:
+		return thick * (1.0 + 0.15 * taper if end == 0 else 1.0 - 0.25 * taper)
+	return thick * (1.0 - 0.25 * taper if end == 0 else 1.0 - 0.55 * taper)
+
+
+## A pointed toe off the ankle: on along the shin, leaning the way she faces - a dancer's pointed foot.
+static func _toe(ci: CanvasItem, pts: Dictionary, side: String, facing: float, length: float, w: float, c: Color) -> void:
+	var ankle: Vector2 = pts["foot_" + side]
+	var shin: Vector2 = ankle - (pts["knee_" + side] as Vector2)
+	var d := (shin.normalized() + Vector2(facing, 0.0) * 0.9).normalized() if shin.length() > 0.01 else Vector2(facing, 0)
+	var n := Vector2(-d.y, d.x)
+	ci.draw_colored_polygon(PackedVector2Array([ankle + n * w / 2.0, ankle + d * length, ankle - n * w / 2.0]), c)
+	ci.draw_circle(ankle, w / 2.0, c, true, -1.0, true)
 
 
 ## The body: neck to hip, chest-wide at the top and hips-wide at the bottom - pinched in at the waist when the style

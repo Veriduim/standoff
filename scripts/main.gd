@@ -13,20 +13,12 @@ func _ready() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--lobbies="):   # (another lobby server - a local one: ws://127.0.0.1:8787)
 			LobbyNet.url = arg.trim_prefix("--lobbies=")
-		if arg.begins_with("--look="):   # (dev: the Dancer in one of Outfit.LOOKS - trying a look before it's picked)
-			Outfit.look = Outfit.LOOKS.get(arg.trim_prefix("--look="), {})
-			Stick.style["waist"] = 1.0 if not Outfit.look.is_empty() else 0.0
 	if "--livecheck" in OS.get_cmdline_user_args():   # (dev: a match on the real lobby server - scripts/dev/live_check.gd)
 		var live: Node = load("res://scripts/dev/live_check.gd").new()
 		add_child(live)
 		live.call("run")
 		return
 	for arg in OS.get_cmdline_user_args():
-		if arg.begins_with("--dancerlab="):   # (dev: the Dancer's looks side by side - scripts/dev/dancer_lab.gd)
-			var dl: Node2D = load("res://scripts/dev/dancer_lab.gd").new()
-			add_child(dl)
-			dl.call("run", arg.trim_prefix("--dancerlab="))
-			return
 		if arg.begins_with("--figlab="):   # (dev: body styles side by side - scripts/dev/figure_lab.gd)
 			var lab: Node2D = load("res://scripts/dev/figure_lab.gd").new()
 			add_child(lab)

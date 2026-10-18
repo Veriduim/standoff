@@ -57,13 +57,10 @@ func _draw() -> void:
 	var col := colour if not disabled else colour.darkened(0.6)
 	var dancer := character == "dancer"
 	var open := Stick.fan_open(0, str(m.get("kind", "")))
-	if dancer:   # (her look and fans - the far ones behind her)
-		var pre := Stick._place(pose, origin, sc, face)
-		Outfit.back(self, pre, sc, face, col, head_r * sc, 0.6, 0.0)
-		Stick.fan_at(self, pre, "b", face, sc, open, col)
+	if dancer:   # (her fans - the far one behind her)
+		Stick.fan_at(self, Stick._place(pose, origin, sc, face), "b", face, sc, open, col)
 	var pts := Stick.draw(self, pose, origin, sc, face, col, maxf(3.0, Stick.limb(sc)), head_r * sc)
 	if dancer:
-		Outfit.front(self, pts, sc, face, col, head_r * sc, 0.6, 0.0)
 		Stick.fan_at(self, pts, "f", face, sc, open, col)
 	var font := get_theme_default_font()
 	var text_col := Color("#e8e8f0") if not disabled else Color("#6b6b78")
