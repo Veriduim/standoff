@@ -10,8 +10,8 @@ extends RefCounted
 ##   arcs      the striking hand or foot leaves a pale arc while its hit is out
 ## The second, flashier pass (18:35: "Im excited to see the flashy animations and burst effects"; scenery and the floor
 ## reflection left out, "those are mods"):
-##   impacts   a hard hit flashes the one hit white for a few frames, throws out impact lines and sends speed streaks
-##             across the stage the way the hit goes (pick 7)
+##   impacts   a hard hit flashes the one hit white for a few frames and throws out impact lines (the speed streaks
+##             across the stage went at 19:41: "They kind of look like rain. Remove those")
 ##   supers    the stage dims round the one starting it, light rays and rings burst out of them, everything holds a
 ##             moment and the picture splits into colours (pick 13); KOs split too
 ##   after     fast movers leave fading copies of themselves (pick 8)
@@ -34,7 +34,6 @@ var shake := 0.0             ## screen px, fading
 var offset := Vector2.ZERO   ## this frame's shake (StageView adds it to the camera)
 var combos := {}             ## victim id -> {hits, dmg, by: colour, pop: 1 -> 0, end: -1 live / seconds since it ended}
 var trails := {}             ## fighter id -> {pts: [[tip, pivot], ...], c: colour, fade: -1 live / seconds}
-var streaks: Array = []      ## {p: screen fraction, d: direction, len, sp: px/s, age, life} - across the whole stage
 var flash := {}              ## fighter id -> seconds they're drawn white (the impact frame)
 var afters: Array = []       ## afterimages: {id, rec: Sim.record row, age, life}
 var dim := 0.0               ## how dark the stage goes round a super (0-1); `dim_id` is drawn over it
@@ -55,7 +54,6 @@ func clear() -> void:
 	jitter.clear()
 	combos.clear()
 	trails.clear()
-	streaks.clear()
 	flash.clear()
 	punch = 0.0
 	afters.clear()
@@ -111,11 +109,10 @@ func on_event(type: String, at: Vector2, face: float, dmg: int, by: Color, victi
 				_add("text", at + Vector2(0, -46), Vector2(0, -60), 0.6, Color("#ff5d5d"), 26.0)
 				parts[-1]["txt"] = "COUNTER"
 				flash[victim] = 0.08
-			if dmg >= 30:   # (a hard one: the shockwave, impact lines, the one hit flashes white, streaks)
+			if dmg >= 30:   # (a hard one: the shockwave, impact lines, the one hit flashes white)
 				_add("shock", at, Vector2.ZERO, 0.24, Color.WHITE, 62.0 * s)
 				_add("spokes", at, Vector2.ZERO, 0.14, Color.WHITE, 46.0 * s)
 				flash[victim] = 0.06
-				rush(Vector2(face, -0.35), 14 + int(8.0 * s))
 			if dmg >= 45:
 				splash(0.35, at)
 			freeze(clampf(0.04 + float(dmg) * 0.0018, 0.05, 0.14), victim)
@@ -151,7 +148,6 @@ func on_event(type: String, at: Vector2, face: float, dmg: int, by: Color, victi
 						_rng.randf_range(0.4, 0.7), victim_col if i % 3 else Color.WHITE, _rng.randf_range(3.0, 6.0))
 			_add("spokes", at, Vector2.ZERO, 0.2, Color.WHITE, 90.0)
 			flash[victim] = 0.12
-			rush(Vector2(face, -0.2), 26)
 			splash(0.8, at)
 			freeze(0.22, victim)
 			kick(6.0)
@@ -205,15 +201,6 @@ func dust(at: Vector2, s: float, seed_n: int) -> void:
 				_rng.randf_range(0.2, 0.38), Color("#8d909c"), _rng.randf_range(2.5, 5.0))
 	if s > 0.7:
 		kick(1.0 + s)
-
-
-## Speed streaks across the stage the way a hit sends someone (screen-wide, behind the fighters).
-func rush(dir: Vector2, n: int) -> void:
-	var d := dir.normalized()
-	for i in n:
-		streaks.append({"p": Vector2(_rng.randf(), _rng.randf()), "d": d, "len": _rng.randf_range(60.0, 220.0),
-			"sp": _rng.randf_range(900.0, 1900.0), "age": 0.0, "life": _rng.randf_range(0.22, 0.45),
-			"a": _rng.randf_range(0.15, 0.45)})
 
 
 ## The colour split (the post shader): `amount` 0-1, from a world point.
@@ -338,9 +325,6 @@ func update(delta: float) -> void:
 			trails[id]["fade"] = float(trails[id]["fade"]) + delta
 			if float(trails[id]["fade"]) > TRAIL_FADE:
 				trails.erase(id)
-	for s: Dictionary in streaks:
-		s["age"] = float(s["age"]) + delta
-	streaks = streaks.filter(func(s: Dictionary) -> bool: return float(s["age"]) < float(s["life"]))
 	for a: Dictionary in afters:
 		a["age"] = float(a["age"]) + delta
 	afters = afters.filter(func(a: Dictionary) -> bool: return float(a["age"]) < float(a["life"]))
@@ -495,17 +479,6 @@ func draw_parts(st: StageView) -> void:
 				var side := Vector2(-dir.y, dir.x) * s * 0.28
 				st.draw_colored_polygon(PackedVector2Array([at + dir * s, at - dir * s * 0.4 + side,
 						at - dir * s * 0.4 - side]), c)
-
-
-## The speed streaks - screen-wide thin lines racing the way the hit went, behind everyone.
-func draw_streaks(st: StageView) -> void:
-	var vp := st.get_viewport_rect().size
-	for s: Dictionary in streaks:
-		var t := float(s["age"]) / float(s["life"])
-		var d: Vector2 = s["d"]
-		var start := (s["p"] as Vector2) * vp + d * float(s["sp"]) * float(s["age"]) - d * vp.length() * 0.25
-		var c := Color(0.85, 0.87, 0.95, float(s["a"]) * sin(t * PI))
-		st.draw_line(start, start + d * float(s["len"]), c, 2.0, true)
 
 
 func _star(st: StageView, at: Vector2, s: float, rot: float, sp: Array, c: Color) -> void:

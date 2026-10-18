@@ -79,6 +79,9 @@ one stage; each attack aims at a picked target.
   the scrubber's gone; a Distance slider. 19:14 "How do I see how my and my opponents moves will interact?" -> tap an
   opponent to guess their move; their ghost plays against yours. READY over your ghost (the YOMI screenshots).
 
+- 19:32 / 19:38 visual pass: body A kept ("I actually like option A"), weight added (0.5.2). 19:41 "What is with the
+  white line streak things ... They kind of look like rain. Remove those" -> the speed streaks (pick 7) are gone (0.5.3).
+
 ## To tune / later
 - **Match length with 6:** bot matches take 120-270 decision points with 6 fighters (50-90 with 2). At ~10 s a decision
   that's far too long - lower HP or more damage with more players (a lobby setting), and a turn timer.

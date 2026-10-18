@@ -329,7 +329,6 @@ func _draw() -> void:
 	for i in range(-steps, steps + 1):
 		var x := w2s(Vector2(i * 100.0, 0)).x
 		draw_line(Vector2(x, floor_y), Vector2(x, floor_y + (16.0 if i % 4 == 0 else 9.0)), LINE, 2.0)
-	fx.draw_streaks(self)
 	if frame.is_empty():
 		return
 	for i in frame.size():   # (a faint spot under anyone in the air, so heights read)
