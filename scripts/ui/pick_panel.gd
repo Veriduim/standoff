@@ -143,7 +143,13 @@ func _ready() -> void:
 	hold_btn.toggle_mode = true
 	hold_btn.custom_minimum_size = Vector2(92, 0)
 	hold_btn.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	for st in ["normal", "hover", "focus"]:   # (clearly a button when you can press it - 22:37)
+		hold_btn.add_theme_stylebox_override(st, Ui.box(Color("#2e3140")))
 	hold_btn.add_theme_stylebox_override("pressed", Ui.box(Color("#2b4f8a")))
+	hold_btn.add_theme_stylebox_override("hover_pressed", Ui.box(Color("#2b4f8a")))
+	hold_btn.add_theme_stylebox_override("disabled", Ui.box(Color("#1a1b22")))
+	hold_btn.add_theme_color_override("font_color", Color("#f2f2f7"))
+	hold_btn.add_theme_color_override("font_disabled_color", Color("#4a4b57"))
 	side.add_child(hold_btn)
 	confirm_btn = Ui.button("Confirm", func() -> void: _confirm(), 24)
 	confirm_btn.custom_minimum_size = Vector2(150, 0)
@@ -231,15 +237,25 @@ func open(the_sim: Sim, id: int, the_stage: StageView) -> void:
 	_close_drawer()
 
 
-## The enemy for the right-hand tabs: the nearest one picking too (-1 = nobody).
+## The enemy for the right-hand side: the nearest one picking too, else the nearest one at all (22:39 - YOMI always
+## shows the other side); -1 = nobody left.
 func _nearest_foe() -> int:
 	var f := sim.fighters[me]
 	var best := -1
-	for id in sim.deciders():
-		var g := sim.fighters[id]
-		if id != me and sim.enemies(f, g) and (best < 0 or absf(g.pos.x - f.pos.x) < absf(sim.fighters[best].pos.x - f.pos.x)):
-			best = id
+	for pass_n in 2:
+		for g in sim.alive():
+			if g.id == me or not sim.enemies(f, g) or (pass_n == 0 and not sim.deciders().has(g.id)):
+				continue
+			if best < 0 or absf(g.pos.x - f.pos.x) < absf(sim.fighters[best].pos.x - f.pos.x):
+				best = g.id
+		if best >= 0:
+			return best
 	return best
+
+
+## Is the enemy down the right picking this turn (so you can guess) - or mid-move / reeling (shown as it plays out)?
+func _foe_picking() -> bool:
+	return foe >= 0 and sim.deciders().has(foe)
 
 func close() -> void:
 	visible = false
@@ -280,7 +296,7 @@ func _build_tabs() -> void:
 	foe_name.visible = foe >= 0
 	if foe >= 0:
 		_build_side(foe_box, foe, true)
-		foe_name.text = "Guess %s" % sim.fighters[foe].name
+		foe_name.text = "Guess %s" % sim.fighters[foe].name if _foe_picking() else "%s - mid-move" % sim.fighters[foe].name
 		foe_name.add_theme_color_override("font_color", stage.colour_of(foe).lightened(0.25))
 
 
@@ -588,7 +604,7 @@ func refresh() -> void:
 		if not gm.is_empty():
 			guessed += "\nIf %s picks %s:" % [sim.fighters[id].name, gm["name"]]
 	var hint := "" if not picks.size() > 1 or sim.deciders().size() < 2 else ""
-	if picks.size() == 1 and foe >= 0:
+	if picks.size() == 1 and _foe_picking():
 		hint = "\n(guess %s's move with their tabs on the right)" % sim.fighters[foe].name
 	info.text = "%s%s%s%s" % [m["name"], guessed, _outcome(), hint]
 	info.reset_size()
@@ -617,6 +633,9 @@ func _show_card(side: String) -> void:
 	var icon: MoveIcon = k["icon"]
 	var pad_grid: GridContainer = k["pad"]
 	var free: Button = k["free"]
+	if id != me and not _foe_picking():   # (they're not picking: what they're doing, as it plays out)
+		_show_busy(k, fw, col)
+		return
 	if mid == "":   # (no guess for them yet)
 		icon.move_id = ""
 		icon.queue_redraw()
@@ -725,6 +744,45 @@ func _parry_frame(evs: Array) -> int:
 	return 0
 
 
+## The enemy's card while they're not picking: the move they're in (its icon, name, frame data and the frames it has
+## left, aimed the way it's going), or reeling / blocking / down and for how long; nothing to set.
+func _show_busy(k: Dictionary, fw: Fighter, col: Color) -> void:
+	var icon: MoveIcon = k["icon"]
+	var state := ""
+	var mid := fw.move
+	if fw.down > 0:
+		state = "knocked down · %df" % fw.down
+		mid = "getup"
+	elif fw.stun > 0:
+		state = "reeling · %df" % fw.stun
+		mid = ""
+	elif fw.blockstun > 0:
+		state = "blocking · %df" % fw.blockstun
+		mid = "block"
+	elif fw.lock > 0:
+		state = "recovering · %df" % fw.lock
+	icon.character = fw.character
+	icon.move_id = mid
+	icon.colour = col
+	icon.face = float(fw.facing)
+	icon.queue_redraw()
+	var m := Moves.move(fw.character, mid) if mid != "" else {}
+	if state == "" and not m.is_empty():
+		state = "%s · %df left" % [m["name"], maxi(0, fw.length - fw.frame)]
+		(k["label"] as Label).text = "%s: %s\n%s" % [fw.name, state, frame_data(m)]
+	else:
+		(k["label"] as Label).text = "%s: %s" % [fw.name, state if state != "" else "standing"]
+	var a := fw.param
+	for n in 9:
+		var dk: Vector2 = DIRS[n]
+		if dk == Vector2.ZERO:
+			continue
+		var b := (k["pad"] as GridContainer).get_node("d%d" % n) as Button
+		b.disabled = true
+		b.set_pressed_no_signal(a.length() > 0.1 and dk.normalized().dot(a.normalized()) > 0.92)
+	(k["dist_row"] as Control).visible = false
+
+
 ## A card's Distance / parry-frame slider: how far that dash or jump goes (yours, or how far you guess theirs will).
 func _on_dist(side: String, v: float) -> void:
 	var id := _side_id(side)
@@ -756,7 +814,12 @@ func _on_tap(id: int) -> void:
 		if id != me and id != foe:   # (another enemy: the right-hand tabs are theirs now)
 			foe = id
 		guess(id)
-	else:
+	elif sim.enemies(sim.fighters[me], sim.fighters[id]) and not sim.fighters[id].ko:   # (mid-move: theirs shown down
+		foe = id                                                                          # the right, as it plays out)
+		who = me
+		_close_drawer()
+		_build_tabs()
+		refresh()
 		info.text = "%s is mid-move - it plays out as shown" % sim.fighters[id].name
 		info.reset_size()
 

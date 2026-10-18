@@ -76,7 +76,7 @@ const COMMON := {
 		"hits": [{"from": 1, "to": 3, "box": [-90, -140, 180, 150], "dmg": 0, "stun": 40, "kb": [3.0, -4.0], "block": 10,
 			"chip": 0, "group": 0, "away": true}],
 		"pose": [[0, "burst"], [12, "idle"]], "icon": "burst"},
-	"hold": {"name": "Hold", "tab": "none", "kind": "hold", "frames": 1, "where": "both", "aim": "lean",
+	"hold": {"name": "Hold", "tab": "move", "kind": "hold", "frames": 1, "where": "both", "aim": "lean",
 		"pose": [[0, "guard"]], "icon": "guard"},
 }
 
@@ -372,8 +372,10 @@ const ROSTER := {"dancer": DANCER}
 ## The menu's tabs, in order: [id, name] - YOMI's five (Timmy 21:03 "Get more references as i think your getting
 ## confused about the way moves are categorised"; its own menu, references/yomi/moves_menu): fixed columns whose moves
 ## change with the state - air attacks show in Attack in the air, Burst in Defense while reeling, Get Up there when
-## down. Wait is Movement; Hold is a button by Confirm ("tab": "none"), as by YOMI's Lock In.
-const TABS := [["move", "Movement"], ["attack", "Attack"], ["special", "Special"], ["super", "Super"],
+## down. Wait is Movement; Hold is a button by Confirm, as by YOMI's Lock In - and in Movement too whenever it's there
+## (mid-move, stuck in a move, reeling: 22:37 "I cant just choice to wait if I click off that during a move").
+## Top to bottom: Movement right above Defense (22:37 "Movement should be above the defence options").
+const TABS := [["attack", "Attack"], ["special", "Special"], ["super", "Super"], ["move", "Movement"],
 	["defend", "Defense"]]
 
 

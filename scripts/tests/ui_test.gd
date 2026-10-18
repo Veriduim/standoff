@@ -41,9 +41,9 @@ func _test_your_pick() -> void:
 			% names.size(), names.size() >= 20 and names.has("sweep") and names.has("hiptoss") and names.has("roll")
 			and names.has("block") and names.has("pushblock") and not names.has("divekick") and not names.has("cyclone"))
 	var tab_of := func(mid: String) -> String: return str(Moves.move("dancer", mid)["tab"])
-	_check("YOMI's five tabs in its order; Wait is Movement, grabs and air attacks are Attack, Uppercut is Special, "
-			+ "Dodge is Defense, Burst Cancel is Super; Hold is a button by Confirm, not in a tab",
-			Moves.TABS.map(func(t: Array) -> String: return str(t[1])) == ["Movement", "Attack", "Special", "Super",
+	_check("YOMI's five tabs, Movement right above Defense; Wait is Movement, grabs and air attacks are Attack, Uppercut "
+			+ "is Special, Dodge is Defense, Burst Cancel is Super; Hold (a button by Confirm) isn't offered standing free",
+			Moves.TABS.map(func(t: Array) -> String: return str(t[1])) == ["Attack", "Special", "Super", "Movement",
 				"Defense"] and tab_of.call("wait") == "move" and tab_of.call("grab") == "attack"
 			and tab_of.call("divekick") == "attack" and tab_of.call("uppercut") == "special"
 			and tab_of.call("roll") == "defend" and tab_of.call("burstcancel") == "super"
@@ -288,4 +288,55 @@ func _test_multiplayer_qol() -> void:
 	_check("your last pick (Mirror) is picked first on your next turn (%s), and kept (%s)" % [g.pick.choice.get("move", ""),
 			PickPanel.last.get("dancer", {})], str(g.pick.choice.get("move", "")) == "mirror"
 			and str(PickPanel.remembered("dancer").get("move", "")) == "mirror")
+	g.queue_free()
+
+
+func _test_hold_mid_move() -> void:
+	_section("Mid-move you can always go back to waiting it out (Timmy 22:37): Hold in Movement and on its button")
+	for cs: Array in [["walk", 600.0, "jab", "mid-walk"], ["axekick", 150.0, "dash", "stuck in an Axe Kick"]]:
+		var g := _screen()
+		g.start_local(1, "ffa")
+		g.bots.clear()
+		var s: Sim = g.sim
+		s.fighters[0].pos.x = -float(cs[1]) / 2.0
+		s.fighters[1].pos.x = float(cs[1]) / 2.0
+		s.fighters[0].burst = Sim.BURST_FULL
+		s.apply({0: {"move": cs[0], "x": 1.0}, 1: {"move": cs[2], "x": -1.0}})
+		for _i in 400:
+			s.step()
+			if s.deciders().has(0) and not s.fighters[0].actionable():
+				break
+		var p: PickPanel = g.pick
+		p.open(s, 0, g.stage)
+		var first := str(p.choice.get("move", ""))
+		var other: String = s.legal_moves(0).filter(func(m: String) -> bool: return m != "hold")[0]
+		p.select(other)
+		p._tab("move")
+		var icon := p.drawer_grid.get_node_or_null("hold") as MoveIcon
+		if icon != null:
+			icon.pressed.emit()
+		_check("%s: Hold picked first; picked something else, Movement still has Hold and it takes you back (%s -> %s -> %s)"
+				% [cs[3], first, other, p.choice.get("move", "")], first == "hold" and icon != null
+				and str(p.choice.get("move", "")) == "hold" and not p.hold_btn.disabled)
+		g.queue_free()
+
+
+func _test_enemy_always_shown() -> void:
+	_section("The enemy's side is always there (Timmy 22:39): picking - guess them; mid-move - what they're doing")
+	var g := _screen()
+	g.start_local(1, "ffa")
+	g.bots.clear()
+	var s: Sim = g.sim
+	s.fighters[0].pos.x = -150.0
+	s.fighters[1].pos.x = 150.0
+	s.apply({1: {"move": "spin", "x": -1.0}})   # (they're mid Spin Kick; you're free)
+	s.step()
+	var p: PickPanel = g.pick
+	p.open(s, 0, g.stage)
+	var card: Dictionary = p.cards["foe"]
+	var text := (card["label"] as Label).text
+	_check("they're mid-move: their card shows it with the frames left, their tabs greyed (%s)" % text.replace("
+", " "),
+			p.foe == 1 and (card["panel"] as Control).visible and p.foe_box.visible and text.contains("Spin Kick")
+			and text.contains("left") and (p.foe_box.get_child(0) as Button).disabled and p.foe_name.text.contains("mid-move"))
 	g.queue_free()
