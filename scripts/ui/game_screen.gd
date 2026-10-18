@@ -130,7 +130,7 @@ func _stage_band() -> void:
 	var picking := pick != null and pick.visible
 	stage.view_top = Ui.CARD_H + 48.0 if phase != "menu" else 40.0
 	stage.view_bottom = vp.y - (PickPanel.BAR_H + 10.0 if picking else 24.0)
-	stage.view_left = 0.0
+	stage.view_left = PickPanel.TAB_W + 12.0 if picking else 0.0   # (tabs down both sides on your turn)
 	stage.view_right = vp.x - (PickPanel.TAB_W + 12.0 if picking else 0.0)
 
 

@@ -6,6 +6,7 @@ const SCREEN := preload("res://scripts/ui/game_screen.gd")
 
 
 func _screen() -> Control:
+	PickPanel.forget()   # (no remembered pick from earlier play; nothing written)
 	var g: Control = SCREEN.new()
 	add_child(g)
 	return g
@@ -224,4 +225,38 @@ func _test_xfactor_screen() -> void:
 		guard += 1
 	_check("...and a whole match plays to the end", g.phase == "over")
 	g.home.xf = saved
+	g.queue_free()
+
+
+func _test_multiplayer_qol() -> void:
+	_section("Multiplayer (Timmy 21:37): your tabs left, the nearest enemy's right; aimless moves face them; last pick kept")
+	var g := _screen()
+	g.start_local(3, "ffa")
+	g.bots.clear()
+	for i in 4:
+		g.sim.fighters[i].pos = Vector2([-300.0, -120.0, 200.0, 420.0][i], 0.0)
+	g.sim.fighters[0].facing = -1
+	var p: PickPanel = g.pick
+	p.open(g.sim, g.me, g.stage)
+	var vp := p.get_viewport_rect().size
+	_check("your tabs down the left, the nearest enemy picking too (Bot 1) down the right with their name (%s)"
+			% p.foe_name.text, p.tabs_box.position.x < vp.x / 2.0 and p.foe_box.position.x > vp.x / 2.0 and p.foe == 1
+			and p.foe_box.visible and p.foe_name.text.contains(g.sim.fighters[1].name))
+	p._side_tab(p.foe, "attack")
+	_check("...their Attack tab: your guess for them, the drawer opening from the right", p.who == 1
+			and p.drawer.visible and p.drawer.position.x > vp.x / 2.0 and p.guesses.has(1))
+	p._side_tab(g.me, "attack")
+	_check("...yours: back to your pick, the drawer from the left", p.who == g.me and p.drawer.visible
+			and p.drawer.position.x < vp.x / 2.0)
+	p._close_drawer()
+	p._on_tap(2)
+	_check("tapping another enemy puts them down the right", p.foe == 2 and p.who == 2)
+	p.guess(g.me)
+	p.select("mirror")
+	p._confirm()
+	_check("a move with no direction turns you to the nearest enemy (Mirror, facing right now)", g.sim.fighters[0].facing == 1)
+	g.start_local(1, "ffa")   # (a new match: your first pick is the last one you made)
+	_check("your last pick (Mirror) is picked first on your next turn (%s), and kept (%s)" % [g.pick.choice.get("move", ""),
+			PickPanel.last.get("dancer", {})], str(g.pick.choice.get("move", "")) == "mirror"
+			and str(PickPanel.remembered("dancer").get("move", "")) == "mirror")
 	g.queue_free()

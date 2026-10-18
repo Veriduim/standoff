@@ -104,6 +104,12 @@ one stage; each attack aims at a picked target.
   yet; options offered. 21:14 "Can we try the fans, temp and dance forms? Maybe combine two of them honestly", 21:17 "We
   may pick one or a combination of two" -> 0.9.0: all three as switches (home screen / lobby rules), any mix
   (docs/xfactors.md). Also fixed: projectiles in flight weren't drawn while you picked.
+- 21:37 "Some qol we will need for the multilayer. Have our options expand from the left and then the enemy closest to
+  use expand from the right. Then we should always try move to the enemy closest to use for attacks. Last remember the
+  last option we choice for our char" -> 0.9.1: your tabs + drawer down the left, the nearest enemy picking too down
+  the right ("Guess <name>" - their tabs set your guess; tap another enemy to swap); moves with no direction (Mirror,
+  Wait, Block) turn you to the nearest enemy (aimed moves already default to them); your last pick (move, Free,
+  Distance) is picked first next turn and kept between plays; your colour is kept too.
 
 ## To tune / later
 - **Match length with 6:** bot matches take 120-270 decision points with 6 fighters (50-90 with 2). At ~10 s a decision

@@ -122,7 +122,8 @@ func _ready() -> void:
 	ver.name = "Version"
 	add_child(ver)
 	_build_xf()
-	_set_colour(0)
+	var saved := ConfigFile.new()   # (your colour, kept between plays - 21:37 "remember the last option we choice")
+	_set_colour(int(saved.get_value("home", "colour", 0)) if saved.load(SETTINGS) == OK else 0)
 	_set_count(3)
 	get_viewport().size_changed.connect(_layout)
 	_layout()
@@ -191,6 +192,11 @@ func _round(text: String, on: Callable) -> Button:
 
 
 func _set_colour(i: int) -> void:
+	if i != colour:
+		var cfg := ConfigFile.new()
+		cfg.load(SETTINGS)
+		cfg.set_value("home", "colour", i)
+		cfg.save(SETTINGS)
 	colour = i
 	for k in swatches.size():
 		var c: Color = StageView.COLOURS[k]

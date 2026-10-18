@@ -8,6 +8,7 @@ const SCREEN := preload("res://scripts/ui/game_screen.gd")
 
 
 func _screen() -> Control:
+	PickPanel.forget()   # (no remembered pick from earlier play; nothing written)
 	var g: Control = SCREEN.new()
 	add_child(g)
 	return g

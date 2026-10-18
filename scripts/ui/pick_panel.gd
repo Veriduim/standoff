@@ -4,9 +4,12 @@ extends Control
 ## from the side so we can test the frames. It also let us use the space more"; 17:37: "I dont like target ... one char
 ## that has as many moves as what a YOMIH char would have and see how we get that to fit with icons. Just have the
 ## direction functionality"):
-##   - a slim tab column on the right - YOMI's five: Movement / Attack / Special / Super / Defense (21:03); a tab slides
-##     out a grid of move icons (MoveIcon - the character's own stick figure in the move's key pose); picking one tucks
-##     it away. Hold is a button by Confirm, as by YOMI's Lock In.
+##   - your tabs down the left - YOMI's five: Movement / Attack / Special / Super / Defense (21:03); a tab slides out a
+##     grid of move icons (MoveIcon - the character's own stick figure in the move's key pose); picking one tucks it
+##     away. Hold is a button by Confirm, as by YOMI's Lock In. The nearest enemy who's picking too has theirs down the
+##     right (21:37 "Have our options expand from the left and then the enemy closest to use expand from the right") -
+##     their tabs set your guess of their move. Your last pick is picked first next turn (21:37 "remember the last
+##     option we choice for our char").
 ##   - a slim bar along the bottom: the move picked (its icon, name, frame data), the direction pad - the only thing you
 ##     pick with a move - a Distance slider for dashes and jumps, the Free (Cancel) switch for attacks, Boxes (hit / hurt
 ##     boxes) and Confirm. (19:12: "Remove the frame thing from the bottom" - the frame scrubber's gone; the ghost loops.)
@@ -24,6 +27,43 @@ const BAR_H := 118.0
 const DIRS := [Vector2(-1, -1), Vector2(0, -1), Vector2(1, -1), Vector2(-1, 0), Vector2.ZERO, Vector2(1, 0),
 	Vector2(-1, 1), Vector2(0, 1), Vector2(1, 1)]
 const ARROWS := ["↖", "↑", "↗", "←", "", "→", "↙", "↓", "↘"]
+const SETTINGS := "user://settings.cfg"
+
+## Your last pick for each character (move, Free, Distance) - picked first on your next turn if you can; kept between
+## plays. keep = false: not written to the settings (the tests).
+static var last := {}
+static var keep := true
+static var _loaded := false
+
+
+static func remembered(character: String) -> Dictionary:
+	if not _loaded:
+		_loaded = true
+		var cfg := ConfigFile.new()
+		if cfg.load(SETTINGS) == OK:
+			var saved: Variant = cfg.get_value("last", "moves", {})
+			if saved is Dictionary:
+				last = saved
+	return last.get(character, {})
+
+
+static func remember(character: String, c: Dictionary) -> void:
+	if str(c.get("move", "")) in ["", "hold"]:
+		return
+	last[character] = {"move": str(c["move"]), "free": bool(c.get("free", false)), "dist": float(c.get("dist", 100.0))}
+	if not keep:
+		return
+	var cfg := ConfigFile.new()
+	cfg.load(SETTINGS)
+	cfg.set_value("last", "moves", last)
+	cfg.save(SETTINGS)
+
+
+## Start over with nothing remembered (the tests: and nothing written).
+static func forget(write := false) -> void:
+	last = {}
+	_loaded = true
+	keep = write
 
 var sim: Sim
 var me := 0
@@ -34,7 +74,10 @@ var guesses := {}            ## opponent id -> the move you think they'll pick (
 var tab := ""                ## the drawer open ("" = closed)
 var preview_events: Array = []
 
-var tabs_box: VBoxContainer
+var tabs_box: VBoxContainer   ## your tabs (left)
+var foe := -1                ## the enemy down the right (the nearest one picking too; tap another to swap)
+var foe_box: VBoxContainer   ## ...their tabs
+var foe_name: Label
 var drawer: PanelContainer
 var drawer_grid: GridContainer
 var bar: PanelContainer
@@ -59,6 +102,12 @@ func _ready() -> void:
 	tabs_box = VBoxContainer.new()
 	tabs_box.add_theme_constant_override("separation", 5)
 	add_child(tabs_box)
+	foe_box = VBoxContainer.new()
+	foe_box.add_theme_constant_override("separation", 5)
+	add_child(foe_box)
+	foe_name = Ui.label("", 15, Color.WHITE)
+	foe_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	add_child(foe_name)
 	drawer = PanelContainer.new()
 	drawer.add_theme_stylebox_override("panel", Ui.box(Color("#17181ff2"), 12))
 	add_child(drawer)
@@ -174,13 +223,19 @@ func _ready() -> void:
 func _layout() -> void:
 	var vp := get_viewport_rect().size
 	var tab_h := 54.0 * Moves.TABS.size() + 5.0 * (Moves.TABS.size() - 1)
-	tabs_box.position = Vector2(vp.x - TAB_W - 6.0, maxf(Ui.CARD_H + 8.0, (vp.y - BAR_H + Ui.CARD_H - tab_h) / 2.0))
+	var tab_y := maxf(Ui.CARD_H + 60.0, (vp.y - BAR_H + Ui.CARD_H - tab_h) / 2.0)
+	tabs_box.position = Vector2(6.0, tab_y)   # (yours down the left)
 	tabs_box.size = Vector2(TAB_W, 0)
-	drawer.position = Vector2(vp.x - TAB_W - 14.0 - DRAWER_W, Ui.CARD_H + 8.0)
-	drawer.size = Vector2(DRAWER_W, vp.y - BAR_H - Ui.CARD_H - 18.0)
+	foe_box.position = Vector2(vp.x - TAB_W - 6.0, tab_y)   # (the enemy's down the right)
+	foe_box.size = Vector2(TAB_W, 0)
+	foe_name.position = Vector2(vp.x - 6.0 - 220.0, tab_y - 26.0)
+	foe_name.size = Vector2(220.0, 22.0)
+	var right := who != me   # (the drawer opens from the side whose tabs it is)
+	drawer.position = Vector2(vp.x - TAB_W - 14.0 - DRAWER_W if right else TAB_W + 14.0, Ui.CARD_H + 52.0)   # (under
+	drawer.size = Vector2(DRAWER_W, vp.y - BAR_H - Ui.CARD_H - 62.0)                                          # the banner)
 	bar.position = Vector2(0, vp.y - BAR_H)
 	bar.size = Vector2(vp.x, BAR_H)
-	info.position = Vector2(10, Ui.CARD_H + 62.0)   # (top left, under the speed button - the fighters stand low)
+	info.position = Vector2(TAB_W + 20.0, Ui.CARD_H + 62.0)   # (top left, beside your tabs - the fighters stand low)
 
 
 ## Your turn: the tabs for what you can do, a first pick made (an attack, aimed at the nearest enemy).
@@ -193,6 +248,7 @@ func open(the_sim: Sim, id: int, the_stage: StageView) -> void:
 		stage.fighter_tapped.connect(_on_tap)
 	visible = true
 	guesses = {}
+	foe = _nearest_foe()
 	_build_tabs()
 	choice = {}
 	var legal := sim.legal_moves(me)
@@ -206,14 +262,34 @@ func open(the_sim: Sim, id: int, the_stage: StageView) -> void:
 		select("hold")
 		_close_drawer()
 		return
+	var f := sim.fighters[me]
+	var again := remembered(f.character)   # (your last pick first, if you can do it now - aimed at the nearest enemy)
+	if legal.has(str(again.get("move", ""))):
+		select(str(again["move"]))
+		choice["dist"] = float(again.get("dist", 100.0))
+		choice["free"] = bool(again.get("free", false)) and str(Moves.move(f.character, str(choice["move"]))["kind"]) == "attack" \
+				and (f.fc > 0 or f.meter >= Sim.BAR)
+		refresh()
+		_close_drawer()
+		return
 	var first := ""
 	for mid in legal:
-		if str(Moves.move(sim.fighters[me].character, mid)["kind"]) == "attack":
+		if str(Moves.move(f.character, mid)["kind"]) == "attack":
 			first = mid
 			break
 	select(first if first != "" else legal[0])
 	_close_drawer()
 
+
+## The enemy for the right-hand tabs: the nearest one picking too (-1 = nobody).
+func _nearest_foe() -> int:
+	var f := sim.fighters[me]
+	var best := -1
+	for id in sim.deciders():
+		var g := sim.fighters[id]
+		if id != me and sim.enemies(f, g) and (best < 0 or absf(g.pos.x - f.pos.x) < absf(sim.fighters[best].pos.x - f.pos.x)):
+			best = id
+	return best
 
 func close() -> void:
 	visible = false
@@ -236,36 +312,61 @@ func menu_moves() -> Array:
 
 
 func _moves_in(tab_id: String) -> Array:
-	var f := sim.fighters[who]
-	return sim.legal_moves(who).filter(func(mid: String) -> bool:
+	return _moves_of(who, tab_id)
+
+
+func _moves_of(id: int, tab_id: String) -> Array:
+	var f := sim.fighters[id]
+	return sim.legal_moves(id).filter(func(mid: String) -> bool:
 		return str(Moves.move(f.character, mid).get("tab", "")) == tab_id)
 
 
+## Both sides' tabs: yours down the left, the enemy's down the right (their name over them, in their colour).
 func _build_tabs() -> void:
-	for c in tabs_box.get_children():
-		tabs_box.remove_child(c)
-		c.queue_free()
 	hold_btn.disabled = not sim.legal_moves(who).has("hold")
 	hold_btn.set_pressed_no_signal(str(choice.get("move", "")) == "hold")
+	_build_side(tabs_box, me, false)
+	foe_box.visible = foe >= 0
+	foe_name.visible = foe >= 0
+	if foe >= 0:
+		_build_side(foe_box, foe, true)
+		foe_name.text = "Guess %s" % sim.fighters[foe].name
+		foe_name.add_theme_color_override("font_color", stage.colour_of(foe).lightened(0.25))
+
+
+func _build_side(box: VBoxContainer, id: int, right: bool) -> void:
+	for c in box.get_children():
+		box.remove_child(c)
+		c.queue_free()
 	for t: Array in Moves.TABS:
 		var tid: String = t[0]
-		var b := Ui.button(str(t[1]), func() -> void: _tab(tid), 17)
+		var b := Ui.button(str(t[1]), func() -> void: _side_tab(id, tid), 17)
 		b.name = tid
 		b.custom_minimum_size = Vector2(TAB_W, 54)
 		b.toggle_mode = true
-		b.disabled = _moves_in(tid).is_empty()
+		b.disabled = _moves_of(id, tid).is_empty()
 		var tint: Color = MoveIcon.TAB_COLOURS.get(tid, Color.WHITE)
 		var off := Ui.box(Color("#1e2029"), 10)
 		off.border_color = tint
-		off.border_width_left = 4
-		for s in ["normal", "hover"]:
-			b.add_theme_stylebox_override(s, off)
 		var on := Ui.box(tint.darkened(0.45), 10)
 		on.border_color = tint
-		on.border_width_left = 4
+		for st: StyleBoxFlat in [off, on]:   # (the colour strip on the outer edge)
+			if right:
+				st.border_width_right = 4
+			else:
+				st.border_width_left = 4
+		for s in ["normal", "hover"]:
+			b.add_theme_stylebox_override(s, off)
 		b.add_theme_stylebox_override("pressed", on)
 		b.add_theme_stylebox_override("hover_pressed", on)
-		tabs_box.add_child(b)
+		box.add_child(b)
+
+
+## A tab on one side: that side's pick (yours, or your guess for them) and its drawer.
+func _side_tab(id: int, tid: String) -> void:
+	if who != id:
+		guess(id)
+	_tab(tid)
 
 
 func _tab(tid: String) -> void:
@@ -273,8 +374,10 @@ func _tab(tid: String) -> void:
 		_close_drawer()
 		return
 	tab = tid
-	for c in tabs_box.get_children():
-		(c as Button).set_pressed_no_signal(c.name == tab)
+	var box := tabs_box if who == me else foe_box
+	for c in tabs_box.get_children() + foe_box.get_children():
+		(c as Button).set_pressed_no_signal(c.get_parent() == box and c.name == tab)
+	_layout()
 	for c in drawer_grid.get_children():
 		drawer_grid.remove_child(c)
 		c.queue_free()
@@ -289,12 +392,14 @@ func _tab(tid: String) -> void:
 		icon.selected = mid == str(_c().get("move", ""))
 		drawer_grid.add_child(icon)
 	drawer.visible = true
+	info.visible = who != me   # (your drawer covers the line about your pick)
 
 
 func _close_drawer() -> void:
 	tab = ""
 	drawer.visible = false
-	for c in tabs_box.get_children():
+	info.visible = true
+	for c in tabs_box.get_children() + foe_box.get_children():
 		(c as Button).set_pressed_no_signal(false)
 
 
@@ -533,6 +638,8 @@ func _on_tap(id: int) -> void:
 	if not visible:
 		return
 	if id == me or (sim.enemies(sim.fighters[me], sim.fighters[id]) and sim.deciders().has(id)):
+		if id != me and id != foe:   # (another enemy: the right-hand tabs are theirs now)
+			foe = id
 		guess(id)
 	else:
 		info.text = "%s is mid-move - it plays out as shown" % sim.fighters[id].name
@@ -567,4 +674,5 @@ func _confirm() -> void:
 	if visible:
 		who = me
 		stage.guessing = -1
+		remember(sim.fighters[me].character, choice)
 		confirmed.emit(choice.duplicate())

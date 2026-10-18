@@ -475,6 +475,10 @@ func _start(f: Fighter, c: Dictionary) -> void:
 	f.param = aim(str(m.get("aim", "none")), Vector2(float(c.get("x", 0.0)), float(c.get("y", 0.0))), f.facing)
 	if absf(f.param.x) > 0.2:
 		f.facing = 1 if f.param.x > 0.0 else -1   # (aimed left or right - they turn that way)
+	elif str(m.get("aim", "none")) in ["none", "height", "lean"]:   # (no way picked: they turn to the nearest enemy -
+		var n := nearest_enemy(f)                                   # Timmy 21:37 "always ... the enemy closest")
+		if n != null and absf(n.pos.x - f.pos.x) > 1.0:
+			f.facing = 1 if n.pos.x > f.pos.x else -1
 	f.dist = clampf(float(c.get("dist", 100.0)) / 100.0, 0.0, 1.0)
 	f.parry_at = int(c.get("pf", 0)) if bool(m.get("parry_frame", false)) else 0
 	f.length = int(m["frames"])
