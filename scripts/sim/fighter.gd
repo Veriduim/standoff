@@ -52,6 +52,12 @@ var splats := 0          ## wall splats this combo (3 at most)
 var splat := 0           ## ticks left stuck to the wall
 var stance := ""         ## the stance they're in ("" = none) - its moves are open while it lasts
 var initiative := false  ## started their move while the nearest enemy was choosing too (some moves get more for it)
+## the x-factors on trial (Sim.xf)
+var fans := 2            ## Fans: fans in hand (Sim.FANS_MAX) - a thrown one comes back
+var tempo := 0           ## Tempo: beats (Sim.TEMPO_MAX)
+var tempo_key := ""      ## ...what gave the last one (a move / a fan / a dodge gives one beat, once)
+var tempo_idle := 0      ## ...ticks since then (a beat fades every Sim.TEMPO_FADE)
+var form := "flow"       ## Forms: "flow" | "snap" | "floor"
 var ko := false
 
 
@@ -92,7 +98,8 @@ func to_dict() -> Dictionary:
 		"air_moves": air_moves, "burst": burst, "di": [di.x, di.y], "combo_used": combo_used.duplicate(true),
 		"cancelled": cancelled, "cancel_frame": cancel_frame, "fc": fc, "freed": freed, "whiffed": whiffed, "down": down, "down_pick": down_pick,
 		"kd": kd, "sad": sad, "sadness": sadness, "sad_warned": sad_warned, "dist": dist, "parry_at": parry_at, "pushed": pushed, "prorate": prorate, "bounce_due": bounce_due, "bounced": bounced,
-		"splat_due": splat_due, "splats": splats, "splat": splat, "stance": stance, "initiative": initiative, "ko": ko}
+		"splat_due": splat_due, "splats": splats, "splat": splat, "stance": stance, "initiative": initiative, "fans": fans, "tempo": tempo,
+		"tempo_key": tempo_key, "tempo_idle": tempo_idle, "form": form, "ko": ko}
 
 
 static func from_dict(d: Dictionary) -> Fighter:
@@ -146,5 +153,10 @@ static func from_dict(d: Dictionary) -> Fighter:
 	f.splat = int(d.get("splat", 0))
 	f.stance = str(d.get("stance", ""))
 	f.initiative = bool(d.get("initiative", false))
+	f.fans = int(d.get("fans", 2))
+	f.tempo = int(d.get("tempo", 0))
+	f.tempo_key = str(d.get("tempo_key", ""))
+	f.tempo_idle = int(d.get("tempo_idle", 0))
+	f.form = str(d.get("form", "flow"))
 	f.ko = bool(d["ko"])
 	return f

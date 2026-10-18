@@ -112,6 +112,19 @@ func on_event(type: String, at: Vector2, face: float, dmg: int, by: Color, victi
 			_add("shock", at, Vector2.ZERO, 0.18, Color.WHITE, 46.0)
 			_add("text", at + Vector2(0, -60), Vector2(0, -50), 0.5, Color.WHITE, 18.0)
 			parts[-1]["txt"] = "WHIFF CANCEL"
+		"beat":   # (Tempo: a beat - a pink tick)
+			_add("text", at + Vector2(0, -70), Vector2(0, -50), 0.45, Color("#ff7ab6"), 17.0)
+			parts[-1]["txt"] = "BEAT"
+		"onbeat":   # (Tempo full: ON BEAT!)
+			_add("shock", at, Vector2.ZERO, 0.3, Color("#ff7ab6"), 70.0)
+			_add("text", at + Vector2(0, -80), Vector2(0, -40), 0.9, Color("#ff7ab6"), 24.0)
+			parts[-1]["txt"] = "ON BEAT!"
+		"catch", "recall":   # (Fans: one back in hand / called home - a gold ring)
+			_add("shock", at, Vector2.ZERO, 0.18, Color("#ffd23f"), 34.0 if type == "catch" else 64.0)
+		"form_snap", "form_floor", "form_flow":   # (Forms: into one - its name)
+			_add("shock", at, Vector2.ZERO, 0.2, Color("#9fd8ff"), 50.0)
+			_add("text", at + Vector2(0, -70), Vector2(0, -40), 0.6, Color("#9fd8ff"), 20.0)
+			parts[-1]["txt"] = type.trim_prefix("form_").to_upper()
 		"sad":   # (Sadness building: SAD!)
 			_add("text", at + Vector2(0, -80), Vector2(0, -40), 0.9, Color("#7fa6ff"), 24.0)
 			parts[-1]["txt"] = "SAD!"

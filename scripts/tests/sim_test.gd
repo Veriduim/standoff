@@ -489,6 +489,158 @@ func _test_cooler_moves() -> void:
 	_check("Grand Finale, the third super, takes all 3 bars", s.legal_moves(0).has("finale"))
 
 
+## Two Dancers with these x-factors on (Sim RULES "xf"), gap apart, facing each other.
+func _xf(rule: String, gap := 300.0) -> Sim:
+	var s := Sim.create([{"character": "dancer"}, {"character": "dancer"}], "ffa", {"xf": rule})
+	s.fighters[0].pos = Vector2(-gap / 2.0, 0.0)
+	s.fighters[1].pos = Vector2(gap / 2.0, 0.0)
+	s.fighters[0].facing = 1
+	s.fighters[1].facing = -1
+	return s
+
+
+## Step tick by tick (everyone who comes free waits / rides it out) until `done` or `ticks` run out.
+func _steps(s: Sim, ticks: int, done := Callable()) -> bool:
+	for _i in ticks:
+		s.step()
+		if done.is_valid() and done.call():
+			return true
+		var hold := {}
+		for id in s.deciders():
+			hold[id] = {"move": "hold"}
+		if not hold.is_empty():
+			s.apply(hold)
+	return false
+
+
+func _test_xfactors() -> void:
+	_section("The Dancer's x-factors on trial (Timmy 21:14): Fans, Tempo, Forms - each a rule, two together")
+	var plain := _duel()
+	var trial := ["fanslash", "recall", "encore", "snapform", "floorform", "pop", "snapkick", "windmill", "kipup",
+		"floorslide"]
+	_check("off by default: none of their moves are there", trial.all(func(m: String) -> bool:
+			return not plain.legal_moves(0).has(m)))
+	# ---- Fans
+	var s := _xf("fans", 260.0)
+	s.fighters[1].burst = 0
+	_check("Fans: two in hand - Fan Throw and Fan Slash there, Recall not (none out)", s.fighters[0].fans == 2
+			and s.legal_moves(0).has("fan") and s.legal_moves(0).has("fanslash") and not s.legal_moves(0).has("recall"))
+	s.apply({0: {"move": "fan"}, 1: {"move": "wait"}})
+	var one_out := [false]
+	var hp0 := s.fighters[1].hp
+	var caught := _steps(s, 260, func() -> bool:
+		if s.fighters[0].fans == 1 and s.shots.size() == 1:
+			one_out[0] = true
+		return one_out[0] and s.fighters[0].fans == 2 and s.shots.is_empty())
+	_check("...thrown: one left in hand; it hits (%d), turns and comes back to her hand" % (hp0 - s.fighters[1].hp),
+			one_out[0] and caught and s.fighters[1].hp < hp0)
+	s = _xf("fans")
+	s.fighters[0].fans = 0
+	_check("...none in hand: no Fan Throw, no Fan Slash", not s.legal_moves(0).has("fan")
+			and not s.legal_moves(0).has("fanslash"))
+	s = _xf("fans", 600.0)
+	s.apply({0: {"move": "fan"}, 1: {"move": "wait"}})
+	_steps(s, 60, func() -> bool: return s.fighters[0].actionable())
+	var can_recall := s.legal_moves(0).has("recall")
+	s.events.clear()
+	s.apply({0: {"move": "recall"}})
+	for _i in 6:
+		s.step()
+	_check("...a fan out: Recall turns it for home at once, fast", can_recall and _types(s.events).has("recall")
+			and not s.shots.is_empty() and int(s.shots[0]["leg"]) == 1 and float(s.shots[0]["spd"]) == Sim.FAN_RECALL)
+	# ---- Tempo
+	s = _xf("tempo", 60.0)
+	s.fighters[1].burst = 0
+	var evs := _play(s, {0: {"move": "jab"}, 1: {"move": "wait"}})
+	_check("Tempo: a landed jab is a beat (%d)" % s.fighters[0].tempo, s.fighters[0].tempo == 1 and _types(evs).has("beat"))
+	var d0 := 450 - s.fighters[1].hp
+	s = _xf("tempo", 60.0)
+	s.fighters[1].burst = 0
+	s.fighters[0].tempo = 4
+	s.fighters[1].tempo = 3
+	_check("...four beats: Encore's there (not with three)", s.legal_moves(0).has("encore")
+			and not s.legal_moves(1).has("encore"))
+	_play(s, {0: {"move": "jab"}, 1: {"move": "wait"}})
+	var d4 := 450 - s.fighters[1].hp
+	_check("...each beat hits harder (a jab: %d -> %d at four), and getting hit loses them all" % [d0, d4],
+			d4 > d0 and s.fighters[1].tempo == 0)
+	s = _xf("tempo", 60.0)
+	s.fighters[0].tempo = 4
+	s.apply({0: {"move": "encore"}, 1: {"move": "wait"}})
+	_check("...Encore spends them", s.fighters[0].tempo == 0 and s.fighters[0].move == "encore")
+	s = _xf("tempo", 60.0)
+	s.apply({0: {"move": "roll", "x": 1.0}, 1: {"move": "jab"}})
+	s.run_segment()
+	_check("...dodging through a hit is a beat (%d)" % s.fighters[0].tempo, s.fighters[0].tempo == 1)
+	s = _xf("tempo")
+	s.fighters[0].tempo = 2
+	s.fighters[0].tempo_idle = 0
+	for _i in Sim.TEMPO_FADE:
+		s.step()
+	_check("...and one fades with no new beat for %d ticks (%d)" % [Sim.TEMPO_FADE, s.fighters[0].tempo],
+			s.fighters[0].tempo == 1)
+	# ---- Forms
+	s = _xf("forms", 60.0)
+	_check("Forms: Snap / Floor Form there, Flow Form not (in it), their moves not yet", s.legal_moves(0).has("snapform")
+			and s.legal_moves(0).has("floorform") and not s.legal_moves(0).has("flowform")
+			and not s.legal_moves(0).has("pop") and not s.legal_moves(0).has("windmill"))
+	s.apply({0: {"move": "floorform"}, 1: {"move": "wait"}})
+	s.run_segment()
+	var lm := s.legal_moves(0)
+	_check("...Floor: Windmill, Kip-Up, Floor Slide, sweeps and defence - no jumps, no jab (%d moves)" % lm.size(),
+			s.fighters[0].form == "floor" and lm.has("windmill") and lm.has("kipup") and lm.has("floorslide")
+			and lm.has("sweep") and lm.has("block") and lm.has("flowform") and not lm.has("jump") and not lm.has("jab"))
+	s.fighters[1].burst = 0
+	evs = _play(s, {0: {"move": "wait"}, 1: {"move": "jab"}})
+	_check("...high strikes pass over her on the floor (%s)" % [_types(evs)], not _types(evs).has("hit")
+			and s.fighters[0].hp == 450)
+	s.apply({0: {"move": "kipup"}, 1: {"move": "wait"}})
+	_check("...Kip-Up takes her back to Flow", s.fighters[0].form == "flow")
+	s = _xf("forms", 60.0)
+	s.apply({0: {"move": "snapform"}, 1: {"move": "wait"}})
+	s.run_segment()
+	s.fighters[1].burst = 0
+	var snap_ok := s.legal_moves(0).has("pop") and s.legal_moves(0).has("snapkick")
+	_play(s, {0: {"move": "jab"}, 1: {"move": "wait"}})
+	_check("...Snap: Pop and Snap Kick, and her strikes hit harder (jab %d vs %d)" % [450 - s.fighters[1].hp, d0],
+			snap_ok and 450 - s.fighters[1].hp > d0)
+	# ---- two together, online-safe
+	s = _xf("fans,tempo", 400.0)
+	s.fighters[0].tempo = 4
+	_check("two together: Fans + Tempo - Fan Slash and Encore both there", s.legal_moves(0).has("fanslash")
+			and s.legal_moves(0).has("encore") and not s.legal_moves(0).has("snapform"))
+	s = _xf("fans,tempo,forms", 400.0)
+	s.apply({0: {"move": "fan"}, 1: {"move": "floorform"}})
+	for _i in 20:
+		s.step()
+	var w := Sim.from_dict(JSON.parse_string(JSON.stringify(s.to_dict(), "", false, true)))
+	for _i in 80:
+		s.step()
+		w.step()
+	_check("through JSON (as online) it plays on the same: fans, the fan in the air, the form (%d / %d fans)"
+			% [s.fighters[0].fans, w.fighters[0].fans], w.xf.size() == 3 and w.fighters[0].fans == s.fighters[0].fans
+			and w.shots.size() == s.shots.size() and w.fighters[1].form == "floor"
+			and w.fighters[0].pos == s.fighters[0].pos and w.tick == s.tick)
+	var turns_all := []
+	var ended := 0
+	for rule in ["fans", "tempo", "forms", "fans,tempo", "fans,forms", "tempo,forms"]:
+		var m := Sim.create([{"character": "dancer"}, {"character": "dancer"}, {"character": "dancer"}], "ffa",
+				{"xf": rule})
+		var bots := [Bot.new(5), Bot.new(9), Bot.new(13)]
+		var turns := 0
+		while not m.over() and turns < 4000:
+			var picks := {}
+			for id in m.deciders():
+				picks[id] = (bots[id] as Bot).choose(m, id)
+			m.apply(picks)
+			m.run_segment()
+			turns += 1
+		if m.over():
+			ended += 1
+		turns_all.append("%s:%d" % [rule, turns])
+	_check("bot matches with each one and each pair always end (%s)" % " ".join(turns_all), ended == 6)
+
+
 func _test_snapshots() -> void:
 	_section("Snapshots and previews")
 	var s := Sim.create([{"character": "dancer"}, {"character": "dancer"}])

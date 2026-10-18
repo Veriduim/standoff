@@ -13,6 +13,19 @@ const P := {
 	"idle": {"head": [4, -92], "neck": [2, -80], "hip": [0, -46], "elbow_f": [14, -64], "hand_f": [22, -76],
 		"elbow_b": [-6, -62], "hand_b": [8, -70], "knee_f": [12, -24], "foot_f": [16, 0], "knee_b": [-10, -24],
 		"foot_b": [-16, 0]},
+	# the x-factors on trial: the Snap form's stance, the Floor form's (low, a hand down), the Windmill's two spins
+	"snap": {"head": [6, -94], "neck": [3, -82], "hip": [0, -48], "elbow_f": [18, -70], "hand_f": [24, -88],
+		"elbow_b": [6, -66], "hand_b": [12, -82], "knee_f": [14, -25], "foot_f": [20, 0], "knee_b": [-8, -25],
+		"foot_b": [-14, 0]},
+	"floor": {"head": [12, -50], "neck": [8, -40], "hip": [-6, -18], "elbow_f": [20, -30], "hand_f": [28, -40],
+		"elbow_b": [-16, -14], "hand_b": [-22, 0], "knee_f": [14, -22], "foot_f": [24, 0], "knee_b": [-2, -4],
+		"foot_b": [-24, -2]},
+	"windmill1": {"head": [-26, -14], "neck": [-14, -18], "hip": [4, -22], "elbow_f": [-20, -6], "hand_f": [-28, 0],
+		"elbow_b": [-6, -6], "hand_b": [-12, 0], "knee_f": [24, -40], "foot_f": [46, -56], "knee_b": [26, -24],
+		"foot_b": [48, -18]},
+	"windmill2": {"head": [-26, -14], "neck": [-14, -18], "hip": [4, -22], "elbow_f": [-20, -6], "hand_f": [-28, 0],
+		"elbow_b": [-6, -6], "hand_b": [-12, 0], "knee_f": [-4, -46], "foot_f": [-18, -66], "knee_b": [20, -44],
+		"foot_b": [36, -62]},
 	"walk1": {"head": [6, -91], "neck": [4, -79], "hip": [0, -45], "elbow_f": [16, -63], "hand_f": [24, -74],
 		"elbow_b": [-4, -61], "hand_b": [10, -68], "knee_f": [18, -24], "foot_f": [26, 0], "knee_b": [-6, -22],
 		"foot_b": [-22, -2]},
@@ -163,6 +176,9 @@ static func for_record(character: String, r: Array) -> Dictionary:
 	var low := r.size() > 13 and int(r[13]) == 1
 	if state == 2 or (mv == "block" and state == 0):
 		return get_pose("guard_low" if low else "guard")
+	var form := int(r[14]) if r.size() > 14 else 0   # (Forms: standing free in Snap / Floor shows its stance)
+	if (mv == "" or mv == "wait") and not air and state == 0 and form > 0:
+		return get_pose("snap" if form == 1 else "floor")
 	if mv == "":
 		return get_pose("fall" if air else ("crouch" if state == 3 else "idle"))
 	var keys: Array = Moves.move(character, mv).get("pose", [[0, "idle"]])

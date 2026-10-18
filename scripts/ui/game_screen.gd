@@ -190,7 +190,7 @@ func _demo_start() -> void:
 	stage.deciding = []
 	stage.ghost = []
 	stage.time_scale = 1.0
-	stage.show_tick(_demo.record())
+	stage.show_tick(_demo.record(), [], _demo.record_shots())
 	_demo_frames = []
 	_demo_pos = 0.0
 	_demo_shown = -1
@@ -241,7 +241,7 @@ func start_local(opponents: int, mode: String, colour := 0) -> void:
 		players.append({"name": "Bot %d" % (i + 1), "character": "dancer", "team": (i + 1) % 2})
 	if mode == "teams" and opponents < 2:
 		mode = "ffa"
-	sim = Sim.create(players, mode)
+	sim = Sim.create(players, mode, {"xf": home.xf_rule()})   # (the x-factors switched on, on the home screen)
 	bots.clear()
 	for i in range(1, players.size()):
 		bots[i] = Bot.new(i * 7 + 3)
@@ -255,7 +255,7 @@ func start_local(opponents: int, mode: String, colour := 0) -> void:
 	stage.palette = palette
 	stage.you = me
 	stage.time_scale = speed
-	stage.show_tick(sim.record())
+	stage.show_tick(sim.record(), [], sim.record_shots())
 	_lag.clear()
 	home.visible = false
 	fast_btn.visible = true
@@ -380,11 +380,28 @@ func _update_cards(rec: Array = []) -> void:
 		var fcs := int(rec[f.id][9]) if not rec.is_empty() and rec[f.id].size() > 9 else f.fc
 		var airs := int(rec[f.id][10]) if not rec.is_empty() and rec[f.id].size() > 10 else Sim.AIR_OPTIONS - f.air_moves
 		var ex := card.find_child("Extras", true, false) as RichTextLabel
-		var text := "[right][color=#46d17a]%s[/color][color=#3a3d4d]%s[/color] [color=#e8e8f0]%s[/color][color=#3a3d4d]%s[/color][/right]" \
-				% ["✕".repeat(fcs), "✕".repeat(Sim.FC_MAX - fcs), "●".repeat(airs), "●".repeat(Sim.AIR_OPTIONS - airs)]
+		var text := "[right]%s[color=#46d17a]%s[/color][color=#3a3d4d]%s[/color] [color=#e8e8f0]%s[/color][color=#3a3d4d]%s[/color][/right]" \
+				% [_trial_marks(f, rec[f.id] if not rec.is_empty() else []), "✕".repeat(fcs), "✕".repeat(Sim.FC_MAX - fcs),
+				"●".repeat(airs), "●".repeat(Sim.AIR_OPTIONS - airs)]
 		if ex.text != text:
 			ex.text = text
 		card.modulate = Color(1, 1, 1, 0.45) if hp <= 0.0 else Color.WHITE
+
+
+## The x-factors on trial on a card: the form (Flow / Snap / Floor), the beats (pink), the fans in hand (gold).
+func _trial_marks(f: Fighter, row: Array) -> String:
+	var out := ""
+	var has := row.size() > 16
+	if sim.xf.has("forms"):
+		var fm := int(row[14]) if has else maxi(0, Sim.FORMS.find(f.form))
+		out += "[color=#9fd8ff]%s[/color] " % ["Flow", "Snap", "Floor"][fm]
+	if sim.xf.has("tempo"):
+		var tp := int(row[15]) if has else f.tempo
+		out += "[color=#ff7ab6]%s[/color][color=#3a3d4d]%s[/color] " % ["▮".repeat(tp), "▮".repeat(Sim.TEMPO_MAX - tp)]
+	if sim.xf.has("fans"):
+		var fn := int(row[16]) if has else f.fans
+		out += "[color=#ffd23f]%s[/color][color=#3a3d4d]%s[/color] " % ["◆".repeat(fn), "◆".repeat(Sim.FANS_MAX - fn)]
+	return out
 
 
 ## Online: a match from the lobby - this phone's copy of it, from the host's start (or, watching, from where it is).
@@ -406,7 +423,7 @@ func start_online(nm: NetMatch) -> void:
 	stage.you = me
 	stage.half = sim.half
 	stage.time_scale = speed
-	stage.show_tick(sim.record())
+	stage.show_tick(sim.record(), [], sim.record_shots())
 	_lag.clear()
 	home.visible = false
 	lobby.visible = false
@@ -427,7 +444,7 @@ func _on_net_turn(t: int, picks: Dictionary, snap: Dictionary) -> void:
 	if sim.tick != t:   # (out of step - take the host's state as it is)
 		if not snap.is_empty():
 			sim = Sim.from_dict(snap)
-			stage.show_tick(sim.record())
+			stage.show_tick(sim.record(), [], sim.record_shots())
 			_update_cards()
 		return
 	pick.close()
@@ -603,7 +620,7 @@ func _process(delta: float) -> void:
 			break
 	_update_cards(_frames[maxi(_shown, 0)] if not _frames.is_empty() else [])
 	if not stage.fx.frozen() and int(_play_pos) >= _frames.size():
-		stage.show_tick(sim.record())
+		stage.show_tick(sim.record(), [], sim.record_shots())
 		_update_cards()
 		if not _net_queue.is_empty():   # (online: a turn that came in meanwhile)
 			phase = "wait"

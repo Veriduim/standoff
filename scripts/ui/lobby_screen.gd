@@ -471,6 +471,25 @@ func _fill_rules() -> void:
 			more.custom_minimum_size = Vector2(46, 40)
 			row.add_child(more)
 		rules_box.add_child(row)
+	var xrow := HBoxContainer.new()   # (the Dancer's x-factors on trial - one, or two together)
+	xrow.add_theme_constant_override("separation", 4)
+	var xl := Ui.label("Dancer x-factor", 15, Color("#c9c9d6"))
+	xl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	xrow.add_child(xl)
+	var on := Sim.xf_set(str(rules.get("xf", "")))
+	if owner:
+		for k: String in Sim.XF:
+			var key := k
+			var xb := Ui.button(k.capitalize(), func() -> void: _toggle_xf(key), 14)
+			xb.name = "XF" + k.capitalize()
+			xb.toggle_mode = true
+			xb.set_pressed_no_signal(on.has(k))
+			xb.custom_minimum_size = Vector2(70, 40)
+			xrow.add_child(xb)
+	else:
+		var names := PackedStringArray(Sim.XF.filter(func(k: String) -> bool: return on.has(k)))
+		xrow.add_child(Ui.label(", ".join(names).capitalize() if not names.is_empty() else "none", 15, Color("#f2f2f7")))
+	rules_box.add_child(xrow)
 	if owner:
 		var pre := HBoxContainer.new()
 		pre.add_theme_constant_override("separation", 6)
@@ -501,6 +520,17 @@ func _bump(key: String, dir: int) -> void:
 			var k := 60.0 if key == "round" else 1.0   # (the round is shown in seconds, kept in ticks)
 			rules[key] = clampf(float(rules[key]) + float(r[4]) * k * dir, float(r[2]) * k, float(r[3]) * k)
 			_set_rules(rules)
+
+
+func _toggle_xf(k: String) -> void:
+	var rules := rules_now()
+	var on := Sim.xf_set(str(rules.get("xf", "")))
+	if on.has(k):
+		on.erase(k)
+	else:
+		on[k] = true
+	rules["xf"] = ",".join(PackedStringArray(Sim.XF.filter(func(x: String) -> bool: return on.has(x))))
+	_set_rules(rules)
 
 
 func _set_rules(rules: Dictionary) -> void:

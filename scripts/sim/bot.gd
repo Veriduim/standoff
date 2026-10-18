@@ -5,13 +5,16 @@ extends RefCounted
 ## pick is a move and a direction (toward that enemy). Seeded, so a test match plays the same every time.
 
 const GROUND_HITS := ["jab", "straight", "lowkick", "sidekick", "uppercut", "spin", "sweep", "axekick", "kneedash",
-	"flashkick", "onetwo", "spinfinish", "swaykick", "risingheel", "stomp"]
-const FROM_AFAR := ["fan", "ripple", "fan", "sway"]
+	"flashkick", "onetwo", "spinfinish", "swaykick", "risingheel", "stomp", "fanslash", "pop", "snapkick", "windmill",
+	"kipup"]
+const FROM_AFAR := ["fan", "ripple", "fan", "sway", "recall"]
+const FLOOR := ["windmill", "kipup", "sweep", "lowkick", "floorslide", "flowform", "snapform", "block", "roll", "ripple"]
+const FORM_SWITCH := ["snapform", "floorform", "flowform"]
 const AIR := ["divekick", "airkick", "airknee", "airspin", "airdash", "fastfall", "block", "wait", "airfan",
 	"airthrow", "airjump"]
 const GRABS := ["grab", "hiptoss", "spinthrow"]
 const SUPERS := ["flurry", "cyclone", "finale"]
-const CLOSE_IN := ["walk", "dash", "roll", "kneedash"]
+const CLOSE_IN := ["walk", "dash", "roll", "kneedash", "floorslide"]
 const BACK_OFF := ["backstep", "walk", "dash"]
 
 var rng := RandomNumberGenerator.new()
@@ -80,6 +83,19 @@ func choose(sim: Sim, id: int) -> Dictionary:
 		return c
 	if t.down > 0 and legal.has("stomp") and dist < 90.0 and rng.randf() < 0.6:   # (they're down: stomp them)
 		c["move"] = "stomp"
+		return c
+	# the x-factors on trial: Encore when it's there, a Recall now and then, forms switched now and then
+	if legal.has("encore") and dist < 130.0 and rng.randf() < 0.6:
+		c["move"] = "encore"
+		return c
+	if legal.has("recall") and rng.randf() < 0.25:
+		return {"move": "recall"}
+	if rng.randf() < 0.07 and FORM_SWITCH.any(func(m: String) -> bool: return legal.has(m)):
+		return {"move": pick.call(FORM_SWITCH)}
+	if f.form == "floor" and legal.has("windmill"):   # (on the floor: its own moves)
+		c["move"] = pick.call(FLOOR)
+		if c["move"] == "block":
+			c["y"] = 1.0
 		return c
 	if legal.has("burstcancel") and rng.randf() < 0.15:
 		return {"move": "burstcancel"}

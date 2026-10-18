@@ -144,7 +144,8 @@ func _effect(e: Dictionary, prev: Array) -> void:
 	if type == "burst":   # (a = the one bursting out)
 		fx.burst_out(a, _chest(a), colour_of(a), n + a)
 		return
-	if type in ["down", "whiff", "sad", "sadness", "bounce", "splat", "ic"]:   # (a = who it happened to)
+	if type in ["down", "whiff", "sad", "sadness", "bounce", "splat", "ic", "beat", "onbeat", "catch", "recall",
+			"form_snap", "form_floor", "form_flow"]:   # (a = who it happened to)
 		var at := _chest(a) if not type in ["down", "bounce"] else Vector2(float(frame[a][0]), -6.0)
 		if type == "splat":   # (at the wall they hit)
 			at = Vector2(signf(float(frame[a][0])) * (half - 4.0), _chest(a).y)
@@ -188,6 +189,8 @@ func hurt_rect(i: int, r: Array) -> Rect2:
 	var st := Moves.stats(_char(i))
 	var w := float(st["width"])
 	var h := float(st["height"])
+	if r.size() > 14 and int(r[14]) == 2 and int(r[5]) != 1:   # (the Floor form: low)
+		h = Sim.FLOOR_HEIGHT
 	return Rect2(float(r[0]) - w / 2.0, float(r[1]) - h, w, h)
 
 

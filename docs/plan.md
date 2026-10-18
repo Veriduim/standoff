@@ -100,6 +100,10 @@ one stage; each attack aims at a picked target.
   (Standoff Workshop/references/yomi/moves_menu/CATEGORIES.md) -> 0.8.2: its five tabs, Movement / Attack / Special /
   Super / Defense; air attacks and grabs in Attack, Wait in Movement, Uppercut / Flash Kick / Spin Throw in Special,
   Dodge (was Roll) in Defense, Burst Cancel / Whiff Cancel in Super; Hold a button by Confirm.
+- 21:11 "So who is the char we are working in first? As every char an x factor so to speak" -> the Dancer, no x-factor
+  yet; options offered. 21:14 "Can we try the fans, temp and dance forms? Maybe combine two of them honestly", 21:17 "We
+  may pick one or a combination of two" -> 0.9.0: all three as switches (home screen / lobby rules), any mix
+  (docs/xfactors.md). Also fixed: projectiles in flight weren't drawn while you picked.
 
 ## To tune / later
 - **Match length with 6:** bot matches take 120-270 decision points with 6 fighters (50-90 with 2). At ~10 s a decision
