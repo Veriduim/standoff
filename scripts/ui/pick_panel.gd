@@ -4,8 +4,9 @@ extends Control
 ## from the side so we can test the frames. It also let us use the space more"; 17:37: "I dont like target ... one char
 ## that has as many moves as what a YOMIH char would have and see how we get that to fit with icons. Just have the
 ## direction functionality"):
-##   - a slim tab column on the right (Attack / Air / Grab / Move / Defend / Super); a tab slides out a grid of move
-##     icons (MoveIcon - the character's own stick figure in the move's key pose); picking one tucks it away
+##   - a slim tab column on the right - YOMI's five: Movement / Attack / Special / Super / Defense (21:03); a tab slides
+##     out a grid of move icons (MoveIcon - the character's own stick figure in the move's key pose); picking one tucks
+##     it away. Hold is a button by Confirm, as by YOMI's Lock In.
 ##   - a slim bar along the bottom: the move picked (its icon, name, frame data), the direction pad - the only thing you
 ##     pick with a move - a Distance slider for dashes and jumps, the Free (Cancel) switch for attacks, Boxes (hit / hurt
 ##     boxes) and Confirm. (19:12: "Remove the frame thing from the bottom" - the frame scrubber's gone; the ghost loops.)
@@ -48,6 +49,7 @@ var free_btn: Button
 var back_btn: Button
 var boxes_btn: Button
 var confirm_btn: Button
+var hold_btn: Button
 var info: Label
 
 
@@ -148,6 +150,12 @@ func _ready() -> void:
 	dist_label = Ui.label("100", 16, Color("#e2e2ea"))
 	dist_label.custom_minimum_size = Vector2(36, 0)
 	dist_row.add_child(dist_label)
+	hold_btn = Ui.button("Hold", func() -> void: select("hold"), 20)   # (carry on / ride it out - by Confirm, as in YOMI)
+	hold_btn.name = "Hold"
+	hold_btn.toggle_mode = true
+	hold_btn.custom_minimum_size = Vector2(96, 0)
+	hold_btn.add_theme_stylebox_override("pressed", Ui.box(Color("#2b4f8a")))
+	row.add_child(hold_btn)
 	confirm_btn = Ui.button("Confirm", func() -> void: _confirm(), 26)
 	confirm_btn.custom_minimum_size = Vector2(170, 0)
 	for st in ["normal", "hover", "focus"]:
@@ -237,6 +245,8 @@ func _build_tabs() -> void:
 	for c in tabs_box.get_children():
 		tabs_box.remove_child(c)
 		c.queue_free()
+	hold_btn.disabled = not sim.legal_moves(who).has("hold")
+	hold_btn.set_pressed_no_signal(str(choice.get("move", "")) == "hold")
 	for t: Array in Moves.TABS:
 		var tid: String = t[0]
 		var b := Ui.button(str(t[1]), func() -> void: _tab(tid), 17)
@@ -335,6 +345,7 @@ func _c() -> Dictionary:
 func select(mid: String) -> void:
 	var c := _c()
 	c["move"] = mid
+	hold_btn.set_pressed_no_signal(mid == "hold")
 	c["dist"] = 100.0
 	var f := sim.fighters[who]
 	var mk := str(Moves.move(f.character, mid).get("kind", ""))

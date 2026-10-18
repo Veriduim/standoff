@@ -95,6 +95,11 @@ one stage; each attack aims at a picked target.
   lobbies like YOMI's Steam ones: a list, lobbies with members / matches / owner's rules / chat, challenges for up to 6
   with bots, spectating; a Cloudflare lobby server (relay/). 20:57 deployed with his API token -> 0.8.1 plays online
   (docs/lobby.md). 20:59 "Also upload this to a new github repo please" -> github.com/Veriduim/standoff (private).
+- 21:03 "Why not the apk builds as releases?" -> every APK is a GitHub release (tools/release_apks.sh). "Get more
+  refernces as i think your getting confused about the way moves are categorised" -> YOMI's own menu studied
+  (Standoff Workshop/references/yomi/moves_menu/CATEGORIES.md) -> 0.8.2: its five tabs, Movement / Attack / Special /
+  Super / Defense; air attacks and grabs in Attack, Wait in Movement, Uppercut / Flash Kick / Spin Throw in Special,
+  Dodge (was Roll) in Defense, Burst Cancel / Whiff Cancel in Super; Hold a button by Confirm.
 
 ## To tune / later
 - **Match length with 6:** bot matches take 120-270 decision points with 6 fighters (50-90 with 2). At ~10 s a decision

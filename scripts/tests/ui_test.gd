@@ -39,8 +39,15 @@ func _test_your_pick() -> void:
 	_check("on the ground the tabs hold %d moves - ground attacks, grabs, moves, defence; no air moves, no supers yet"
 			% names.size(), names.size() >= 20 and names.has("sweep") and names.has("hiptoss") and names.has("roll")
 			and names.has("block") and names.has("pushblock") and not names.has("divekick") and not names.has("cyclone"))
-	_check("...the Air and Super tabs are greyed out", (p.tabs_box.get_node("air") as Button).disabled
-			and (p.tabs_box.get_node("super") as Button).disabled)
+	var tab_of := func(mid: String) -> String: return str(Moves.move("dancer", mid)["tab"])
+	_check("YOMI's five tabs in its order; Wait is Movement, grabs and air attacks are Attack, Uppercut is Special, "
+			+ "Dodge is Defense, Burst Cancel is Super; Hold is a button by Confirm, not in a tab",
+			Moves.TABS.map(func(t: Array) -> String: return str(t[1])) == ["Movement", "Attack", "Special", "Super",
+				"Defense"] and tab_of.call("wait") == "move" and tab_of.call("grab") == "attack"
+			and tab_of.call("divekick") == "attack" and tab_of.call("uppercut") == "special"
+			and tab_of.call("roll") == "defend" and tab_of.call("burstcancel") == "super"
+			and not names.has("hold") and p.hold_btn.disabled)
+	_check("...the Super tab is greyed out (no meter yet)", (p.tabs_box.get_node("super") as Button).disabled)
 	p._tab("attack")
 	var icons: Array = p.drawer_grid.get_children()
 	_check("the Attack tab slides out a grid of move icons (%d)" % icons.size(), p.drawer.visible

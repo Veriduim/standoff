@@ -54,7 +54,7 @@ const COMMON := {
 		"aim": "height", "parry_frame": true, "pose": [[0, "guard"]], "icon": "guard"},
 	"pushblock": {"name": "Push Block", "tab": "defend", "kind": "guard", "push": true, "frames": 22, "where": "both",
 		"aim": "none", "pose": [[0, "parry"]], "icon": "parry"},
-	"wait": {"name": "Wait", "tab": "defend", "kind": "wait", "interrupt": true, "frames": 10, "where": "both", "aim": "none",
+	"wait": {"name": "Wait", "tab": "move", "kind": "wait", "interrupt": true, "frames": 10, "where": "both", "aim": "none",
 		"pose": [[0, "idle"]]},
 	# ---- only while reeling with a full Burst gauge (Timmy 18:37: "Burst is the move we do to get out of stun lock")
 	"burst": {"name": "Burst", "tab": "defend", "kind": "burst", "frames": 26, "where": "both", "aim": "none",
@@ -64,19 +64,19 @@ const COMMON := {
 		"pose": [[0, "crouch"], [2, "burst"], [18, "fall"]], "icon": "burst"},
 	# ---- Hold: carry on with the move running (an interruptible one), or - reeling - ride it out, leaning with the pad
 	# ---- Whiff Cancel (stuck in a committed move, 3/4 of the Burst gauge) and getting up off the floor
-	"whiff": {"name": "Whiff Cancel", "tab": "defend", "kind": "whiff", "frames": 2, "where": "both", "aim": "none",
+	"whiff": {"name": "Whiff Cancel", "tab": "super", "kind": "whiff", "frames": 2, "where": "both", "aim": "none",
 		"pose": [[0, "crouch"]], "icon": "crouch"},
 	"getup": {"name": "Get Up", "tab": "defend", "kind": "getup", "frames": 12, "where": "both", "aim": "none",
 		"invuln": [0, 10], "pose": [[0, "down"], [4, "crouch"], [10, "idle"]], "icon": "crouch"},
 	"techroll": {"name": "Tech Roll", "tab": "defend", "kind": "getup", "frames": 20, "where": "both", "aim": "facing",
 		"invuln": [0, 13], "motion": [[2, 15, 7.0, 0.0]], "pose": [[0, "roll"], [16, "crouch"]], "icon": "roll"},
 	# ---- Burst Cancel (the attacker's: the whole Burst gauge, mid-combo - +lots, the combo goes on)
-	"burstcancel": {"name": "Burst Cancel", "tab": "defend", "kind": "burst", "frames": 18, "where": "both",
+	"burstcancel": {"name": "Burst Cancel", "tab": "super", "kind": "burst", "frames": 18, "where": "both",
 		"aim": "none", "float": true, "invuln": [0, 8],
 		"hits": [{"from": 1, "to": 3, "box": [-90, -140, 180, 150], "dmg": 0, "stun": 40, "kb": [3.0, -4.0], "block": 10,
 			"chip": 0, "group": 0, "away": true}],
 		"pose": [[0, "burst"], [12, "idle"]], "icon": "burst"},
-	"hold": {"name": "Hold", "tab": "defend", "kind": "hold", "frames": 1, "where": "both", "aim": "lean",
+	"hold": {"name": "Hold", "tab": "none", "kind": "hold", "frames": 1, "where": "both", "aim": "lean",
 		"pose": [[0, "guard"]], "icon": "guard"},
 }
 
@@ -93,7 +93,7 @@ const DANCER := {
 		"backstep": {"name": "Back Step", "tab": "move", "kind": "move", "interrupt": true, "frames": 14, "where": "ground",
 			"aim": "facing", "motion": [[1, 10, -7.0, 0.0]], "invuln": [1, 6],
 			"pose": [[0, "crouch"], [4, "fall"], [11, "idle"]], "icon": "fall"},
-		"roll": {"name": "Roll", "tab": "move", "kind": "move", "frames": 22, "where": "ground", "aim": "facing",
+		"roll": {"name": "Dodge", "tab": "defend", "kind": "move", "frames": 22, "where": "ground", "aim": "facing",
 			"motion": [[2, 17, 8.0, 0.0]], "invuln": [2, 14], "pose": [[0, "crouch"], [2, "roll"], [17, "crouch"]],
 			"icon": "roll"},
 		"jump": {"name": "Jump", "tab": "move", "kind": "move", "interrupt": true, "frames": 6, "where": "ground", "aim": "up",
@@ -127,7 +127,7 @@ const DANCER := {
 			"hits": [{"from": 8, "to": 10, "box": [12, -66, 78, 22], "dmg": 40, "stun": 18, "kb": [9.0, -2.0],
 				"block": 12, "chip": 3, "group": 0, "splat": true}],
 			"pose": [[0, "kick_wind"], [8, "side_kick"], [15, "idle"]]},
-		"uppercut": {"name": "Uppercut", "tab": "attack", "kind": "attack", "init_invuln": [1, 6],
+		"uppercut": {"name": "Uppercut", "tab": "special", "kind": "attack", "init_invuln": [1, 6],
 			"cancel_into": ["jump", "superjump"], "frames": 26, "where": "ground",
 			"aim": "facing",
 			"hits": [{"from": 6, "to": 9, "box": [4, -120, 46, 70], "dmg": 38, "stun": 26, "kb": [1.5, -12.0],
@@ -153,17 +153,17 @@ const DANCER := {
 			"hits": [{"from": 6, "to": 14, "box": [10, -70, 40, 34], "dmg": 34, "stun": 18, "kb": [6.0, -3.0],
 				"block": 10, "chip": 3, "group": 0, "guardbreak": true}],
 			"pose": [[0, "dash"], [5, "knee"], [17, "idle"]]},
-		"flashkick": {"name": "Flash Kick", "tab": "attack", "kind": "attack", "no_cancel": true, "frames": 30, "where": "ground",
+		"flashkick": {"name": "Flash Kick", "tab": "special", "kind": "attack", "no_cancel": true, "frames": 30, "where": "ground",
 			"aim": "facing", "invuln": [1, 8], "motion": [[4, 10, 1.0, -6.0]],
 			"hits": [{"from": 4, "to": 9, "box": [-4, -140, 56, 120], "dmg": 48, "stun": 28, "kb": [3.0, -13.0],
 				"block": 14, "chip": 4, "group": 0, "knockdown": true}],
 			"pose": [[0, "crouch"], [4, "flash_kick"], [14, "fall"]]},
 		# ---- in the air
-		"airkick": {"name": "Air Kick", "tab": "air", "kind": "attack", "proration": 1, "frames": 18, "where": "air", "aim": "facing",
+		"airkick": {"name": "Air Kick", "tab": "attack", "kind": "attack", "proration": 1, "frames": 18, "where": "air", "aim": "facing",
 			"hits": [{"from": 4, "to": 8, "box": [6, -66, 60, 24], "dmg": 24, "stun": 14, "kb": [4.0, -1.0],
 				"block": 8, "chip": 1, "group": 0}],
 			"pose": [[0, "kick_wind"], [4, "kick_hit"], [12, "fall"]]},
-		"airknee": {"name": "Air Knee", "tab": "air", "kind": "attack", "proration": 1, "frames": 16, "where": "air", "aim": "facing",
+		"airknee": {"name": "Air Knee", "tab": "attack", "kind": "attack", "proration": 1, "frames": 16, "where": "air", "aim": "facing",
 			"hits": [{"from": 3, "to": 6, "box": [6, -80, 40, 36], "dmg": 28, "stun": 16, "kb": [5.0, -4.0],
 				"block": 8, "chip": 2, "group": 0}],
 			"pose": [[0, "knee"], [10, "fall"]]},
@@ -216,7 +216,7 @@ const DANCER := {
 			"pose": [[0, "mirror"]], "icon": "mirror"},
 		"mirrorstrike": {"name": "Mirror Strike", "tab": "special", "kind": "attack", "hidden": true, "frames": 20,
 			"where": "both", "aim": "none", "invuln": [0, 12], "pose": [[0, "side_kick"], [12, "idle"]]},
-		"spinthrow": {"name": "Spin Throw", "tab": "grab", "kind": "grab", "frames": 32, "where": "ground",
+		"spinthrow": {"name": "Spin Throw", "tab": "special", "kind": "grab", "frames": 32, "where": "ground",
 			"aim": "facing",
 			"hits": [{"from": 9, "to": 10, "box": [6, -96, 56, 76], "dmg": 72, "stun": 32, "kb": [13.0, -6.0], "group": 0,
 				"knockdown": true, "splat": true}],
@@ -225,26 +225,26 @@ const DANCER := {
 			"hits": [{"from": 8, "to": 10, "box": [8, -26, 54, 28], "dmg": 26, "stun": 18, "kb": [2.0, -7.0], "block": 8,
 				"chip": 2, "group": 0, "height": "low", "otg": true}],
 			"pose": [[0, "kick_wind"], [8, "axe_down"], [15, "idle"]], "icon": "axe_down"},
-		"airthrow": {"name": "Air Throw", "tab": "air", "kind": "grab", "air_grab": true, "frames": 20, "where": "air",
+		"airthrow": {"name": "Air Throw", "tab": "attack", "kind": "grab", "air_grab": true, "frames": 20, "where": "air",
 			"aim": "facing",
 			"hits": [{"from": 3, "to": 6, "box": [4, -100, 50, 80], "dmg": 50, "stun": 26, "kb": [-6.0, 9.0],
 				"group": 0, "knockdown": true}],
 			"pose": [[0, "grab_reach"], [6, "throw"], [14, "fall"]], "icon": "grab_reach"},
-		"divekick": {"name": "Dive Kick", "tab": "air", "kind": "attack", "frames": 32, "where": "air", "aim": "down",
+		"divekick": {"name": "Dive Kick", "tab": "attack", "kind": "attack", "frames": 32, "where": "air", "aim": "down",
 			"motion": [[3, 32, ["px", 9.0], ["pyd", 12.0]]], "land_ends": true, "landing": 8,
 			"hits": [{"from": 3, "to": 32, "box": [0, -26, 46, 30], "dmg": 45, "stun": 18, "kb": [5.0, -3.0],
 				"block": 10, "chip": 3, "group": 0}],
 			"pose": [[0, "dive"]]},
-		"airspin": {"name": "Air Spin", "tab": "air", "kind": "attack", "frames": 24, "where": "air", "aim": "facing",
+		"airspin": {"name": "Air Spin", "tab": "attack", "kind": "attack", "frames": 24, "where": "air", "aim": "facing",
 			"hits": [{"from": 5, "to": 12, "box": [-56, -90, 112, 40], "dmg": 36, "stun": 16, "kb": [5.0, -5.0],
 				"block": 10, "chip": 3, "group": 0}],
 			"pose": [[0, "fall"], [5, "spin1"], [9, "spin2"], [14, "fall"]], "icon": "spin1"},
 		# ---- grabs
-		"grab": {"name": "Grab", "tab": "grab", "kind": "grab", "frames": 22, "where": "ground", "aim": "facing",
+		"grab": {"name": "Grab", "tab": "attack", "kind": "grab", "frames": 22, "where": "ground", "aim": "facing",
 			"hits": [{"from": 5, "to": 6, "box": [6, -88, 38, 60], "dmg": 50, "stun": 26, "kb": [10.0, -5.0],
 				"group": 0, "knockdown": true}],
 			"pose": [[0, "grab_reach"], [7, "throw"], [15, "idle"]], "icon": "grab_reach"},
-		"hiptoss": {"name": "Hip Toss", "tab": "grab", "kind": "grab", "frames": 34, "where": "ground",
+		"hiptoss": {"name": "Hip Toss", "tab": "attack", "kind": "grab", "frames": 34, "where": "ground",
 			"aim": "facing",
 			"hits": [{"from": 12, "to": 14, "box": [6, -90, 46, 66], "dmg": 80, "stun": 34, "kb": [-9.0, -9.0],
 				"group": 0, "knockdown": true}],
@@ -293,9 +293,12 @@ const DANCER := {
 
 ## One character for now (Timmy 18 Oct 17:52: "Just work on getting one char working and remove the other one").
 const ROSTER := {"dancer": DANCER}
-## The menu's tabs, in order: [id, name].
-const TABS := [["attack", "Attack"], ["air", "Air"], ["grab", "Grab"], ["special", "Special"], ["move", "Move"],
-	["defend", "Defend"], ["super", "Super"]]
+## The menu's tabs, in order: [id, name] - YOMI's five (Timmy 21:03 "Get more references as i think your getting
+## confused about the way moves are categorised"; its own menu, references/yomi/moves_menu): fixed columns whose moves
+## change with the state - air attacks show in Attack in the air, Burst in Defense while reeling, Get Up there when
+## down. Wait is Movement; Hold is a button by Confirm ("tab": "none"), as by YOMI's Lock In.
+const TABS := [["move", "Movement"], ["attack", "Attack"], ["special", "Special"], ["super", "Super"],
+	["defend", "Defense"]]
 
 
 ## A character's full move list: their own plus the shared ones.

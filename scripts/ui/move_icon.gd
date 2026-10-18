@@ -5,9 +5,10 @@ extends Button
 ## the move data - no art to make for a new move.
 
 const AIM_BADGE := {"facing": "↔", "dir8": "✣", "up": "↑", "down": "↓", "lean": "✣", "none": ""}
-## Each tab's colour - its icons are drawn in it, so a move's kind reads at a glance (pick 12).
-const TAB_COLOURS := {"attack": Color("#ffd23f"), "air": Color("#6fd3ff"), "grab": Color("#ff7ab6"), "special": Color("#ff6b6b"),
-	"move": Color("#eef0f6"), "defend": Color("#7ee0a1"), "super": Color("#c58bff")}
+## Each tab's colour - its icons are drawn in it, so a move's kind reads at a glance (pick 12). YOMI's: Movement and
+## Defense white, Attack yellow, Special red, Super blue (21:03).
+const TAB_COLOURS := {"move": Color("#eef0f6"), "attack": Color("#ffd23f"), "special": Color("#ff6b6b"),
+	"super": Color("#5aa9ff"), "defend": Color("#c9cede"), "none": Color("#8fd6ff")}
 
 
 static func tab_colour(ch: String, mid: String) -> Color:
