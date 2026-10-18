@@ -14,10 +14,9 @@ const FAR := 0.3             ## how much darker the far arm and leg are
 ## limb / head: for a fighter 100 tall; body: the torso's thickness at the chest, in limbs (hips: `hips`); fist: a
 ## fist's radius in limbs; foot: a foot's length in limbs (0 = none); squash: the legs' length (1 = as posed); ink: the
 ## outline, in limbs.
-## B "chunky" from the figure lab sheet (19:32 pass) - a solid torso wider than the limbs, a big head, feet, legs a
-## little shorter; C / D went to blobs (the arms lost in the body).
-static var style := {"limb": 13.0, "head": 15.0, "body": 1.9, "hips": 1.5, "fist": 0.66, "foot": 1.0, "squash": 0.92,
-	"ink": 0.22}
+## A - the figure lab's first row (Timmy 19:38: "I actually like option A"; B-D stay in the lab).
+static var style := {"limb": 9.0, "head": 11.5, "body": 1.45, "hips": 1.45, "fist": 0.62, "foot": 0.0, "squash": 1.0,
+	"ink": 0.3}
 
 
 ## A limb's thickness on screen for a fighter scaled `scale` (pose units -> px).

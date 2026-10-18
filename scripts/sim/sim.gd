@@ -44,7 +44,8 @@ extends RefCounted
 
 const STAGE_HALF := 800.0
 const GRAVITY := 0.6
-const MAX_FALL := 15.0
+const GRAVITY_FALL := 0.85    ## falling pulls harder than rising (19:38 "feels a little weightless") - same jump height
+const MAX_FALL := 16.0
 const FRICTION := 0.8
 const SEGMENT_CAP := 900      ## ticks a segment may run without a decision (a safety net - 15 s)
 const CLASH_LOCK := 10
@@ -518,7 +519,7 @@ func _floating(f: Fighter) -> bool:
 func _physics(f: Fighter) -> void:
 	var was_air := f.pos.y < 0.0
 	if not _floating(f) and (f.pos.y < 0.0 or f.vel.y < 0.0):
-		f.vel.y = minf(f.vel.y + GRAVITY, MAX_FALL)
+		f.vel.y = minf(f.vel.y + (GRAVITY if f.vel.y < 0.0 else GRAVITY_FALL), MAX_FALL)
 	f.pos += f.vel
 	if f.pos.y >= 0.0:
 		f.pos.y = 0.0

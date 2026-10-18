@@ -20,7 +20,10 @@ const GHOST_ALPHA := 0.55
 const PAD := 170.0          ## world px kept round everyone
 const ZOOM_MIN := 0.45
 const ZOOM_MAX := 1.35
-const TIPS := ["hand_f", "hand_b", "foot_f", "foot_b"]   ## what can strike (the one nearest the hit box leaves an arc)
+const TIPS := ["hand_f", "hand_b", "foot_f", "foot_b"]
+const LAND_TICKS := 7        ## the landing squash
+const LEAN := 0.03           ## radians of lean per px a tick of speed (up to LEAN_MAX)
+const LEAN_MAX := 0.32   ## what can strike (the one nearest the hit box leaves an arc)
 
 var characters: Array = []   ## per fighter id
 var palette: Array = []      ## each fighter's colour (empty = COLOURS in order) - the player picks theirs
@@ -47,6 +50,8 @@ var _time := 0.0
 var _tip_of := {}            ## "character:move:hit" -> the joint that strikes
 var _spin := {}              ## fighter id -> how far round a launched fighter has tumbled (radians)
 var _after_n := {}           ## fighter id -> ticks they've been moving fast (an afterimage every other one)
+var _land := {}              ## fighter id -> ticks of landing squash left (weight - 19:38)
+var _vx := {}                ## fighter id -> how far they moved last tick (they lean into it)
 var _tick_n := 0
 var _glow: GradientTexture2D
 var advantage := {}          ## your pick: enemy id -> the ticks you're free before them (drawn "+N" under them)
@@ -63,6 +68,8 @@ func setup(chars: Array, fighter_names: Array) -> void:
 	fx.clear()
 	_spin.clear()
 	_after_n.clear()
+	_land.clear()
+	_vx.clear()
 	advantage = {}
 
 
@@ -97,6 +104,18 @@ func _motion_fx(prev: Array) -> void:
 		_after_n[i] = int(_after_n.get(i, 0)) + 1 if fast else 0
 		if fast and int(_after_n[i]) % 2 == 1:
 			fx.afterimage(i, r)
+		var dy := float(r[1]) - float(p[1])
+		_vx[i] = float(r[0]) - float(p[0])
+		if float(p[1]) < -6.0 and float(r[1]) >= -0.5 and int(r[5]) != 4:   # (landed: squash, and dust if it was a drop)
+			_land[i] = LAND_TICKS
+			if dy > 6.0:
+				fx.dust(Vector2(float(r[0]), 0.0), clampf(dy / 14.0, 0.4, 1.2), _tick_n * 5 + i)
+		elif _land.has(i):
+			_land[i] = int(_land[i]) - 1
+			if int(_land[i]) <= 0:
+				_land.erase(i)
+		if int(r[5]) == 1 and float(r[1]) >= -0.5 and absf(float(_vx[i])) > 4.0 and _tick_n % 3 == 0:
+			fx.dust(Vector2(float(r[0]), 0.0), 0.35, _tick_n * 5 + i)   # (sliding back from a hit: dust off the feet)
 		if int(r[5]) == 1 and float(r[1]) < -20.0:   # (launched: they tumble the way they're flying)
 			_spin[i] = float(_spin.get(i, 0.0)) - 0.3 * float(r[2])
 		else:
@@ -433,6 +452,15 @@ func _figure(i: int, r: Array, alpha: float) -> void:
 		for j: String in ["head", "neck", "elbow_f", "hand_f", "elbow_b", "hand_b"]:
 			pose[j] = (pose[j] as Vector2) + Vector2(0, bob * (1.0 if j in ["head", "neck"] else 0.7))
 		pose["hip"] = (pose["hip"] as Vector2) + Vector2(0, bob * 0.4)
+	if alpha >= 1.0 and int(r[5]) in [0, 3] and _land.has(i):   # (just landed: sink into a crouch and come back up)
+		var k := float(_land[i]) / float(LAND_TICKS)
+		pose = Poses.blend(pose, Poses.get_pose("crouch"), 0.65 * k * k)
+	if alpha >= 1.0 and int(r[5]) == 0 and float(r[1]) >= -1.0 and absf(float(_vx.get(i, 0.0))) > 1.0:
+		# (moving along the ground: the top half leans into it - forward when going the way they face)
+		var ang := clampf(float(_vx[i]) * LEAN, -LEAN_MAX, LEAN_MAX) * float(r[2])
+		var hip: Vector2 = pose["hip"]
+		for j: String in ["head", "neck", "elbow_f", "hand_f", "elbow_b", "hand_b"]:
+			pose[j] = hip + ((pose[j] as Vector2) - hip).rotated(ang)
 	if alpha >= 1.0 and _spin.has(i):   # (launched: tumbling round their middle)
 		var hip: Vector2 = pose["hip"]
 		var mid := hip + Vector2(0, -14)

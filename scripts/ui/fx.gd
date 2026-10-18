@@ -195,6 +195,18 @@ func super_start(id: int, at: Vector2, col: Color, seed_n: int) -> void:
 	kick(3.0)
 
 
+## Dust off the ground (a landing, feet sliding): grey bits kicked out both ways, low.
+func dust(at: Vector2, s: float, seed_n: int) -> void:
+	_rng.seed = seed_n
+	for i in int(4 + 6 * s):
+		var side := 1.0 if i % 2 == 0 else -1.0
+		_add("chip", at + Vector2(side * _rng.randf_range(4.0, 14.0), -2.0),
+				Vector2(side * _rng.randf_range(80.0, 260.0) * s, -_rng.randf_range(40.0, 160.0) * s),
+				_rng.randf_range(0.2, 0.38), Color("#8d909c"), _rng.randf_range(2.5, 5.0))
+	if s > 0.7:
+		kick(1.0 + s)
+
+
 ## Speed streaks across the stage the way a hit sends someone (screen-wide, behind the fighters).
 func rush(dir: Vector2, n: int) -> void:
 	var d := dir.normalized()
