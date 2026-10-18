@@ -10,6 +10,12 @@ func _ready() -> void:
 		var code := await _run_tests()
 		get_tree().quit(code)
 		return
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--figlab="):   # (dev: body styles side by side - scripts/dev/figure_lab.gd)
+			var lab: Node2D = load("res://scripts/dev/figure_lab.gd").new()
+			add_child(lab)
+			lab.call("run", arg.trim_prefix("--figlab="))
+			return
 	var game: Control = load("res://scripts/ui/game_screen.gd").new()
 	add_child(game)
 	for arg in OS.get_cmdline_user_args():

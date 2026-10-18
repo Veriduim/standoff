@@ -161,6 +161,9 @@ static func for_record(character: String, r: Array) -> Dictionary:
 	if nxt.is_empty() or int(nxt[0]) <= int(cur[0]):
 		return get_pose(str(cur[1]))
 	var t := float(f - int(cur[0])) / float(int(nxt[0]) - int(cur[0]))
-	# hold the pose most of the way, snap to the next near the keyframe (hits read as hits, not floaty)
-	t = clampf((t - 0.6) / 0.4, 0.0, 1.0)
+	# strikes hold the pose most of the way and snap to the next near the keyframe (hits read as hits, not floaty);
+	# moving, guarding, getting up and the like ease the whole way (smooth)
+	var kind := str(Moves.move(character, mv).get("kind", ""))
+	if kind in ["attack", "super", "grab", "burst"]:
+		t = clampf((t - 0.6) / 0.4, 0.0, 1.0)
 	return blend(get_pose(str(cur[1])), get_pose(str(nxt[1])), t * t * (3.0 - 2.0 * t))

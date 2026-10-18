@@ -31,6 +31,7 @@ var burst := 0           ## the Burst gauge - fills with time (and hits taken); 
 var di := Vector2.ZERO   ## the way they lean while reeling (picked on their reeling turns) - nudges their knockback
 var combo_used := {}     ## this combo, move id -> [times it's been used on them, that move's instance] (reuse = less stun)
 var cancelled := ""      ## the move they just hit-cancelled out of (not pickable again until they start another)
+var cancel_frame := 0    ## ...the frame it was on (they're drawn holding it until they pick)
 var fc := 2              ## Free Cancels left (Sim.FC_MAX)
 var freed := false       ## the attack running was Free Cancelled - it gives way when anyone else can act
 var whiffed := false     ## just Whiff Cancelled: attacks only on this pick
@@ -67,7 +68,7 @@ func to_dict() -> Dictionary:
 		"move": move, "frame": frame, "length": length, "param": [param.x, param.y], "instance": instance,
 		"hit_done": hit_done.keys(), "stun": stun, "blockstun": blockstun, "lock": lock, "combo": combo,
 		"air_moves": air_moves, "burst": burst, "di": [di.x, di.y], "combo_used": combo_used.duplicate(true),
-		"cancelled": cancelled, "fc": fc, "freed": freed, "whiffed": whiffed, "down": down, "down_pick": down_pick,
+		"cancelled": cancelled, "cancel_frame": cancel_frame, "fc": fc, "freed": freed, "whiffed": whiffed, "down": down, "down_pick": down_pick,
 		"kd": kd, "sad": sad, "sadness": sadness, "sad_warned": sad_warned, "dist": dist, "ko": ko}
 
 
@@ -101,6 +102,7 @@ static func from_dict(d: Dictionary) -> Fighter:
 	f.di = Vector2(float(lean[0]), float(lean[1]))
 	f.combo_used = (d.get("combo_used", {}) as Dictionary).duplicate(true)
 	f.cancelled = str(d.get("cancelled", ""))
+	f.cancel_frame = int(d.get("cancel_frame", 0))
 	f.fc = int(d.get("fc", 2))
 	f.freed = bool(d.get("freed", false))
 	f.whiffed = bool(d.get("whiffed", false))

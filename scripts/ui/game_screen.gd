@@ -387,7 +387,7 @@ func _next() -> void:
 		_banner()
 		var adv := {}   # (how many ticks each enemy is still tied up - "+N" over them)
 		for g in sim.alive():
-			if sim.enemies(f, g) and not g.actionable() and not sim.interruptible(g) and g.busy() > 0:
+			if sim.enemies(f, g) and not g.actionable() and not sim.interruptible(g) and g.busy() > 0:   # (+N)
 				adv[g.id] = g.busy()
 		stage.advantage = adv
 		pick.open(sim, me, stage)

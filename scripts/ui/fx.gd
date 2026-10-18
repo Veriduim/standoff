@@ -40,6 +40,7 @@ var afters: Array = []       ## afterimages: {id, rec: Sim.record row, age, life
 var dim := 0.0               ## how dark the stage goes round a super (0-1); `dim_id` is drawn over it
 var dim_id := -1
 var split := 0.0             ## the colour split (0-1, fading) - the screens' post shader reads it
+var punch := 0.0             ## the camera's push-in on a big hit (a share of the zoom, fading)
 var split_at := Vector2.ZERO ## (world) where it splits from
 var _rng := RandomNumberGenerator.new()
 static var _bold: FontVariation
@@ -56,6 +57,7 @@ func clear() -> void:
 	trails.clear()
 	streaks.clear()
 	flash.clear()
+	punch = 0.0
 	afters.clear()
 	hitstop = 0.0
 	shake = 0.0
@@ -222,6 +224,7 @@ func freeze(seconds: float, who: int) -> void:
 
 func kick(px: float) -> void:
 	shake = maxf(shake, px)
+	punch = maxf(punch, clampf(px * 0.012, 0.0, 0.08))
 
 
 ## The burst where a hit lands: a spiky star, rings and squares flying on the way the hit goes, a few chips.
@@ -338,6 +341,7 @@ func update(delta: float) -> void:
 		if dim <= 0.0:
 			dim_id = -1
 	split = maxf(0.0, split - delta * 2.6)
+	punch = maxf(0.0, punch - delta * 0.25)
 
 
 # ---------- drawing (through the stage's camera) ----------

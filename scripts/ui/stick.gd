@@ -4,49 +4,106 @@ extends RefCounted
 ## placed. Chunky since the first style pass (Timmy 18 Oct 18:07, pick 1): thick round-ended limbs, a thicker body,
 ## fists, a big round head, and the far arm and leg a shade darker so the body reads in any pose. A dark edge round it
 ## all keeps overlapping fighters apart. The stage and the move icons share it.
+## The body's proportions live in `style` (19:32 "I think visually we can do better" - the look is picked on a sheet of
+## options drawn by scripts/dev/figure_lab.gd).
 
 const BACK := [["neck", "elbow_b"], ["elbow_b", "hand_b"], ["hip", "knee_b"], ["knee_b", "foot_b"]]
 const FRONT := [["hip", "knee_f"], ["knee_f", "foot_f"], ["neck", "elbow_f"], ["elbow_f", "hand_f"]]
-const BODY := 1.45           ## the body's thickness, in limbs
-const FIST := 0.62           ## a fist's radius, in limbs
 const FAR := 0.3             ## how much darker the far arm and leg are
+
+## limb / head: for a fighter 100 tall; body: the torso's thickness at the chest, in limbs (hips: `hips`); fist: a
+## fist's radius in limbs; foot: a foot's length in limbs (0 = none); squash: the legs' length (1 = as posed); ink: the
+## outline, in limbs.
+## B "chunky" from the figure lab sheet (19:32 pass) - a solid torso wider than the limbs, a big head, feet, legs a
+## little shorter; C / D went to blobs (the arms lost in the body).
+static var style := {"limb": 13.0, "head": 15.0, "body": 1.9, "hips": 1.5, "fist": 0.66, "foot": 1.0, "squash": 0.92,
+	"ink": 0.22}
+
+
+## A limb's thickness on screen for a fighter scaled `scale` (pose units -> px).
+static func limb(scale: float) -> float:
+	return float(style["limb"]) * scale
+
+
+static func head(scale: float) -> float:
+	return float(style["head"]) * scale
 
 
 ## pose: joint -> Vector2 (Poses); thick = a limb's thickness on screen. edge = false for ghosts (no outline).
 static func draw(ci: CanvasItem, pose: Dictionary, origin: Vector2, scale: float, facing: float, col: Color,
 		thick: float, head_r: float, edge := true) -> Dictionary:
-	var pts := {}
-	for j: String in Poses.JOINTS:
-		var v: Vector2 = pose[j]
-		pts[j] = origin + Vector2(v.x * facing, v.y) * scale
-	var body := thick * BODY
-	var fist := thick * FIST
+	var pts := _place(pose, origin, scale, facing)
+	var chest := thick * float(style["body"])
+	var hips := thick * float(style["hips"])
+	var fist := thick * float(style["fist"])
+	var foot := thick * float(style["foot"])
 	if edge:
 		var ink := Color(0.02, 0.02, 0.03, col.a)
-		var ew := maxf(1.5, thick * 0.3)
+		var ew := maxf(1.5, thick * float(style["ink"]))
 		for b: Array in BACK + FRONT:
-			_bone(ci, pts[b[0]], pts[b[1]], thick + ew * 2.0, ink)
-		_bone(ci, pts["neck"], pts["hip"], body + ew * 2.0, ink)
+			_bone(ci, pts[b[0]], pts[b[1]], thick + ew * 2.0, thick + ew * 2.0, ink)
+		_bone(ci, pts["neck"], pts["hip"], chest + ew * 2.0, hips + ew * 2.0, ink)
 		for j: String in ["hand_f", "hand_b"]:
 			ci.draw_circle(pts[j], fist + ew, ink, true, -1.0, true)
+		if foot > 0.0:
+			for s: String in ["f", "b"]:
+				_foot(ci, pts, s, facing, foot, thick + ew * 2.0, ink)
 		ci.draw_circle(pts["head"], head_r + ew, ink, true, -1.0, true)
 	var far := col.darkened(FAR)
 	for b: Array in BACK:
-		_bone(ci, pts[b[0]], pts[b[1]], thick, far)
+		_bone(ci, pts[b[0]], pts[b[1]], thick, thick, far)
 	ci.draw_circle(pts["hand_b"], fist, far, true, -1.0, true)
-	_bone(ci, pts["neck"], pts["hip"], body, col)
+	if foot > 0.0:
+		_foot(ci, pts, "b", facing, foot, thick, far)
+	_bone(ci, pts["neck"], pts["hip"], chest, hips, col)
 	for b: Array in FRONT:
-		_bone(ci, pts[b[0]], pts[b[1]], thick, col)
+		_bone(ci, pts[b[0]], pts[b[1]], thick, thick, col)
+	if foot > 0.0:
+		_foot(ci, pts, "f", facing, foot, thick, col)
 	ci.draw_circle(pts["hand_f"], fist, col, true, -1.0, true)
 	ci.draw_circle(pts["head"], head_r, col, true, -1.0, true)
 	return pts
 
 
-## A limb: a thick line with round ends.
-static func _bone(ci: CanvasItem, a: Vector2, b: Vector2, w: float, c: Color) -> void:
-	ci.draw_line(a, b, c, w, true)
-	ci.draw_circle(a, w / 2.0, c, true, -1.0, true)
-	ci.draw_circle(b, w / 2.0, c, true, -1.0, true)
+## The pose's joints on screen: the legs squashed toward the hip by `squash` (the body rides lower), then scaled,
+## flipped and placed.
+static func _place(pose: Dictionary, origin: Vector2, scale: float, facing: float) -> Dictionary:
+	var sq := float(style["squash"])
+	var hip: Vector2 = pose["hip"]
+	var drop := -hip.y * (1.0 - sq)   # (how much lower everything above the hips sits)
+	var pts := {}
+	for j: String in Poses.JOINTS:
+		var v: Vector2 = pose[j]
+		if j.begins_with("knee") or j.begins_with("foot"):
+			v = Vector2(v.x, hip.y + (v.y - hip.y) * sq + drop)
+		else:
+			v = v + Vector2(0, drop)
+		pts[j] = origin + Vector2(v.x * facing, v.y) * scale
+	return pts
+
+
+## A limb: a line from a to b, wa thick at a and wb at b, with round ends.
+static func _bone(ci: CanvasItem, a: Vector2, b: Vector2, wa: float, wb: float, c: Color) -> void:
+	if is_equal_approx(wa, wb):
+		ci.draw_line(a, b, c, wa, true)
+	else:
+		var d := (b - a)
+		if d.length() > 0.01:
+			var n := Vector2(-d.y, d.x).normalized()
+			ci.draw_colored_polygon(PackedVector2Array([a + n * wa / 2.0, b + n * wb / 2.0, b - n * wb / 2.0,
+					a - n * wa / 2.0]), c)
+	ci.draw_circle(a, wa / 2.0, c, true, -1.0, true)
+	ci.draw_circle(b, wb / 2.0, c, true, -1.0, true)
+
+
+## A foot: a short block off the ankle, across the shin, toes the way they face.
+static func _foot(ci: CanvasItem, pts: Dictionary, side: String, facing: float, length: float, w: float, c: Color) -> void:
+	var ankle: Vector2 = pts["foot_" + side]
+	var shin: Vector2 = ankle - (pts["knee_" + side] as Vector2)
+	var across := Vector2(-shin.y, shin.x).normalized() if shin.length() > 0.01 else Vector2(facing, 0)
+	if across.x * facing < 0.0 or (is_zero_approx(across.x) and across.y < 0.0):
+		across = -across
+	_bone(ci, ankle, ankle + across * length, w, w * 0.85, c)
 
 
 ## A pose's extent (joints + head), for fitting it in a box.

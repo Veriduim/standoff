@@ -20,8 +20,6 @@ const GHOST_ALPHA := 0.55
 const PAD := 170.0          ## world px kept round everyone
 const ZOOM_MIN := 0.45
 const ZOOM_MAX := 1.35
-const LIMB := 9.0           ## a limb's thickness for a fighter 100 tall (world px)
-const HEAD := 11.5          ## the head's radius, the same scale
 const TIPS := ["hand_f", "hand_b", "foot_f", "foot_b"]   ## what can strike (the one nearest the hit box leaves an arc)
 
 var characters: Array = []   ## per fighter id
@@ -50,6 +48,7 @@ var _tip_of := {}            ## "character:move:hit" -> the joint that strikes
 var _spin := {}              ## fighter id -> how far round a launched fighter has tumbled (radians)
 var _after_n := {}           ## fighter id -> ticks they've been moving fast (an afterimage every other one)
 var _tick_n := 0
+var _glow: GradientTexture2D
 var advantage := {}          ## your pick: enemy id -> the ticks you're free before them (drawn "+N" under them)
 var guessing := -1           ## the opponent whose move you're guessing (a "?" over them)
 
@@ -194,7 +193,7 @@ func _contact(a: int, d: int) -> Vector2:
 func _arcs() -> void:
 	for i in frame.size():
 		var r: Array = frame[i]
-		var tip := _striking(i, str(r[3]), int(r[4])) if int(r[5]) == 0 and str(r[3]) != "" else ""
+		var tip := _striking(i, str(r[3]), int(r[4])) if int(r[5]) == 0 and str(r[3]) != "" and not _free(r) else ""
 		if tip == "":
 			fx.trail_end(i)
 			continue
@@ -266,7 +265,7 @@ func _follow(delta: float) -> void:
 	var want := Vector2((lo + hi) / 2.0, top * 0.5 - 70.0)
 	var k := 1.0 - pow(0.02, delta)
 	cam = cam.lerp(want, k)
-	zoom = lerpf(zoom, want_zoom, k)
+	zoom = lerpf(zoom, want_zoom * (1.0 + fx.punch), k)   # (a big hit pushes the camera in a touch)
 
 
 ## The camera's centre sits a little above the band's middle (the floor near its foot).
@@ -285,6 +284,19 @@ func s2w(p: Vector2) -> Vector2:
 func _draw() -> void:
 	var vp := get_viewport_rect().size
 	draw_rect(Rect2(Vector2.ZERO, vp), BG)
+	if _glow == null:   # (a soft light behind the action - a radial gradient)
+		var g := Gradient.new()
+		g.set_color(0, Color(0.5, 0.56, 0.85, 0.075))
+		g.set_color(1, Color(0.5, 0.56, 0.85, 0.0))
+		_glow = GradientTexture2D.new()
+		_glow.gradient = g
+		_glow.fill = GradientTexture2D.FILL_RADIAL
+		_glow.fill_from = Vector2(0.5, 0.5)
+		_glow.fill_to = Vector2(1.0, 0.5)
+		_glow.width = 256
+		_glow.height = 256
+	var gr := 760.0 * zoom
+	draw_texture_rect(_glow, Rect2(w2s(cam + Vector2(0, 40)) - Vector2(gr, gr), Vector2(gr, gr) * 2.0), false)
 	var floor_y := w2s(Vector2(0, 0)).y
 	var wl := w2s(Vector2(-Sim.STAGE_HALF, 0)).x
 	var wr := w2s(Vector2(Sim.STAGE_HALF, 0)).x
@@ -344,7 +356,7 @@ func _draw() -> void:
 
 
 func _free(r: Array) -> bool:
-	return str(r[3]) == "" and int(r[5]) == 0
+	return int(r[12]) == 1 if r.size() > 12 else (str(r[3]) == "" and int(r[5]) == 0)
 
 
 func _ready_label(i: int, r: Array) -> void:
@@ -387,7 +399,7 @@ func _boxes(i: int, r: Array) -> void:
 		return
 	var body := hurt_rect(i, r)
 	draw_rect(Rect2(w2s(body.position), body.size * zoom), Color(1, 1, 1, 0.55), false, 1.5)
-	if str(r[3]) == "" or int(r[5]) != 0:
+	if str(r[3]) == "" or int(r[5]) != 0 or _free(r):
 		return
 	var m := Moves.move(_char(i), str(r[3]))
 	for e: Dictionary in m.get("hits", []):
@@ -414,14 +426,19 @@ func _figure(i: int, r: Array, alpha: float) -> void:
 		col = col.lerp(BG, 1.0 - alpha)
 	elif fx.flash.has(i):   # (the impact frame: drawn white)
 		col = Color.WHITE
-	var head_r := HEAD * h * zoom
+	var head_r := Stick.head(h * zoom)
 	var pose := Poses.for_record(ch, r)
+	if alpha >= 1.0 and int(r[5]) == 0 and (str(r[3]) == "" or str(r[3]) == "wait") and float(r[1]) >= -1.0:
+		var bob := sin(_time * 3.2 + i * 1.3) * 1.6   # (standing free: breathing - the top half rises and falls)
+		for j: String in ["head", "neck", "elbow_f", "hand_f", "elbow_b", "hand_b"]:
+			pose[j] = (pose[j] as Vector2) + Vector2(0, bob * (1.0 if j in ["head", "neck"] else 0.7))
+		pose["hip"] = (pose["hip"] as Vector2) + Vector2(0, bob * 0.4)
 	if alpha >= 1.0 and _spin.has(i):   # (launched: tumbling round their middle)
 		var hip: Vector2 = pose["hip"]
 		var mid := hip + Vector2(0, -14)
 		for j: String in Poses.JOINTS:
 			pose[j] = mid + ((pose[j] as Vector2) - mid).rotated(float(_spin[i]))
-	var pts := Stick.draw(self, pose, w2s(base), h * zoom, face, col, LIMB * h * zoom, head_r, alpha >= 1.0)
+	var pts := Stick.draw(self, pose, w2s(base), h * zoom, face, col, Stick.limb(h * zoom), head_r, alpha >= 1.0)
 	if alpha < 1.0:
 		return
 	if ch == "dancer":   # (her headband - two short tails off the back of the head)

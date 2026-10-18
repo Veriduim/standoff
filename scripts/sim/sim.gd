@@ -725,6 +725,7 @@ func _resolve_hits() -> Dictionary:
 		var f := get_f(id)
 		if f.move != "" and f.stun == 0:
 			f.cancelled = f.move
+			f.cancel_frame = f.frame
 			f.move = ""
 			f.frame = 0
 	_cancels.clear()
@@ -842,16 +843,22 @@ func _grab(a: Fighter, d: Fighter, e: Dictionary, kind: Dictionary, live: Dictio
 
 
 ## One tick's picture of every fighter, for playback: [x, y, facing, move, frame, state, hp, meter, burst gauge, Free
-## Cancels, air options left, sad (0, 1 SAD!, 2 SADNESS!)].
-## state: 0 free / in a move, 1 hit, 2 blocking, 3 locked, 4 KO, 5 lying down.
+## Cancels, air options left, sad (0, 1 SAD!, 2 SADNESS!), free to act (1 / 0)].
+## state: 0 free / in a move, 1 hit, 2 blocking, 3 locked, 4 KO, 5 lying down. Someone free after a hit cancel is
+## recorded in the move they landed, on its frame (they hold the strike until they pick - as YOMI draws it).
 func record() -> Array:
 	var out: Array = []
 	for f in fighters:
 		var state := 4 if f.ko else (5 if f.down > 0 else (1 if f.stun > 0 else (2 if f.blockstun > 0 \
 				else (3 if f.lock > 0 else 0))))
 		var sad := 2 if f.sadness > 0 else (1 if f.sad_warned else 0)
-		out.append([f.pos.x, f.pos.y, f.facing, f.move, f.frame, state, f.hp, f.meter, f.burst, f.fc,
-			AIR_OPTIONS - f.air_moves, sad])
+		var mv := f.move
+		var fr := f.frame
+		if mv == "" and f.cancelled != "" and f.actionable():
+			mv = f.cancelled
+			fr = f.cancel_frame
+		out.append([f.pos.x, f.pos.y, f.facing, mv, fr, state, f.hp, f.meter, f.burst, f.fc,
+			AIR_OPTIONS - f.air_moves, sad, 1 if f.actionable() else 0])
 	return out
 
 
