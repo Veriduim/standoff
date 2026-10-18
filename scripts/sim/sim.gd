@@ -264,7 +264,23 @@ func reeling(f: Fighter) -> bool:
 func interruptible(f: Fighter) -> bool:
 	if f == null or f.ko or f.stun > 0 or f.blockstun > 0 or f.lock > 0 or f.down > 0 or f.move == "":
 		return false
+	if _chased(f):   # (Beating Backdash: backing off while they come in - stuck in it until they can act)
+		return false
 	return bool(Moves.move(f.character, f.move).get("interrupt", false)) or (f.freed and _kind(f) == "attack")
+
+
+## Beating Backdash (the wiki; the IASA guide): she's moving away from an enemy who's moving in on her with a movement
+## option (and not free yet) - her backward movement can't be interrupted until they're actionable.
+func _chased(f: Fighter) -> bool:
+	if _kind(f) != "move" or absf(f.vel.x) < 0.5:
+		return false
+	for g in alive():
+		if not enemies(f, g) or g.actionable() or _kind(g) != "move" or absf(g.pos.x - f.pos.x) < 1.0:
+			continue
+		var away := signf(f.pos.x - g.pos.x)   # (the way from them to her)
+		if signf(f.vel.x) == away and signf(g.vel.x) == away and absf(g.vel.x) > 0.5:
+			return true
+	return false
 
 
 ## A Burst Cancel: a full gauge, free, with someone in a combo close by.

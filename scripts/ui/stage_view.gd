@@ -390,10 +390,10 @@ func _draw() -> void:
 				continue
 			if (ghost_ids.is_empty() and (ghost_only < 0 or i == ghost_only)) or ghost_ids.has(i):
 				_figure(i, g[i], GHOST_ALPHA)
-				if _free(g[i]) and ghost_index() > 0:   # (the ghost starts in its move - free again = READY)
-					_ready_label(i, g[i])
 			elif not ghost_play:   # (held: where everyone else would be on that frame)
 				_figure(i, g[i], GHOST_ALPHA * 0.6)
+	if not ghost.is_empty():
+		_predict_labels()
 	fx.draw_back(self)   # (the dark starbursts of hits, behind everyone)
 	for a: Dictionary in fx.afters:   # (afterimages - fading copies behind fast movers)
 		var id := int(a["id"])
@@ -477,6 +477,40 @@ func _shot(s: Array, alpha: float) -> void:
 
 func _free(r: Array) -> bool:
 	return int(r[12]) == 1 if r.size() > 12 else (str(r[3]) == "" and int(r[5]) == 0)
+
+
+## YOMI's prediction labels (the research, 00:22): over each ghost picked this turn, "Ready in N" - or "Interrupt in N"
+## when it's cut short mid-move - drawn where they'll be then. Yours green when you get your options first or together,
+## yellow when an enemy gets theirs first.
+func _predict_labels() -> void:
+	var ids: Array = ghost_ids if not ghost_ids.is_empty() else ([ghost_only] if ghost_only >= 0 else [])
+	var at := {}   # id -> the ghost frame they're free on
+	for id: int in ids:
+		for k in range(1, ghost.size()):
+			var rows: Array = ghost[k]
+			if id < rows.size() and _free(rows[id]):
+				at[id] = k
+				break
+	var mine := int(at.get(you, 9999))
+	var first_foe := 9999
+	for id: int in at:
+		if id != you:
+			first_foe = mini(first_foe, int(at[id]))
+	for id: int in at:
+		var k := int(at[id])
+		var r: Array = ghost[k][id]
+		var cut := str(r[3]) != "" and str(r[3]) != "wait" and int(r[5]) == 0
+		var text := ("Interrupt in %d" if cut else "Ready in %d") % k
+		var col := colour_of(id).lerp(Color.WHITE, 0.55)
+		if id == you:
+			col = Color("#5ee08a") if mine <= first_foe else Color("#ffd23f")
+		var font := ThemeDB.fallback_font
+		var h := float(Moves.stats(_char(id))["height"])
+		var p := w2s(Vector2(float(r[0]), float(r[1]) - h * 1.5))
+		var w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x
+		draw_string_outline(font, p - Vector2(w / 2.0, 0), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, 5, Color(0.02, 0.02,
+				0.03, 0.9))
+		draw_string(font, p - Vector2(w / 2.0, 0), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, col)
 
 
 func _ready_label(i: int, r: Array) -> void:

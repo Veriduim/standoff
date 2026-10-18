@@ -668,6 +668,21 @@ func _test_spacer() -> void:
 			450 - b2.fighters[1].hp], 450 - b2.fighters[1].hp > 450 - b1.fighters[1].hp)
 
 
+func _test_beating_backdash() -> void:
+	_section("Beating Backdash (the wiki): backing off while they dash in, you're stuck in it until they can act")
+	var s := _duel("dancer", "dancer", 400.0)
+	s.apply({0: {"move": "walk", "x": -1.0}, 1: {"move": "dash", "x": -1.0}})
+	for _i in 4:
+		s.step()
+	var chased := not s.interruptible(s.fighters[0])
+	var t := _duel("dancer", "dancer", 400.0)
+	t.apply({0: {"move": "walk", "x": -1.0}, 1: {"move": "wait"}})
+	for _i in 4:
+		t.step()
+	_check("walking away from a dash in can't be interrupted; from someone standing it can", chased
+			and t.interruptible(t.fighters[0]))
+
+
 ## Two Dancers with these x-factors on (Sim RULES "xf"), gap apart, facing each other.
 func _xf(rule: String, gap := 300.0) -> Sim:
 	var s := Sim.create([{"character": "dancer"}, {"character": "dancer"}], "ffa", {"xf": rule})
