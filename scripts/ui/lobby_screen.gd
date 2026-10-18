@@ -121,8 +121,9 @@ func _layout() -> void:
 	var vp := get_viewport_rect().size
 	position = Vector2.ZERO   # (sized by hand, as the post layer is - the game screen's own rect isn't the viewport's)
 	size = vp
-	list_view.position = Vector2((vp.x - 820.0) / 2.0, 30.0)
-	list_view.size = Vector2(820.0, vp.y - 60.0)
+	var lw := minf(820.0, vp.x - 32.0)
+	list_view.position = Vector2((vp.x - lw) / 2.0, 16.0)
+	list_view.size = Vector2(lw, vp.y - 32.0)
 	room_view.position = Vector2(16, 16)
 	room_view.size = vp - Vector2(32, 32)
 	modal.reset_size()
@@ -305,11 +306,15 @@ func _build_room() -> void:
 	room_view = HBoxContainer.new()
 	(room_view as HBoxContainer).add_theme_constant_override("separation", 14)
 	add_child(room_view)
-	var left := _column(320)
+	var left := _column(240)
 	room_view.add_child(left)
 	left.add_child(Ui.label("MEMBERS", 15, Color("#8a8a9c")))
 	members_box = _scroll_list(left)
-	var mid := _column(420)
+	var leave := Ui.button("Leave lobby", func() -> void: leave_lobby(), 16)   # (under the members - the rules
+	leave.name = "Leave"                                                        # column runs off a short screen)
+	leave.custom_minimum_size = Vector2(0, 44)
+	left.add_child(leave)
+	var mid := _column(300)
 	room_view.add_child(mid)
 	title = Ui.label("", 26, Color("#f2f2f7"))
 	mid.add_child(title)
@@ -328,7 +333,7 @@ func _build_room() -> void:
 	var new_match := _main(Ui.button("New match...", func() -> void: _new_match(), 20))
 	new_match.name = "NewMatch"
 	mid.add_child(new_match)
-	var right := _column(460)
+	var right := _column(330)
 	room_view.add_child(right)
 	right.add_child(Ui.label("RULES", 15, Color("#8a8a9c")))
 	rules_box = VBoxContainer.new()
@@ -348,14 +353,14 @@ func _build_room() -> void:
 	chat_edit.text_submitted.connect(func(_t: String) -> void: _send_chat())
 	say.add_child(chat_edit)
 	say.add_child(Ui.button("Send", func() -> void: _send_chat(), 16))
-	var leave := Ui.button("Leave lobby", func() -> void: leave_lobby(), 16)
-	leave.name = "Leave"
-	right.add_child(leave)
+
 
 
 func _column(w: float) -> VBoxContainer:
 	var v := VBoxContainer.new()
 	v.custom_minimum_size = Vector2(w, 0)
+	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL   # (they share whatever width there is)
+	v.size_flags_stretch_ratio = w
 	v.add_theme_constant_override("separation", 6)
 	return v
 
@@ -493,7 +498,7 @@ func _fill_rules() -> void:
 			shown = "spread out"
 		if owner:
 			var less := Ui.button("−", func() -> void: _bump(key, -1), 16)
-			less.custom_minimum_size = Vector2(46, 40)
+			less.custom_minimum_size = Vector2(46, 34)
 			row.add_child(less)
 		var vl := Ui.label(shown, 15, Color("#f2f2f7"))
 		vl.custom_minimum_size = Vector2(96, 0)
@@ -501,7 +506,7 @@ func _fill_rules() -> void:
 		row.add_child(vl)
 		if owner:
 			var more := Ui.button("+", func() -> void: _bump(key, 1), 16)
-			more.custom_minimum_size = Vector2(46, 40)
+			more.custom_minimum_size = Vector2(46, 34)
 			row.add_child(more)
 		rules_box.add_child(row)
 	if owner:

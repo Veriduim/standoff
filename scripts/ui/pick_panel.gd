@@ -700,7 +700,7 @@ func _show_card(side: String) -> void:
 		free.visible = str(cm.get("kind", "")) == "attack"
 		free.disabled = fw.fc == 0 and fw.meter < Sim.BAR
 		free.set_pressed_no_signal(bool(c.get("free", false)))
-		free.text = "Free · %d left" % fw.fc if fw.fc > 0 else ("Free · 1 bar" if fw.meter >= Sim.BAR else "Free · none")
+		free.text = "Free ×%d" % fw.fc if fw.fc > 0 else ("Free · bar" if fw.meter >= Sim.BAR else "Free ×0")
 
 
 ## What the preview says happens, a line each (others standing still): your hits, blocks, parries, clashes, armour - and

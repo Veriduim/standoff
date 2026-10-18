@@ -260,10 +260,11 @@ func _test_multiplayer_qol() -> void:
 			and p.foe_box.visible and p.foe_name.text.contains(g.sim.fighters[1].name))
 	p._side_tab(p.foe, "attack")
 	_check("...their Attack tab: your guess for them, the drawer opening from the right", p.who == 1
-			and p.drawer.visible and p.drawer.position.x > vp.x / 2.0 and p.guesses.has(1))
+			and p.drawer.visible and absf(p.drawer.position.x + p.drawer.size.x - p.foe_box.position.x) < 20.0
+			and p.guesses.has(1))
 	p._side_tab(g.me, "attack")
 	_check("...yours: back to your pick, the drawer from the left", p.who == g.me and p.drawer.visible
-			and p.drawer.position.x < vp.x / 2.0)
+			and absf(p.drawer.position.x - (p.tabs_box.position.x + PickPanel.TAB_W)) < 20.0)
 	p._close_drawer()
 	var mine: Dictionary = p.cards["me"]
 	var theirs: Dictionary = p.cards["foe"]
@@ -376,4 +377,21 @@ func _test_replay() -> void:
 		m += 1
 	_check("Replay plays every turn (%d) and comes back to the result" % turns, turns > 3 and playing
 			and g.phase == "over" and g.over_panel.visible and m >= turns - 1)
+	g.queue_free()
+
+
+func _test_match_menu() -> void:
+	_section("The match menu (Timmy 00:28 \"How do I quit a game with bots?\"): ☰ / Back - Resume, Restart, Quit")
+	var g := _screen()
+	g.start_local(2, "ffa")
+	var shown: bool = g.menu_btn.visible
+	g.toggle_menu()
+	var t0: float = g._turn_left
+	g._process(1.0)
+	var waits: bool = g.menu_panel.visible and is_equal_approx(g._turn_left, t0)
+	g._menu_pick("Resume")
+	_check("☰ shows in a match; open, the turn clock waits; Resume closes it", shown and waits and not g.menu_panel.visible)
+	g.toggle_menu()
+	g._menu_pick("Quit")
+	_check("Quit to menu: back to the home screen", g.phase == "menu" and g.home.visible and not g.menu_btn.visible)
 	g.queue_free()

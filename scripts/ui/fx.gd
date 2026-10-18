@@ -226,16 +226,12 @@ func burst_out(id: int, at: Vector2, col: Color, seed_n: int) -> void:
 	_rng.seed = seed_n
 	_add("flash", at, Vector2.ZERO, 0.32, Color.WHITE, 150.0)
 	_add("shock", at, Vector2.ZERO, 0.42, col.lightened(0.5), 210.0)
-	_add("shock", at, Vector2.ZERO, 0.3, Color.WHITE, 140.0)
 	_add("rays", at, Vector2.ZERO, 0.35, Color.WHITE, 170.0)
 	for i in 18:
 		var dir := Vector2.from_angle(TAU * float(i) / 18.0 + _rng.randf_range(-0.15, 0.15))
 		_add("shard", at + dir * 30.0, dir * _rng.randf_range(420.0, 820.0), _rng.randf_range(0.35, 0.6),
 				Color("#9fe8ff") if i % 3 else col.lightened(0.5), _rng.randf_range(10.0, 20.0))
-	for i in 8:
-		_add("ring", at, Vector2.from_angle(_rng.randf() * TAU) * _rng.randf_range(300.0, 600.0),
-				_rng.randf_range(0.3, 0.5), Color.WHITE, _rng.randf_range(5.0, 9.0))
-	flash[id] = 0.1
+	flash[id] = 0.1   # (no confetti rings or white ring - 23:11, 00:22)
 	splash(0.9, at)
 	freeze(0.3, -1)
 	kick(5.0)

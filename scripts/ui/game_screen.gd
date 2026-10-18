@@ -49,6 +49,8 @@ var _replay_log: Array = []   ## every turn as it played this match (frames, eve
 var _replaying := false
 var _replay_i := -1
 var replay_btn: Button
+var menu_btn: Button         ## ☰ - the match menu (00:28 "How do I quit a game with bots?")
+var menu_panel: PanelContainer
 var _history: Array = []     ## against bots: the match as it was at each of your picks (Undo - YOMI's single player)
 var _demo: Sim               ## the bot match behind the home screen
 var _demo_bots: Array = []
@@ -105,6 +107,11 @@ func _ready() -> void:
 	add_child(lobby)
 	lobby.play.connect(start_online)
 	lobby.closed.connect(func() -> void: _show_start())
+	menu_btn = Ui.button("☰", func() -> void: toggle_menu(), 26)
+	menu_btn.name = "MenuButton"
+	menu_btn.visible = false
+	add_child(menu_btn)
+	_build_menu()
 	replay_btn = Ui.button("Skip ▶▶", func() -> void: _end_replay(), 16)
 	replay_btn.visible = false
 	add_child(replay_btn)
@@ -118,9 +125,9 @@ func _ready() -> void:
 
 func _layout() -> void:
 	var vp := get_viewport_rect().size
-	banner.position = Vector2(96, Ui.CARD_H + 16)
-	banner.size = Vector2(vp.x - 96.0 - PickPanel.TAB_W - 20.0, 30)
-	fast_btn.position = Vector2(10, Ui.CARD_H + 8)
+	banner.position = Vector2(152, Ui.CARD_H + 16)
+	banner.size = Vector2(vp.x - 152.0 - PickPanel.TAB_W - 20.0, 30)
+	fast_btn.position = Vector2(70, Ui.CARD_H + 8)
 	fast_btn.size = Vector2(70, 44)
 	if leave_btn != null:
 		leave_btn.position = Vector2(vp.x - 230.0, Ui.CARD_H + 44)
@@ -128,6 +135,11 @@ func _layout() -> void:
 	if replay_btn != null:
 		replay_btn.position = Vector2(vp.x - 250.0, Ui.CARD_H + 44)
 		replay_btn.size = Vector2(110, 40)
+	if menu_btn != null:
+		menu_btn.position = Vector2(10, Ui.CARD_H + 8)   # (top left, before the speed button)
+		menu_btn.size = Vector2(54, 44)
+		menu_panel.reset_size()
+		menu_panel.position = (vp - menu_panel.size) / 2.0
 	clock.position = Vector2(vp.x - 230.0, Ui.CARD_H + 14)
 	clock.size = Vector2(120, 30)
 	post.position = Vector2.ZERO   # (sized by hand - this screen's own rect isn't the viewport's)
@@ -179,6 +191,9 @@ func _build_over() -> void:
 func _show_start() -> void:
 	phase = "menu"
 	home.visible = true
+	_menu_shown(false)
+	if menu_btn != null:
+		menu_btn.visible = false
 	over_panel.visible = false
 	fast_btn.visible = false
 	pick.close()
@@ -257,6 +272,8 @@ func start_local(opponents: int, mode: String, colour := 0) -> void:
 	if mode == "teams" and opponents < 2:
 		mode = "ffa"
 	sim = Sim.create(players, mode)   # (the Dancer as she is: Fans + Tempo - 23:31)
+	menu_btn.visible = true
+	_menu_shown(false)
 	_history.clear()
 	_replay_log.clear()
 	stage.ceiling = sim.ceiling
@@ -317,7 +334,7 @@ func _build_cards() -> void:
 		extras.scroll_active = false
 		extras.autowrap_mode = TextServer.AUTOWRAP_OFF
 		extras.custom_minimum_size = Vector2(62, 0)
-		extras.add_theme_font_size_override("normal_font_size", 13)
+		extras.add_theme_font_size_override("normal_font_size", 12 if w < 190.0 else 13)
 		extras.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		head.add_child(extras)
 		var hpb := _hp_bar(stage.colour_of(f.id))
@@ -455,7 +472,7 @@ func start_online(nm: NetMatch) -> void:
 	home.visible = false
 	lobby.visible = false
 	fast_btn.visible = true
-	leave_btn.visible = true
+	menu_btn.visible = true
 	over_panel.visible = false
 	_build_cards()
 	_next()
@@ -577,6 +594,73 @@ func _next() -> void:
 		_commit({})
 
 
+## The match menu (☰ / Back): Resume, Restart (against bots), Quit to menu - or Leave match online.
+func _build_menu() -> void:
+	menu_panel = PanelContainer.new()
+	var st := Ui.box(Color("#15161ef4"), 16)
+	st.set_content_margin_all(22)
+	st.border_color = Color("#3a3d4d")
+	st.set_border_width_all(2)
+	menu_panel.add_theme_stylebox_override("panel", st)
+	menu_panel.visible = false
+	add_child(menu_panel)
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 10)
+	menu_panel.add_child(v)
+	var t := Ui.label("Paused", 28, Color("#f2f2f7"))
+	t.name = "MenuTitle"
+	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	v.add_child(t)
+	for b: Array in [["Resume", "Resume"], ["Restart", "Restart"], ["Quit", "Quit to menu"]]:
+		var id: String = b[0]
+		var btn := Ui.button(str(b[1]), func() -> void: _menu_pick(id), 22)
+		btn.name = "Menu" + id
+		btn.custom_minimum_size = Vector2(280, 54)
+		v.add_child(btn)
+
+
+func toggle_menu() -> void:
+	if phase in ["menu", "over"] or _replaying:
+		return
+	_menu_shown(not menu_panel.visible)
+
+
+func _menu_shown(on: bool) -> void:
+	if menu_panel == null:
+		return
+	menu_panel.visible = on
+	var online := net_match != null
+	(menu_panel.find_child("MenuTitle", true, false) as Label).text = "Match menu" if online else "Paused"
+	(menu_panel.find_child("MenuRestart", true, false) as Button).visible = not online
+	(menu_panel.find_child("MenuQuit", true, false) as Button).text = "Leave match" if online else "Quit to menu"
+	_layout()
+
+
+func _menu_pick(id: String) -> void:
+	_menu_shown(false)
+	match id:
+		"Restart":
+			start_local(setup_count, setup_mode, setup_colour)
+		"Quit":
+			_leave_match()
+
+
+## The phone's Back: the match menu in a match; the lobby -> home; the result -> on; home -> quit.
+func _notification(what: int) -> void:
+	if what != NOTIFICATION_WM_GO_BACK_REQUEST:
+		return
+	if lobby != null and lobby.visible:
+		lobby._close()
+	elif phase == "over":
+		_leave_match()
+	elif phase == "menu":
+		get_tree().quit()
+	elif _replaying:
+		_end_replay()
+	else:
+		toggle_menu()
+
+
 ## Replay (23:59): the whole match again, every turn as it played, at the speed button's speed; Skip (or its end) back
 ## to the result.
 func watch_replay() -> void:
@@ -691,6 +775,8 @@ func _process(delta: float) -> void:
 	if phase == "menu":
 		_demo_step(delta)
 		return
+	if menu_panel.visible:   # (the match menu's open: everything waits)
+		return
 	_drain(delta)
 	if phase == "wait":
 		return
@@ -781,6 +867,8 @@ func _finish() -> void:
 		text = "Time! " + text
 	(over_panel.find_child("Result", true, false) as Label).text = text
 	(over_panel.find_child("Rematch", true, false) as Button).visible = net_match == null
+	menu_btn.visible = false
+	_menu_shown(false)
 	(over_panel.find_child("Menu", true, false) as Button).text = "Back to lobby" if net_match != null else "Menu"
 	over_panel.visible = true
 	banner.text = ""

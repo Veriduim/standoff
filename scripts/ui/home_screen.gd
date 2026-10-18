@@ -35,13 +35,13 @@ func _ready() -> void:
 	add_child(title)
 	card = PanelContainer.new()
 	var st := Ui.box(Color("#15161ee8"), 18)
-	st.set_content_margin_all(22)
+	st.set_content_margin_all(16)
 	st.border_color = Color("#2c2f3c")
 	st.set_border_width_all(2)
 	card.add_theme_stylebox_override("panel", st)
 	add_child(card)
 	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", 16)
+	v.add_theme_constant_override("separation", 7)
 	card.add_child(v)
 	v.add_child(_heading("YOUR COLOUR"))
 	var sw := HBoxContainer.new()
@@ -49,7 +49,7 @@ func _ready() -> void:
 	v.add_child(sw)
 	for i in StageView.COLOURS.size():
 		var b := Button.new()
-		b.custom_minimum_size = Vector2(52, 52)
+		b.custom_minimum_size = Vector2(46, 46)
 		b.toggle_mode = true
 		var on_pick := func() -> void: _set_colour(i)
 		b.pressed.connect(on_pick)
@@ -77,7 +77,7 @@ func _ready() -> void:
 		b.toggle_mode = true
 		b.button_group = group
 		b.button_pressed = mid == mode
-		b.custom_minimum_size = Vector2(170, 52)
+		b.custom_minimum_size = Vector2(160, 46)
 		b.add_theme_stylebox_override("pressed", Ui.box(Color("#3a3d4d"), 10))
 		b.add_theme_stylebox_override("normal", Ui.box(Color("#1e2029"), 10))
 		modes.add_child(b)
@@ -97,20 +97,20 @@ func _ready() -> void:
 		b.toggle_mode = true
 		b.button_group = look_group
 		b.button_pressed = px == pixel
-		b.custom_minimum_size = Vector2(170, 52)
+		b.custom_minimum_size = Vector2(160, 46)
 		b.add_theme_stylebox_override("pressed", Ui.box(Color("#3a3d4d"), 10))
 		b.add_theme_stylebox_override("normal", Ui.box(Color("#1e2029"), 10))
 		looks.add_child(b)
 	var go := Ui.button("FIGHT", func() -> void: fight.emit(opponents, mode, colour), 34)
 	go.name = "Fight"
-	go.custom_minimum_size = Vector2(0, 76)
+	go.custom_minimum_size = Vector2(0, 62)
 	for s in ["normal", "hover", "focus"]:
 		go.add_theme_stylebox_override(s, Ui.box(Color("#d63d3d"), 14))
 	go.add_theme_stylebox_override("pressed", Ui.box(Color("#a82f2f"), 14))
 	v.add_child(go)
 	var lobbies := Ui.button("Online lobbies", func() -> void: online.emit(colour), 22)
 	lobbies.name = "Online"
-	lobbies.custom_minimum_size = Vector2(0, 56)
+	lobbies.custom_minimum_size = Vector2(0, 50)
 	for s in ["normal", "hover", "focus"]:
 		lobbies.add_theme_stylebox_override(s, Ui.box(Color("#2b4f8a"), 12))
 	v.add_child(lobbies)
@@ -130,7 +130,7 @@ func _heading(text: String) -> Label:
 
 func _round(text: String, on: Callable) -> Button:
 	var b := Ui.button(text, on, 30)
-	b.custom_minimum_size = Vector2(58, 58)
+	b.custom_minimum_size = Vector2(50, 50)
 	for s in ["normal", "hover"]:
 		b.add_theme_stylebox_override(s, Ui.box(Color("#262833"), 29))
 	b.add_theme_stylebox_override("pressed", Ui.box(Color("#3a3d4d"), 29))
