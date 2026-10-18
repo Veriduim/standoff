@@ -156,6 +156,18 @@ one stage; each attack aims at a picked target.
   - Air Fan is an air option with a brief hang;
   - the Ceiling; Land Cancel; Low Profile; Undo against bots;
   - quieter beats; the enemy card's empty state (docs/mechanics.md).
+- 23:59-00:11 0.13.x: the Dancer is a spacer (docs/dancer.md); Replay; lobbies survive the phone being put aside.
+- 00:22-00:28 0.14.x: everything 25% bigger; the ☰ match menu; the YOMI character research (docs/yomi_chars.md),
+  "Ready in N" labels, Beating Backdash.
+- 00:38 "Continue working please" on my list (steerable fans, sound, the Chess Timer); 00:43 "1 sounds like a pretty
+  good soultion" (local play over a phone's hotspot / the same Wi-Fi - next after sound); 00:43 "why the fans [are] so
+  small? ... compared to the ones in hand" -> 0.15.0:
+  - steerable fans: Recall with a direction flings her fans that way before they come home (Cowboy's bullets);
+  - thrown fans drawn the same size as the ones in her hand (they'd kept the old size);
+  - **sound**: 32 sounds made in code (`tools/sfx_make.py`; `tools/sfx_board.py` = a numbered listening video), played
+    by `Sfx` (scripts/ui/sfx.gd) on every event, swing, super, drop landing, menu button, your turn and the last 5 s
+    of the clock; a limiter on the master bus; quiet behind the home screen; Sound on/off on the home screen and in
+    the ☰ menu, kept. `SOUND=1 tools/reel.sh` keeps the audio.
 
 ## To tune / later
 - **Match length with 6:** bot matches take 120-270 decision points with 6 fighters (50-90 with 2). At ~10 s a decision

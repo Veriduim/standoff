@@ -2,3 +2,4 @@
 build/
 *.tmp
 .shots/
+__pycache__/

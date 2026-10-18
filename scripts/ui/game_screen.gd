@@ -22,6 +22,8 @@ var setup_colour := 0      ## your colour (StageView.COLOURS) - the bots take th
 var auto_me := false       ## a bot plays you too (the tests; a demo)
 
 var stage: StageView
+var sfx: Sfx                 ## the sounds (stage events, the menus, your turn)
+var _tick_at := -1           ## the last whole second the turn clock ticked on
 var pick: PickPanel
 var cards: HBoxContainer
 var banner: Label
@@ -67,6 +69,10 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE   # (taps on the stage reach StageView's _unhandled_input)
 	stage = StageView.new()
 	add_child(stage)
+	sfx = Sfx.new()
+	sfx.name = "Sfx"
+	add_child(sfx)
+	stage.sfx = sfx
 	post = ColorRect.new()   # (over the stage, under everything else: the colour split, the pixel look)
 	post.name = "Post"
 	var mat := ShaderMaterial.new()
@@ -567,6 +573,8 @@ func _next() -> void:
 	if free.has(me) and not auto_me:
 		phase = "pick"
 		_turn_left = float(net_match.rules.get("turn", TURN_SECONDS)) if net_match != null else TURN_SECONDS
+		_tick_at = -1
+		sfx.play("ui_turn", -8.0)
 		var f := sim.fighters[me]
 		_ask = "Your move"
 		if f.down > 0:
@@ -611,7 +619,7 @@ func _build_menu() -> void:
 	t.name = "MenuTitle"
 	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(t)
-	for b: Array in [["Resume", "Resume"], ["Restart", "Restart"], ["Quit", "Quit to menu"]]:
+	for b: Array in [["Resume", "Resume"], ["Restart", "Restart"], ["Sound", Sfx.label()], ["Quit", "Quit to menu"]]:
 		var id: String = b[0]
 		var btn := Ui.button(str(b[1]), func() -> void: _menu_pick(id), 22)
 		btn.name = "Menu" + id
@@ -637,6 +645,11 @@ func _menu_shown(on: bool) -> void:
 
 
 func _menu_pick(id: String) -> void:
+	if id == "Sound":   # (on / off - the menu stays open)
+		Sfx.set_on(not Sfx.on)
+		(menu_panel.find_child("MenuSound", true, false) as Button).text = Sfx.label()
+		home.sync_sound()
+		return
 	_menu_shown(false)
 	match id:
 		"Restart":
@@ -767,6 +780,7 @@ func _commit(mine: Dictionary) -> void:
 
 func _process(delta: float) -> void:
 	_post()
+	sfx.quiet = phase == "menu"   # (the demo behind the home screen plays silently)
 	clock.visible = phase != "menu" and sim != null
 	if clock.visible:
 		var left := maxi(0, sim.round_len - (_first_tick + maxi(_shown, 0) if phase == "play" else sim.tick))
@@ -783,6 +797,10 @@ func _process(delta: float) -> void:
 	if phase == "pick":   # (the turn clock: when it runs out, what's picked goes in)
 		_turn_left -= delta
 		_banner()
+		var whole := ceili(_turn_left)
+		if whole <= 5 and whole >= 1 and whole != _tick_at:   # (the last five seconds tick)
+			_tick_at = whole
+			sfx.play("ui_tick", -4.0)
 		if _turn_left <= 0.0:
 			pick._confirm()
 		return

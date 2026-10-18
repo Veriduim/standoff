@@ -19,6 +19,7 @@ static func button(text: String, on: Callable, fs := FONT) -> Button:
 	b.text = text
 	b.add_theme_font_size_override("font_size", fs)
 	b.custom_minimum_size = Vector2(64, 52)
+	b.pressed.connect(func() -> void: Sfx.ui("ui_click", -3.0))   # (every menu button clicks)
 	b.pressed.connect(on)
 	return b
 

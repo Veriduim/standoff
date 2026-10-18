@@ -395,3 +395,31 @@ func _test_match_menu() -> void:
 	g._menu_pick("Quit")
 	_check("Quit to menu: back to the home screen", g.phase == "menu" and g.home.visible and not g.menu_btn.visible)
 	g.queue_free()
+
+
+func _test_sound() -> void:
+	_section("Sound (19 Oct list item 2): events play their sounds, quiet behind the home screen, on / off kept")
+	var g := _screen()
+	var was := Sfx.on
+	Sfx.set_on(true)
+	g.start_local(1, "ffa")
+	g._process(0.0)
+	g.sfx.event({"type": "hit", "dmg": 12})
+	g.sfx.event({"type": "hit", "dmg": 45})
+	g.sfx.event({"type": "block", "push": true})
+	g.sfx.event({"type": "shot", "kind": "fan"})
+	var heard: Array[String] = g.sfx.played.duplicate()
+	_check("a hit, a big hit, a Push Block, a Fan Throw: %s" % [heard], heard.slice(-4) == ["hit_light", "hit_heavy",
+			"push", "fan_throw"])
+	Sfx.set_on(false)
+	g.sfx.event({"type": "ko"})
+	var muted: bool = not g.sfx.played.has("ko")
+	Sfx.set_on(true)
+	g._menu_pick("Quit")
+	g._process(0.0)
+	g.sfx.event({"type": "ko"})
+	_check("off: silent; behind the home screen: silent", muted and not g.sfx.played.has("ko"))
+	g._show_start()
+	g.toggle_menu()
+	Sfx.set_on(was)
+	g.queue_free()

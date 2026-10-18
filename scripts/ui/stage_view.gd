@@ -49,6 +49,8 @@ var view_right := 1280.0
 var ghost_play := true      ## the ghost loops; false = held on the scrubbed frame, everyone's predicted spot shown
 var show_boxes := false     ## hurt boxes (outlines) and live hit boxes (red) - testing the frames
 var quiet := false          ## no effects (skipping ahead)
+var sfx: Sfx                 ## the sounds (the game screen's) - none if unset
+var _swinging := {}          ## fighter id -> true while an attack's arc is out (its swing sound played once)
 var zoom := 0.8
 var _ghost_i := 0
 var _time := 0.0
@@ -97,6 +99,8 @@ func show_tick(rec: Array, events: Array = [], flying: Array = []) -> void:
 		return
 	for e: Dictionary in events:
 		_effect(e, prev)
+		if sfx != null:
+			sfx.event(e)
 	if prev.size() == frame.size():
 		_motion_fx(prev)
 	fx.settle_combos(frame)
@@ -113,6 +117,8 @@ func _motion_fx(prev: Array) -> void:
 		var kind := str(Moves.move(_char(i), mv).get("kind", "")) if mv != "" else ""
 		if kind == "super" and int(r[4]) <= 1 and (str(p[3]) != mv or int(p[4]) > int(r[4])):
 			fx.super_start(i, _chest(i), colour_of(i), _tick_n * 13 + i, str(Moves.move(_char(i), mv)["name"]))
+			if sfx != null:
+				sfx.play("super")
 		var speed := maxf(absf(float(r[0]) - float(p[0])), absf(float(r[1]) - float(p[1])) * 0.8)
 		var fast := int(r[5]) != 4 and (speed > 5.5 or kind in ["super", "burst"])
 		_after_n[i] = int(_after_n.get(i, 0)) + 1 if fast else 0
@@ -126,6 +132,8 @@ func _motion_fx(prev: Array) -> void:
 			_land[i] = LAND_TICKS
 			if dy > 6.0:
 				fx.dust(Vector2(float(r[0]), 0.0), clampf(dy / 14.0, 0.4, 1.2), _tick_n * 5 + i)
+				if sfx != null:
+					sfx.play("land", -4.0)
 		elif _land.has(i):
 			_land[i] = int(_land[i]) - 1
 			if int(_land[i]) <= 0:
@@ -252,7 +260,11 @@ func _arcs() -> void:
 		var tip := _striking(i, str(r[3]), int(r[4])) if int(r[5]) == 0 and str(r[3]) != "" and not _free(r) else ""
 		if tip == "":
 			fx.trail_end(i)
+			_swinging.erase(i)
 			continue
+		if not _swinging.has(i) and sfx != null:   # (an attack's arc starting: its swish)
+			sfx.play("swing", -2.0, randf_range(0.9, 1.1))
+		_swinging[i] = true
 		var pose := Poses.for_record(_char(i), r)
 		var pivot := "hip" if tip.begins_with("foot") else "neck"
 		var tip_w := _world(i, r, pose[tip])

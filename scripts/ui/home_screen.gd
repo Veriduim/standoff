@@ -114,6 +114,12 @@ func _ready() -> void:
 	for s in ["normal", "hover", "focus"]:
 		lobbies.add_theme_stylebox_override(s, Ui.box(Color("#2b4f8a"), 12))
 	v.add_child(lobbies)
+	var snd := Ui.button(Sfx.label(), func() -> void: _toggle_sound(), 18)   # (19 Oct: sound on / off, kept)
+	snd.name = "Sound"
+	snd.custom_minimum_size = Vector2(150, 46)
+	for s in ["normal", "hover", "focus"]:
+		snd.add_theme_stylebox_override(s, Ui.box(Color("#1e2029e8"), 12))
+	add_child(snd)
 	var ver := Ui.label(VERSION + "  ·  the Dancer: her war fans and her Tempo", 15, Color("#6b6b78"))
 	ver.name = "Version"
 	add_child(ver)
@@ -167,6 +173,17 @@ func set_pixel(on: bool) -> void:
 	cfg.save(SETTINGS)
 
 
+func _toggle_sound() -> void:
+	Sfx.set_on(not Sfx.on)
+	sync_sound()
+	Sfx.ui("ui_click")
+
+
+## The button shows what's saved (the ☰ menu can change it too).
+func sync_sound() -> void:
+	(get_node("Sound") as Button).text = Sfx.label()
+
+
 func _set_count(n: int) -> void:
 	opponents = clampi(n, 1, 5)
 	count_label.text = "%d bot%s" % [opponents, "" if opponents == 1 else "s"]
@@ -181,6 +198,8 @@ func _layout() -> void:
 	title.size = Vector2(maxf(300.0, card.position.x - 60.0), vp.y)
 	var ver := get_node("Version") as Label
 	ver.position = Vector2(24, vp.y - 36)
+	var snd := get_node("Sound") as Button
+	snd.position = Vector2(24, vp.y - 92)
 
 
 
