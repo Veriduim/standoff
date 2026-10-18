@@ -39,6 +39,7 @@ var you := -1                ## this phone's fighter (a marker over them)
 var deciding: Array = []     ## who's choosing now (a pulse over them)
 var fx := Fx.new()           ## sparks, the freeze, the shake, combo counts, arcs
 var time_scale := 1.0        ## the playback speed (the effects keep up at 2x)
+var half := Sim.STAGE_HALF   ## the match's half stage width (its rules)
 var cam := Vector2(0, -120)
 var view_top := 70.0        ## the screen area the stage may use (under the cards, above the bar, left of the tabs -
 var view_bottom := 680.0    ## the screens set it)
@@ -146,7 +147,7 @@ func _effect(e: Dictionary, prev: Array) -> void:
 	if type in ["down", "whiff", "sad", "sadness", "bounce", "splat", "ic"]:   # (a = who it happened to)
 		var at := _chest(a) if not type in ["down", "bounce"] else Vector2(float(frame[a][0]), -6.0)
 		if type == "splat":   # (at the wall they hit)
-			at = Vector2(signf(float(frame[a][0])) * (Sim.STAGE_HALF - 4.0), _chest(a).y)
+			at = Vector2(signf(float(frame[a][0])) * (half - 4.0), _chest(a).y)
 			face = signf(float(frame[a][0]))
 		fx.on_event(type, at, face, 0, colour_of(a), a, colour_of(a), false, n + a)
 		return
@@ -162,7 +163,7 @@ func _effect(e: Dictionary, prev: Array) -> void:
 		return
 	if type == "wall":   # (a = the one bouncing off the wall)
 		var side := signf(float(frame[a][0]))
-		var at := Vector2(side * (Sim.STAGE_HALF - 4.0), _chest(a).y)
+		var at := Vector2(side * (half - 4.0), _chest(a).y)
 		fx.on_event(type, at, side, 0, colour_of(a), a, colour_of(a), false, n + a)
 		return
 	if d < 0 or d >= frame.size():
@@ -332,15 +333,15 @@ func _draw() -> void:
 	var gr := 760.0 * zoom
 	draw_texture_rect(_glow, Rect2(w2s(cam + Vector2(0, 40)) - Vector2(gr, gr), Vector2(gr, gr) * 2.0), false)
 	var floor_y := w2s(Vector2(0, 0)).y
-	var wl := w2s(Vector2(-Sim.STAGE_HALF, 0)).x
-	var wr := w2s(Vector2(Sim.STAGE_HALF, 0)).x
+	var wl := w2s(Vector2(-half, 0)).x
+	var wr := w2s(Vector2(half, 0)).x
 	draw_rect(Rect2(wl - vp.x, -20, vp.x, vp.y + 40), BEYOND)
 	draw_rect(Rect2(wr, -20, vp.x, vp.y + 40), BEYOND)
 	for wx in [wl, wr]:
 		draw_line(Vector2(wx, -20), Vector2(wx, floor_y), WALL, 3.0)
 	# the floor: one white line, a mark every 100 px (longer every 400) so distance reads
 	draw_line(Vector2(wl, floor_y), Vector2(wr, floor_y), LINE, 3.0)
-	var steps := int(Sim.STAGE_HALF / 100.0)
+	var steps := int(half / 100.0)
 	for i in range(-steps, steps + 1):
 		var x := w2s(Vector2(i * 100.0, 0)).x
 		draw_line(Vector2(x, floor_y), Vector2(x, floor_y + (16.0 if i % 4 == 0 else 9.0)), LINE, 2.0)

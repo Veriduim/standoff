@@ -2,7 +2,7 @@ extends Node
 ## The boot node: `-- --test` runs the headless tests (tools/test.sh) and quits; otherwise the game.
 
 ## (loaded only when testing - the phone build leaves scripts/tests out)
-const SUITES := ["res://scripts/tests/sim_test.gd", "res://scripts/tests/ui_test.gd"]
+const SUITES := ["res://scripts/tests/sim_test.gd", "res://scripts/tests/ui_test.gd", "res://scripts/tests/online_test.gd"]
 
 
 func _ready() -> void:
@@ -23,6 +23,10 @@ func _ready() -> void:
 			var shots: Node = load("res://scripts/dev/shots.gd").new()
 			add_child(shots)
 			shots.call("run", game, arg.trim_prefix("--shots="))
+		elif arg.begins_with("--lobbyshots="):   # (dev: the lobby screens - scripts/dev/lobby_shots.gd)
+			var ls: Node = load("res://scripts/dev/lobby_shots.gd").new()
+			add_child(ls)
+			ls.call("run", game, arg.trim_prefix("--lobbyshots="))
 		elif arg.begins_with("--reel="):   # (dev: bots play a match for a video - tools/reel.sh)
 			var reel: Node = load("res://scripts/dev/shots.gd").new()
 			add_child(reel)

@@ -5,8 +5,9 @@ extends Control
 ## opponents, free-for-all or teams, FIGHT. Online is on its way.
 
 signal fight(opponents: int, mode: String, colour: int)
+signal online(colour: int)   ## the online lobbies (YOMI's Steam lobbies - Timmy 20:19)
 
-const VERSION := "v0.7.0"
+const VERSION := "v" + Version.TAG
 
 const SETTINGS := "user://settings.cfg"
 
@@ -107,10 +108,12 @@ func _ready() -> void:
 		go.add_theme_stylebox_override(s, Ui.box(Color("#d63d3d"), 14))
 	go.add_theme_stylebox_override("pressed", Ui.box(Color("#a82f2f"), 14))
 	v.add_child(go)
-	var online := Ui.button("Online with friends - coming soon", func() -> void: pass, 16)
-	online.disabled = true
-	online.add_theme_stylebox_override("disabled", Ui.box(Color("#1a1b22"), 10))
-	v.add_child(online)
+	var lobbies := Ui.button("Online lobbies", func() -> void: online.emit(colour), 22)
+	lobbies.name = "Online"
+	lobbies.custom_minimum_size = Vector2(0, 56)
+	for s in ["normal", "hover", "focus"]:
+		lobbies.add_theme_stylebox_override(s, Ui.box(Color("#2b4f8a"), 12))
+	v.add_child(lobbies)
 	var ver := Ui.label(VERSION + "  ·  one fighter for now: the Dancer", 15, Color("#6b6b78"))
 	ver.name = "Version"
 	add_child(ver)

@@ -93,8 +93,15 @@ const WALL_BOUNCE := 0.6      ## how much of their speed someone launched into a
 const WALL_STUN := 3          ## ...and the stun it adds
 const DEFAULT := {"move": "wait"}   ## a pick that never came (a turn timer ran out)
 
+## The match's rules (a lobby's owner sets them - YOMI's lobby rules panel; defaults = the game as it is).
+const RULES := {"turn": 30, "round": 3600, "start": 0, "width": 1600, "damage": 1.0, "hitstun": 1.0, "meter": 0.0}
+
 var fighters: Array[Fighter] = []
 var mode := "ffa"        ## "ffa" | "teams"
+var half := STAGE_HALF   ## half the stage's width (the rules' width / 2)
+var round_len := ROUND_TICKS
+var dmg_mult := 1.0
+var stun_mult := 1.0
 var tick := 0
 var events: Array = []   ## this segment's: {t, type, a, d, dmg (, counter)}
 var _cancels := {}       ## attackers whose hit landed this tick (hit cancel)
@@ -105,9 +112,15 @@ var _shot_n := 0
 
 ## A new match. players: [{name, character, team}] (team only read in "teams" mode) - spread across the stage, each
 ## facing the middle.
-static func create(players: Array, match_mode := "ffa") -> Sim:
+static func create(players: Array, match_mode := "ffa", rules := {}) -> Sim:
 	var s := Sim.new()
 	s.mode = match_mode
+	var r := RULES.duplicate()
+	r.merge(rules, true)
+	s.half = clampf(float(r["width"]), 800.0, 3200.0) / 2.0
+	s.round_len = clampi(int(r["round"]), 600, 36000)
+	s.dmg_mult = clampf(float(r["damage"]), 0.25, 4.0)
+	s.stun_mult = clampf(float(r["hitstun"]), 0.25, 4.0)
 	var n := players.size()
 	for i in n:
 		var p: Dictionary = players[i]
@@ -121,7 +134,10 @@ static func create(players: Array, match_mode := "ffa") -> Sim:
 		f.hp = f.max_hp
 		f.burst = BURST_FULL   # (one Burst to start - YOMI's HUD shows both gauges full at the round start)
 		f.fc = FC_MAX
-		var x := lerpf(-STAGE_HALF * 0.75, STAGE_HALF * 0.75, (i + 0.5) / n) if n > 1 else 0.0
+		f.meter = clampi(int(float(r["meter"]) * BAR), 0, METER_MAX)
+		var x := lerpf(-s.half * 0.75, s.half * 0.75, (i + 0.5) / n) if n > 1 else 0.0
+		if n == 2 and float(r["start"]) > 0.0:   # (one on one: the rules' start distance)
+			x = (float(r["start"]) / 2.0) * (-1.0 if i == 0 else 1.0)
 		f.pos = Vector2(x, 0.0)
 		f.facing = 1 if x <= 0.0 else -1
 		s.fighters.append(f)
@@ -147,7 +163,7 @@ func over() -> bool:
 
 
 func timed_out() -> bool:
-	return tick >= ROUND_TICKS and _teams_left() > 1
+	return tick >= round_len and _teams_left() > 1
 
 
 func _teams_left() -> int:
@@ -507,7 +523,7 @@ func step() -> void:
 		if not hit_now.has(f.id):
 			_count(f)
 		_upkeep(f)
-	if tick == ROUND_TICKS and timed_out():
+	if tick == round_len and timed_out():
 		_event("time", fighters[0], null)
 
 
@@ -612,8 +628,8 @@ func _physics(f: Fighter) -> void:
 			if absf(f.vel.x) < 0.05:
 				f.vel.x = 0.0
 	var half := float(Moves.stats(f.character)["width"]) / 2.0
-	if absf(f.pos.x) > STAGE_HALF - half:
-		f.pos.x = signf(f.pos.x) * (STAGE_HALF - half)
+	if absf(f.pos.x) > self.half - half:
+		f.pos.x = signf(f.pos.x) * (self.half - half)
 		if f.stun > 0 and f.splat_due and f.pos.y < -2.0 and f.splats < SPLATS_MAX:   # (a wall splat: stuck there)
 			f.splat = SPLAT_TICKS - 8 * f.splats
 			f.splats += 1
@@ -950,7 +966,7 @@ func _shots_step(touched: Dictionary) -> void:
 		s["pos"] = (s["pos"] as Vector2) + v
 		s["life"] = int(s["life"]) - 1
 		var p: Vector2 = s["pos"]
-		if int(s["life"]) <= 0 or absf(p.x) > STAGE_HALF + 40.0 or p.y > 4.0:
+		if int(s["life"]) <= 0 or absf(p.x) > half + 40.0 or p.y > 4.0:
 			continue
 		var landed := false
 		for d in fighters:
@@ -1002,7 +1018,7 @@ func _hurt(a: Fighter, d: Fighter, e: Dictionary, type: String, src := "", side_
 	var counter := type == "hit" and int(e["dmg"]) > 0 and d.move != "" \
 			and _kind(d) in ["attack", "super", "grab", "special"]
 	var dmg := maxi(int(e.get("min_dmg", 0)),
-			int(round(float(e["dmg"]) * scale * (1.1 if counter else 1.0) * (1.5 if d.sadness > 0 else 1.0))))
+			int(round(float(e["dmg"]) * scale * (1.1 if counter else 1.0) * (1.5 if d.sadness > 0 else 1.0) * dmg_mult)))
 	d.hp -= dmg
 	var in_air := d.pos.y < -1.0
 	if d.down > 0:   # (an OTG hit: picked up off the floor, the combo goes on)
@@ -1014,7 +1030,7 @@ func _hurt(a: Fighter, d: Fighter, e: Dictionary, type: String, src := "", side_
 	if int(used[1]) != a.instance:
 		used = [int(used[0]) + 1, a.instance]
 		d.combo_used[mv] = used
-	d.stun = maxi(1, int(round(float(e["stun"]) * maxf(REUSE_FLOOR, 1.0 - REUSE_DECAY * (int(used[0]) - 1)))))
+	d.stun = maxi(1, int(round(float(e["stun"]) * maxf(REUSE_FLOOR, 1.0 - REUSE_DECAY * (int(used[0]) - 1)) * stun_mult)))
 	if in_air:   # (one more frame of hitstun in the air)
 		d.stun += 1
 	a.burst = mini(BURST_FULL, a.burst + dmg / BURST_DEALT_DIV)
@@ -1110,13 +1126,17 @@ func to_dict() -> Dictionary:
 		c["vel"] = [(s["vel"] as Vector2).x, (s["vel"] as Vector2).y]
 		flying.append(c)
 	return {"mode": mode, "tick": tick, "fighters": fighters.map(func(f: Fighter) -> Dictionary: return f.to_dict()),
-		"shots": flying, "shot_n": _shot_n}
+		"shots": flying, "shot_n": _shot_n, "half": half, "round": round_len, "dmg": dmg_mult, "stun": stun_mult}
 
 
 static func from_dict(d: Dictionary) -> Sim:
 	var s := Sim.new()
 	s.mode = str(d["mode"])
 	s.tick = int(d["tick"])
+	s.half = float(d.get("half", STAGE_HALF))
+	s.round_len = int(d.get("round", ROUND_TICKS))
+	s.dmg_mult = float(d.get("dmg", 1.0))
+	s.stun_mult = float(d.get("stun", 1.0))
 	for fd: Dictionary in d["fighters"]:
 		s.fighters.append(Fighter.from_dict(fd))
 	for sd: Dictionary in d.get("shots", []):

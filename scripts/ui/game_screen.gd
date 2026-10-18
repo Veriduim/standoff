@@ -26,6 +26,10 @@ var pick: PickPanel
 var cards: HBoxContainer
 var banner: Label
 var home: HomeScreen
+var lobby: LobbyScreen
+var net_match: NetMatch      ## an online match (null = this phone against bots)
+var _net_queue: Array = []   ## turns that came in while one was still playing - played next, in order
+var leave_btn: Button
 var clock: Label
 var post: ColorRect
 var pixel_size := 1.0        ## the after-pass's block size now (screen px; 1 = smooth)
@@ -67,6 +71,9 @@ func _ready() -> void:
 	home = HomeScreen.new()
 	add_child(home)
 	home.fight.connect(func(n: int, m: String, c: int) -> void: start_local(n, m, c))
+	home.online.connect(func(c: int) -> void:
+		home.visible = false
+		lobby.open(c))
 	cards = HBoxContainer.new()
 	cards.position = Vector2(8, 6)
 	cards.add_theme_constant_override("separation", 6)
@@ -88,6 +95,13 @@ func _ready() -> void:
 		if phase == "pick":
 			_commit(c))
 	_build_over()
+	lobby = LobbyScreen.new()
+	add_child(lobby)
+	lobby.play.connect(start_online)
+	lobby.closed.connect(func() -> void: _show_start())
+	leave_btn = Ui.button("Leave", func() -> void: _leave_match(), 16)
+	leave_btn.visible = false
+	add_child(leave_btn)
 	get_viewport().size_changed.connect(_layout)
 	_layout()
 	_show_start()
@@ -99,6 +113,9 @@ func _layout() -> void:
 	banner.size = Vector2(vp.x - 96.0 - PickPanel.TAB_W - 20.0, 30)
 	fast_btn.position = Vector2(10, Ui.CARD_H + 8)
 	fast_btn.size = Vector2(70, 44)
+	if leave_btn != null:
+		leave_btn.position = Vector2(vp.x - 230.0, Ui.CARD_H + 44)
+		leave_btn.size = Vector2(90, 40)
 	clock.position = Vector2(vp.x - 230.0, Ui.CARD_H + 14)
 	clock.size = Vector2(120, 30)
 	post.position = Vector2.ZERO   # (sized by hand - this screen's own rect isn't the viewport's)
@@ -135,8 +152,12 @@ func _build_over() -> void:
 	h.alignment = BoxContainer.ALIGNMENT_CENTER
 	h.add_theme_constant_override("separation", 16)
 	v.add_child(h)
-	h.add_child(Ui.button("Rematch", func() -> void: start_local(setup_count, setup_mode, setup_colour)))
-	h.add_child(Ui.button("Menu", func() -> void: _show_start()))
+	var again := Ui.button("Rematch", func() -> void: start_local(setup_count, setup_mode, setup_colour))
+	again.name = "Rematch"
+	h.add_child(again)
+	var menu := Ui.button("Menu", func() -> void: _leave_match())
+	menu.name = "Menu"
+	h.add_child(menu)
 	over_panel.visible = false
 
 
@@ -366,16 +387,124 @@ func _update_cards(rec: Array = []) -> void:
 		card.modulate = Color(1, 1, 1, 0.45) if hp <= 0.0 else Color.WHITE
 
 
-## The next turn: bots pick at once; if you're free you pick; then it plays.
+## Online: a match from the lobby - this phone's copy of it, from the host's start (or, watching, from where it is).
+func start_online(nm: NetMatch) -> void:
+	net_match = nm
+	_net_queue.clear()
+	if nm.get_parent() == null:
+		add_child(nm)
+	nm.turn.connect(_on_net_turn)
+	nm.ended.connect(_on_net_end)
+	_demo = null
+	bots.clear()
+	sim = Sim.from_dict(nm.start_snap)
+	me = nm.mine
+	stage.setup(sim.fighters.map(func(f: Fighter) -> String: return f.character),
+			sim.fighters.map(func(f: Fighter) -> String: return f.name))
+	stage.palette = nm.seats.map(func(s: Dictionary) -> Color:
+		return StageView.COLOURS[int(s.get("colour", 0)) % StageView.COLOURS.size()])
+	stage.you = me
+	stage.half = sim.half
+	stage.time_scale = speed
+	stage.show_tick(sim.record())
+	_lag.clear()
+	home.visible = false
+	lobby.visible = false
+	fast_btn.visible = true
+	leave_btn.visible = true
+	over_panel.visible = false
+	_build_cards()
+	_next()
+
+
+## The host's turn, played here: the same picks from the same state; then the host's state is the truth.
+func _on_net_turn(t: int, picks: Dictionary, snap: Dictionary) -> void:
+	if net_match == null:
+		return
+	if phase == "play":   # (still playing the last one - this one's next)
+		_net_queue.append([t, picks, snap])
+		return
+	if sim.tick != t:   # (out of step - take the host's state as it is)
+		if not snap.is_empty():
+			sim = Sim.from_dict(snap)
+			stage.show_tick(sim.record())
+			_update_cards()
+		return
+	pick.close()
+	_stage_band()
+	stage.deciding = []
+	stage.advantage = {}
+	sim.apply(picks)
+	var seg := sim.run_segment()
+	if net_match.is_host():
+		var w := NetMatch.wire(sim.to_dict())
+		sim = Sim.from_dict(w)   # (the host goes on from exactly what everyone else gets)
+		net_match.publish(t, picks, w)
+	elif not snap.is_empty():
+		sim = Sim.from_dict(snap)
+	_frames = seg["frames"]
+	_events = seg["events"]
+	_shots = seg.get("shots", [])
+	_first_tick = int(seg["end_tick"]) - _frames.size() + 1
+	_play_pos = 0.0
+	_shown = -1
+	phase = "play"
+	banner.text = ""
+
+
+func _on_net_end(reason: String) -> void:
+	if phase == "over":
+		return
+	phase = "over"
+	pick.close()
+	(over_panel.find_child("Result", true, false) as Label).text = reason if reason != "" else "The match ended"
+	(over_panel.find_child("Rematch", true, false) as Button).visible = false
+	(over_panel.find_child("Menu", true, false) as Button).text = "Back to lobby"
+	over_panel.visible = true
+	banner.text = ""
+
+
+## Leave the match (or close the result): online, back to the lobby (the host leaving ends it for everyone).
+func _leave_match() -> void:
+	leave_btn.visible = false
+	if net_match != null:
+		net_match.finish("%s left" % (sim.fighters[me].name if me >= 0 and me < sim.fighters.size() else "The host")
+				if net_match.is_host() else "")
+		net_match.queue_free()
+		net_match = null
+		over_panel.visible = false
+		pick.close()
+		for c in cards.get_children():
+			cards.remove_child(c)
+			c.queue_free()
+		phase = "menu"
+		fast_btn.visible = false
+		banner.text = ""
+		_demo_start()
+		_stage_band()
+		lobby.back_from_match()
+		return
+	_show_start()
+
+
+## The next turn: bots pick at once; if you're free you pick; then it plays. (Online: the host collects the picks.)
 func _next() -> void:
 	if sim.over():
 		_finish()
 		return
 	var free := sim.deciders()
 	stage.deciding = free
+	if net_match != null and not (free.has(me) and not auto_me):
+		phase = "wait"
+		banner.text = "Waiting for the others..." if me >= 0 else "Watching"
+		if net_match.is_host():   # (the turn opens before anyone's pick goes in)
+			net_match.open_turn(sim)
+		if free.has(me):   # (a bot playing for this phone - the tests)
+			net_match.submit(me, Bot.new(sim.tick + 99).choose(sim, me), sim.tick)
+		return
 	if free.has(me) and not auto_me:
 		phase = "pick"
-		_turn_left = TURN_SECONDS
+		_turn_left = float(net_match.rules.get("turn", TURN_SECONDS)) if net_match != null else TURN_SECONDS
 		var f := sim.fighters[me]
 		_ask = "Your move"
 		if f.down > 0:
@@ -396,6 +525,8 @@ func _next() -> void:
 		stage.advantage = adv
 		pick.open(sim, me, stage)
 		_stage_band()
+		if net_match != null and net_match.is_host():
+			net_match.open_turn(sim)
 	else:
 		_commit({})
 
@@ -406,6 +537,15 @@ func _banner() -> void:
 
 
 func _commit(mine: Dictionary) -> void:
+	if net_match != null:   # (online: the pick goes to the host; the turn plays when everyone's is in)
+		pick.close()
+		_stage_band()
+		stage.deciding = []
+		stage.advantage = {}
+		phase = "wait"
+		banner.text = "Waiting for the others..."
+		net_match.submit(me, mine if not mine.is_empty() else {"move": "hold"}, sim.tick)
+		return
 	var picks := {}
 	for id in sim.deciders():
 		if id == me and not mine.is_empty():
@@ -434,13 +574,15 @@ func _process(delta: float) -> void:
 	_post()
 	clock.visible = phase != "menu" and sim != null
 	if clock.visible:
-		var left := maxi(0, Sim.ROUND_TICKS - (_first_tick + maxi(_shown, 0) if phase == "play" else sim.tick))
+		var left := maxi(0, sim.round_len - (_first_tick + maxi(_shown, 0) if phase == "play" else sim.tick))
 		clock.text = "⏱ %d" % ceili(left / 60.0)
 		clock.modulate = Color("#ff6b6b") if left < 600 else Color.WHITE
 	if phase == "menu":
 		_demo_step(delta)
 		return
 	_drain(delta)
+	if phase == "wait":
+		return
 	if phase == "pick":   # (the turn clock: when it runs out, what's picked goes in)
 		_turn_left -= delta
 		_banner()
@@ -463,6 +605,11 @@ func _process(delta: float) -> void:
 	if not stage.fx.frozen() and int(_play_pos) >= _frames.size():
 		stage.show_tick(sim.record())
 		_update_cards()
+		if not _net_queue.is_empty():   # (online: a turn that came in meanwhile)
+			phase = "wait"
+			var q: Array = _net_queue.pop_front()
+			_on_net_turn(int(q[0]), q[1], q[2])
+			return
 		_next()
 
 
@@ -519,8 +666,11 @@ func _finish() -> void:
 	if sim.timed_out() and not text.begins_with("Time"):
 		text = "Time! " + text
 	(over_panel.find_child("Result", true, false) as Label).text = text
+	(over_panel.find_child("Rematch", true, false) as Button).visible = net_match == null
+	(over_panel.find_child("Menu", true, false) as Button).text = "Back to lobby" if net_match != null else "Menu"
 	over_panel.visible = true
 	banner.text = ""
+	leave_btn.visible = false
 
 
 func _toggle_speed() -> void:

@@ -1,27 +1,73 @@
-// The Standoff relay: wss://<host>/room/<CODE>?host=1&name=... (the host - the phone that runs the match) or
-// ?name=... (a player joining). One Durable Object per room code keeps the sockets and passes messages along:
-//   host -> a player ({..., to: peer}) or everyone (no `to`)
-//   player -> the host (the relay adds `from: peer`)
-// The relay knows nothing about the game. It tells the host who joined / left, closes the room when the host goes,
-// and sends {t: "welcome", peer} to each socket (the host is peer 1, players 2-6) or {t: "error", msg} and closes.
+// The Standoff lobby server (Timmy, 18 Oct 2026 20:19: "Can we work on the lobby system? Look at the steam lobby your
+// only move is hustle has" - its lobbies, studied from a video: a list with name / version / players, create with a
+// name / public / max players, a code to find one; inside, members with their status and a challenge button, the
+// matches going on with spectate, the owner's rules, chat).
+//
+//   GET /lobbies                 the public lobbies: [{code, name, version, players, max}]
+//   WS  /lobby/<CODE>?name=..&create=1&lname=..&public=1&max=8&v=..   create (create=1) or join a lobby
+//
+// One Durable Object per lobby keeps its members' sockets and passes messages along. It knows nothing about the game:
+//   {t:"chat", text}                  -> everyone {t:"chat", from, name, text}
+//   {t:"member", data}                your own member data (status, colour...) -> everyone {t:"member", id, data}
+//   {t:"lobby", data}                 the owner's lobby data (name, public, max, rules) -> everyone {t:"lobby", data}
+//   {t:"to", to, msg}                 one member -> them {t:"from", from, msg} (challenges, answers)
+//   {t:"sub" | "unsub", ch}           listen to a match channel (its players and spectators)
+//   {t:"chan", ch, msg}               -> everyone listening on ch but you {t:"chan", ch, from, msg} (the match)
+// It sends {t:"welcome", id, owner, lobby, members}, {t:"joined", id, name}, {t:"left", id}, {t:"owner", id} (the
+// owner left - the next one in takes over) and {t:"error", msg}. A second Durable Object keeps the public list.
 
-const MAX_PEERS = 6;
-const CODE = /^\/room\/([A-Z0-9]{4,8})$/;
+const CODE = /^\/lobby\/([0-9]{4,6})$/;
+const MAX_MEMBERS = 16;
+const STALE_MS = 3 * 60 * 1000;
+const json = (d, status = 200) => new Response(JSON.stringify(d), {
+  status, headers: { "content-type": "application/json", "access-control-allow-origin": "*" },
+});
 
 export default {
   async fetch(req, env) {
     const url = new URL(req.url);
-    if (url.pathname === "/") return new Response("Standoff relay - ok\n");
+    if (url.pathname === "/") return new Response("Standoff lobbies - ok\n");
+    if (url.pathname === "/lobbies") return env.DIRECTORY.get(env.DIRECTORY.idFromName("all")).fetch(req);
     const m = url.pathname.match(CODE);
     if (!m) return new Response("not found\n", { status: 404 });
     if (req.headers.get("Upgrade") !== "websocket") return new Response("expected a websocket\n", { status: 426 });
-    return env.ROOMS.get(env.ROOMS.idFromName(m[1])).fetch(req);
+    return env.LOBBIES.get(env.LOBBIES.idFromName(m[1])).fetch(req);
   },
 };
 
-export class Room {
+// The list of public lobbies (each lobby tells it when it changes, and every minute while it's open).
+export class Directory {
+  constructor(ctx) {
+    this.ctx = ctx;
+  }
+
+  async fetch(req) {
+    const url = new URL(req.url);
+    if (req.method === "POST" && url.pathname === "/update") {
+      const d = await req.json();
+      await this.ctx.storage.put("l:" + d.code, { ...d, updated: Date.now() });
+      return json({ ok: true });
+    }
+    if (req.method === "POST" && url.pathname === "/remove") {
+      const d = await req.json();
+      await this.ctx.storage.delete("l:" + d.code);
+      return json({ ok: true });
+    }
+    const all = await this.ctx.storage.list({ prefix: "l:" });
+    const now = Date.now();
+    const out = [];
+    for (const [k, v] of all) {
+      if (now - v.updated > STALE_MS) await this.ctx.storage.delete(k);
+      else if (v.public && v.players > 0) out.push({ code: v.code, name: v.name, version: v.version, players: v.players, max: v.max });
+    }
+    return json(out);
+  }
+}
+
+export class Lobby {
   constructor(ctx, env) {
     this.ctx = ctx;
+    this.env = env;
   }
 
   info(ws) {
@@ -29,76 +75,161 @@ export class Room {
   }
 
   open() {
-    return this.ctx.getWebSockets().filter((s) => this.info(s).peer && s.readyState === 1);
+    return this.ctx.getWebSockets().filter((s) => this.info(s).id && s.readyState === 1);
+  }
+
+  members() {
+    return this.open().map((s) => {
+      const a = this.info(s);
+      return { id: a.id, name: a.name, data: a.data || {} };
+    });
+  }
+
+  send(ws, d) {
+    try {
+      ws.send(JSON.stringify(d));
+    } catch {}
+  }
+
+  all(d, except) {
+    const s = JSON.stringify(d);
+    for (const w of this.open()) if (w !== except) try { w.send(s); } catch {}
+  }
+
+  async meta() {
+    return (await this.ctx.storage.get("meta")) || null;
+  }
+
+  async listing(meta, players) {
+    const dir = this.env.DIRECTORY.get(this.env.DIRECTORY.idFromName("all"));
+    const body = players > 0
+      ? { code: meta.code, name: meta.name, version: meta.version, players, max: meta.max, public: !!meta.public }
+      : { code: meta.code };
+    try {
+      await dir.fetch("https://dir/" + (players > 0 ? "update" : "remove"), { method: "POST", body: JSON.stringify(body) });
+    } catch {}
   }
 
   async fetch(req) {
     const url = new URL(req.url);
-    const host = url.searchParams.get("host") === "1";
-    const name = (url.searchParams.get("name") || "Player").slice(0, 16);
+    const code = url.pathname.split("/").pop();
+    const p = url.searchParams;
+    const name = (p.get("name") || "Player").slice(0, 16);
     const pair = new WebSocketPair();
     const [client, server] = Object.values(pair);
     this.ctx.acceptWebSocket(server);
     const socks = this.open();
-    const hostWs = socks.find((s) => this.info(s).host);
+    let meta = await this.meta();
     let error = "";
-    if (host && hostWs) error = "That room code is taken - try hosting again";
-    else if (!host && !hostWs) error = "No game with that code";
-    else if (socks.length >= MAX_PEERS) error = "That game is full";
+    if (p.get("create") === "1") {
+      if (meta && socks.length > 0) error = "That lobby code is taken - try again";
+      else meta = {
+        code, name: (p.get("lname") || name + "'s Lobby").slice(0, 28), public: p.get("public") !== "0",
+        max: Math.max(2, Math.min(MAX_MEMBERS, parseInt(p.get("max") || "8", 10) || 8)),
+        version: (p.get("v") || "?").slice(0, 16), owner: 0, rules: {},
+      };
+    } else if (!meta || socks.length === 0) error = "No lobby with that code";
+    else if (socks.length >= meta.max) error = "That lobby is full";
     if (error) {
-      server.send(JSON.stringify({ t: "error", msg: error }));
+      this.send(server, { t: "error", msg: error });
       server.close(1000, "refused");
       return new Response(null, { status: 101, webSocket: client });
     }
-    const used = new Set(socks.map((s) => this.info(s).peer));
-    let peer = host ? 1 : 2;
-    while (used.has(peer)) peer++;
-    server.serializeAttachment({ peer, host, name });
-    server.send(JSON.stringify({ t: "welcome", peer }));
-    if (!host) hostWs.send(JSON.stringify({ t: "joined", peer, name }));
+    const id = ((await this.ctx.storage.get("next")) || 0) + 1;
+    await this.ctx.storage.put("next", id);
+    if (!meta.owner || socks.length === 0) meta.owner = id;
+    await this.ctx.storage.put("meta", meta);
+    server.serializeAttachment({ id, name, data: {}, subs: [] });
+    this.send(server, { t: "welcome", id, owner: meta.owner, lobby: meta, members: this.members() });
+    this.all({ t: "joined", id, name }, server);
+    await this.listing(meta, socks.length + 1);
+    await this.ctx.storage.setAlarm(Date.now() + 60 * 1000);
     return new Response(null, { status: 101, webSocket: client });
   }
 
-  webSocketMessage(ws, msg) {
+  async alarm() {
+    const meta = await this.meta();
+    const n = this.open().length;
+    if (meta) await this.listing(meta, n);
+    if (n > 0) await this.ctx.storage.setAlarm(Date.now() + 60 * 1000);
+  }
+
+  async webSocketMessage(ws, msg) {
     const me = this.info(ws);
-    if (!me.peer || typeof msg !== "string") return;
-    let data;
+    if (!me.id || typeof msg !== "string" || msg.length > 200000) return;
+    let d;
     try {
-      data = JSON.parse(msg);
+      d = JSON.parse(msg);
     } catch {
       return;
     }
-    const socks = this.open();
-    if (me.host) {
-      for (const s of socks) {
-        const a = this.info(s);
-        if (!a.host && (data.to === undefined || data.to === a.peer)) s.send(msg);
+    switch (d.t) {
+      case "chat":
+        this.all({ t: "chat", from: me.id, name: me.name, text: String(d.text || "").slice(0, 200) });
+        break;
+      case "member":
+        me.data = { ...(me.data || {}), ...(d.data || {}) };
+        ws.serializeAttachment(me);
+        this.all({ t: "member", id: me.id, data: me.data });
+        break;
+      case "lobby": {
+        const meta = await this.meta();
+        if (!meta || meta.owner !== me.id) break;
+        const nd = d.data || {};
+        if (typeof nd.name === "string") meta.name = nd.name.slice(0, 28);
+        if (typeof nd.public === "boolean") meta.public = nd.public;
+        if (Number.isInteger(nd.max)) meta.max = Math.max(2, Math.min(MAX_MEMBERS, nd.max));
+        if (nd.rules && typeof nd.rules === "object") meta.rules = nd.rules;
+        await this.ctx.storage.put("meta", meta);
+        this.all({ t: "lobby", data: meta });
+        await this.listing(meta, this.open().length);
+        break;
       }
-    } else {
-      data.from = me.peer;
-      const h = socks.find((s) => this.info(s).host);
-      if (h) h.send(JSON.stringify(data));
+      case "to": {
+        const s = JSON.stringify({ t: "from", from: me.id, msg: d.msg });
+        for (const w of this.open()) if (this.info(w).id === d.to) w.send(s);
+        break;
+      }
+      case "sub":
+      case "unsub": {
+        const subs = new Set(me.subs || []);
+        if (d.t === "sub") subs.add(String(d.ch)); else subs.delete(String(d.ch));
+        me.subs = [...subs];
+        ws.serializeAttachment(me);
+        break;
+      }
+      case "chan": {
+        const s = JSON.stringify({ t: "chan", ch: String(d.ch), from: me.id, msg: d.msg });
+        for (const w of this.open()) if (w !== ws && (this.info(w).subs || []).includes(String(d.ch))) w.send(s);
+        break;
+      }
     }
   }
 
-  webSocketClose(ws, code, reason) {
+  async webSocketClose(ws) {
     const me = this.info(ws);
-    const others = this.open().filter((s) => s !== ws);
-    if (me.host) {
-      for (const s of others) {
-        s.send(JSON.stringify({ t: "host_left" }));
-        s.close(1000, "host left");
-      }
-    } else if (me.peer) {
-      const h = others.find((s) => this.info(s).host);
-      if (h) h.send(JSON.stringify({ t: "left", peer: me.peer }));
-    }
     try {
       ws.close(1000, "bye");
     } catch {}
+    if (!me.id) return;
+    const others = this.open().filter((s) => s !== ws);
+    this.all({ t: "left", id: me.id }, ws);
+    const meta = await this.meta();
+    if (!meta) return;
+    if (others.length === 0) {
+      await this.listing(meta, 0);
+      await this.ctx.storage.deleteAll();
+      return;
+    }
+    if (meta.owner === me.id) {   // the owner left - the next one in takes over
+      meta.owner = Math.min(...others.map((s) => this.info(s).id));
+      await this.ctx.storage.put("meta", meta);
+      this.all({ t: "owner", id: meta.owner }, ws);
+    }
+    await this.listing(meta, others.length);
   }
 
-  webSocketError(ws) {
-    this.webSocketClose(ws, 1011, "error");
+  async webSocketError(ws) {
+    await this.webSocketClose(ws);
   }
 }

@@ -91,6 +91,10 @@ one stage; each attack aims at a picked target.
   on please" -> 0.7.0 = step 3: projectiles, the Sway stance, the jab chain, Mirror, Spin / Air Throw, initiative, Grand
   Finale (docs/mechanics.md).
 
+- 20:19 "Can we work on the lobby system? Look at the steam lobby your only move is hustle has" -> 0.8.0 = online
+  lobbies like YOMI's Steam ones: a list, lobbies with members / matches / owner's rules / chat, challenges for up to 6
+  with bots, spectating; a Cloudflare lobby server (relay/) - live once he logs in to Cloudflare (docs/lobby.md).
+
 ## To tune / later
 - **Match length with 6:** bot matches take 120-270 decision points with 6 fighters (50-90 with 2). At ~10 s a decision
   that's far too long - lower HP or more damage with more players (a lobby setting), and a turn timer.
