@@ -18,6 +18,12 @@ func _test_your_pick() -> void:
 			and g._demo != null and g._demo.fighters.size() == 4)
 	g._process(1.0)
 	_check("...and the match behind it moves", g._demo.tick > 0)
+	var was_pixel: bool = g.home.pixel
+	(g.home as HomeScreen).set_pixel(true)
+	g._process(0.016)
+	_check("the Pixel look switch puts the after-pass over the stage in blocks",
+			g.post.visible and g.pixel_size > 1.0)
+	(g.home as HomeScreen).set_pixel(was_pixel)
 	(g.home as HomeScreen)._set_colour(2)
 	(g.home as HomeScreen)._set_count(9)
 	_check("the home screen keeps 1-5 opponents (9 -> %d)" % g.home.opponents, g.home.opponents == 5)
@@ -114,6 +120,9 @@ func _test_hit_effects() -> void:
 			star.x > -10.0 and star.x < 60.0 and star.y < -60.0 and star.y > -100.0)
 	_check("the playback freezes on contact and holds that frame", seen["froze"] and seen["held"])
 	_check("the striking hand leaves an arc", seen["arc"])
+	_check("your next pick shows how far ahead you are over the one reeling (+%s), on a turn clock (%s)"
+			% [g.stage.advantage.get(1, 0), g.banner.text], g.phase == "pick" and int(g.stage.advantage.get(1, 0)) > 0
+			and g.banner.text.ends_with("30"))
 	_check("the HP lost shows as a white chunk before it drains", seen["lag"])
 	g.sim.fighters[0].pos.x = g.sim.fighters[1].pos.x - 70.0
 	_watch(g, {"move": "sweep", "x": 1.0})   # (a sweep leaves them reeling long enough for a jab)
@@ -122,7 +131,9 @@ func _test_hit_effects() -> void:
 	var combo: Dictionary = g.stage.fx.combos.get(1, {})
 	_check("a hit while they still reel counts on as a combo - sweep, jab (%s)" % [combo],
 			not combo.is_empty() and int(combo["hits"]) == 2 and int(combo["dmg"]) > 30)
-	_watch(g, {"move": "wait"})   # (they get their feet back - the combo's over)
+	for _i in 4:   # (they get their feet back - the combo's over)
+		if g.sim.reeling(g.sim.fighters[1]):
+			_watch(g, {"move": "wait"})
 	for _i in 3:
 		g._process(1.0)
 		g.stage._process(1.0)

@@ -6,11 +6,14 @@ extends Control
 
 signal fight(opponents: int, mode: String, colour: int)
 
-const VERSION := "v0.3.0"
+const VERSION := "v0.4.0"
+
+const SETTINGS := "user://settings.cfg"
 
 var colour := 0
 var opponents := 3
 var mode := "ffa"
+var pixel := false   ## the pixel look (Timmy 18:35 - pick 2 from the YOMI study, as a switch); kept between plays
 
 var dim: ColorRect
 var card: PanelContainer
@@ -77,6 +80,26 @@ func _ready() -> void:
 		b.add_theme_stylebox_override("pressed", Ui.box(Color("#3a3d4d"), 10))
 		b.add_theme_stylebox_override("normal", Ui.box(Color("#1e2029"), 10))
 		modes.add_child(b)
+	v.add_child(_heading("LOOK"))
+	var looks := HBoxContainer.new()
+	looks.add_theme_constant_override("separation", 8)
+	v.add_child(looks)
+	var look_group := ButtonGroup.new()
+	var cfg := ConfigFile.new()
+	if cfg.load(SETTINGS) == OK:
+		pixel = bool(cfg.get_value("look", "pixel", false))
+	for l: Array in [["Smooth", false], ["Pixel", true]]:
+		var px: bool = l[1]
+		var on_look := func() -> void: set_pixel(px)
+		var b := Ui.button(str(l[0]), on_look, 20)
+		b.name = "Look" + str(l[0])
+		b.toggle_mode = true
+		b.button_group = look_group
+		b.button_pressed = px == pixel
+		b.custom_minimum_size = Vector2(170, 52)
+		b.add_theme_stylebox_override("pressed", Ui.box(Color("#3a3d4d"), 10))
+		b.add_theme_stylebox_override("normal", Ui.box(Color("#1e2029"), 10))
+		looks.add_child(b)
 	var go := Ui.button("FIGHT", func() -> void: fight.emit(opponents, mode, colour), 34)
 	go.name = "Fight"
 	go.custom_minimum_size = Vector2(0, 76)
@@ -124,6 +147,15 @@ func _set_colour(i: int) -> void:
 		swatches[k].set_pressed_no_signal(k == i)
 	title.colour = StageView.COLOURS[i]
 	title.queue_redraw()
+
+
+## Smooth or pixel - saved, so the game opens the way it was left.
+func set_pixel(on: bool) -> void:
+	pixel = on
+	var cfg := ConfigFile.new()
+	cfg.load(SETTINGS)
+	cfg.set_value("look", "pixel", on)
+	cfg.save(SETTINGS)
 
 
 func _set_count(n: int) -> void:

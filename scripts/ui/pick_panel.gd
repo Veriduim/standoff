@@ -86,7 +86,7 @@ func _ready() -> void:
 		if d == Vector2.ZERO:
 			pad.add_child(Control.new())
 			continue
-		var aim_at := func() -> void: set_dir(d)
+		var aim_at := func() -> void: _pad_tap(d)
 		var b := Ui.button(ARROWS[k], aim_at, 18)
 		b.name = "d%d" % k
 		b.custom_minimum_size = Vector2(44, 30)
@@ -163,6 +163,16 @@ func open(the_sim: Sim, id: int, the_stage: StageView) -> void:
 	_build_tabs()
 	choice = {}
 	var legal := sim.legal_moves(me)
+	if sim.reeling(sim.fighters[me]):   # (reeling: Hold - leaning with the pad - picked; Burst out beside it if ready)
+		select("hold")
+		_close_drawer()
+		if legal.has("burst"):
+			_tab("defend")
+		return
+	if legal.has("hold"):   # (mid-move that gives way: carrying on is picked, anything else is a tap away)
+		select("hold")
+		_close_drawer()
+		return
 	var first := ""
 	for mid in legal:
 		if str(Moves.move(sim.fighters[me].character, mid)["kind"]) == "attack":
@@ -206,7 +216,15 @@ func _build_tabs() -> void:
 		b.custom_minimum_size = Vector2(TAB_W, 54)
 		b.toggle_mode = true
 		b.disabled = _moves_in(tid).is_empty()
-		var on := Ui.box(stage.colour_of(me).darkened(0.2), 10)
+		var tint: Color = MoveIcon.TAB_COLOURS.get(tid, Color.WHITE)
+		var off := Ui.box(Color("#1e2029"), 10)
+		off.border_color = tint
+		off.border_width_left = 4
+		for s in ["normal", "hover"]:
+			b.add_theme_stylebox_override(s, off)
+		var on := Ui.box(tint.darkened(0.45), 10)
+		on.border_color = tint
+		on.border_width_left = 4
 		b.add_theme_stylebox_override("pressed", on)
 		b.add_theme_stylebox_override("hover_pressed", on)
 		tabs_box.add_child(b)
@@ -227,7 +245,7 @@ func _tab(tid: String) -> void:
 		var pick := func() -> void:
 			select(mid)
 			_close_drawer()
-		var icon := MoveIcon.make(f.character, mid, stage.colour_of(me), pick)
+		var icon := MoveIcon.make(f.character, mid, MoveIcon.tab_colour(f.character, mid), pick)
 		icon.selected = mid == str(choice.get("move", ""))
 		drawer_grid.add_child(icon)
 	drawer.visible = true
@@ -283,11 +301,11 @@ func select(mid: String) -> void:
 			d = Vector2(toward, -1.0)
 		"down":
 			d = Vector2(toward, 1.0)
-		"none":
+		"none", "lean":
 			d = Vector2.ZERO
 	picked_icon.character = f.character
 	picked_icon.move_id = mid
-	picked_icon.colour = stage.colour_of(me)
+	picked_icon.colour = MoveIcon.tab_colour(f.character, mid)
 	picked_icon.queue_redraw()
 	picked_label.text = "%s\n%s" % [m["name"], frame_data(m)]
 	set_dir(d)
@@ -313,11 +331,19 @@ func set_dir(d: Vector2) -> void:
 				usable = dk.y < 0.0
 			"down":
 				usable = dk.y > 0.0
-			"dir8":
+			"dir8", "lean":
 				usable = true
 		b.disabled = not usable
 		b.set_pressed_no_signal(usable and Sim.aim(kind, dk, f.facing).is_equal_approx(a))
 	refresh()
+
+
+## A pad arrow: aims the move that way. A lean is optional - tapping the lit arrow again takes it off.
+func _pad_tap(d: Vector2) -> void:
+	var f := sim.fighters[me]
+	var kind := str(Moves.move(f.character, str(choice["move"])).get("aim", "none"))
+	var now := Vector2(float(choice.get("x", 0.0)), float(choice.get("y", 0.0)))
+	set_dir(Vector2.ZERO if kind == "lean" and now.is_equal_approx(d.normalized()) else d)
 
 
 ## The ghost and the line about it for the pick as it stands; the scrubber starts over, playing.

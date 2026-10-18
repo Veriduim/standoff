@@ -4,7 +4,14 @@ extends Button
 ## key pose (Moves.icon_pose), its name under it, a badge for the direction it takes and the meter it costs. Drawn from
 ## the move data - no art to make for a new move.
 
-const AIM_BADGE := {"facing": "↔", "dir8": "✣", "up": "↑", "down": "↓", "none": ""}
+const AIM_BADGE := {"facing": "↔", "dir8": "✣", "up": "↑", "down": "↓", "lean": "✣", "none": ""}
+## Each tab's colour - its icons are drawn in it, so a move's kind reads at a glance (pick 12).
+const TAB_COLOURS := {"attack": Color("#ffd23f"), "air": Color("#6fd3ff"), "grab": Color("#ff7ab6"),
+	"move": Color("#eef0f6"), "defend": Color("#7ee0a1"), "super": Color("#c58bff")}
+
+
+static func tab_colour(ch: String, mid: String) -> Color:
+	return TAB_COLOURS.get(str(Moves.move(ch, mid).get("tab", "")), Color.WHITE)
 
 var character := "dancer"
 var move_id := ""

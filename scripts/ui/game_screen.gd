@@ -8,6 +8,8 @@ const FONT := 22
 const SMALL := 17
 const LAG_HOLD := 0.45     ## seconds the HP lost stays showing (white) before it drains (pick 10)
 const LAG_SPEED := 0.6     ## how fast it drains, in whole bars a second
+const TURN_SECONDS := 30.0 ## the turn clock (the YOMI wiki's default ruleset: 30 s) - then your pick as it stands goes in
+const PIXEL := 3.0         ## the pixel look's block size, in game pixels
 
 var sim: Sim
 var bots := {}             ## fighter id -> Bot
@@ -24,6 +26,8 @@ var pick: PickPanel
 var cards: HBoxContainer
 var banner: Label
 var home: HomeScreen
+var post: ColorRect
+var pixel_size := 1.0        ## the after-pass's block size now (screen px; 1 = smooth)
 var over_panel: PanelContainer
 var fast_btn: Button
 
@@ -33,6 +37,8 @@ var _first_tick := 0
 var _play_pos := 0.0
 var _shown := -1
 var _lag := {}               ## fighter id -> [HP shown by the white chunk, seconds before it drains, HP now]
+var _turn_left := 0.0        ## seconds left on your turn
+var _ask := ""               ## what your turn asks (the banner)
 var _demo: Sim               ## the bot match behind the home screen
 var _demo_bots: Array = []
 var _demo_frames: Array = []
@@ -47,6 +53,14 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE   # (taps on the stage reach StageView's _unhandled_input)
 	stage = StageView.new()
 	add_child(stage)
+	post = ColorRect.new()   # (over the stage, under everything else: the colour split, the pixel look)
+	post.name = "Post"
+	var mat := ShaderMaterial.new()
+	mat.shader = load("res://shaders/post.gdshader")
+	post.material = mat
+	post.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	post.visible = false
+	add_child(post)
 	home = HomeScreen.new()
 	add_child(home)
 	home.fight.connect(func(n: int, m: String, c: int) -> void: start_local(n, m, c))
@@ -56,7 +70,7 @@ func _ready() -> void:
 	cards.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(cards)
 	banner = Ui.label("", FONT, Color("#e8e8f0"))
-	banner.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	banner.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT   # (left, by the speed button - clear of the drawer)
 	banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(banner)
 	fast_btn = Ui.button("1x", func() -> void: _toggle_speed())
@@ -74,10 +88,12 @@ func _ready() -> void:
 
 func _layout() -> void:
 	var vp := get_viewport_rect().size
-	banner.position = Vector2(0, Ui.CARD_H + 10)
-	banner.size = Vector2(vp.x, 30)
+	banner.position = Vector2(96, Ui.CARD_H + 16)
+	banner.size = Vector2(vp.x - 96.0 - PickPanel.TAB_W - 20.0, 30)
 	fast_btn.position = Vector2(10, Ui.CARD_H + 8)
 	fast_btn.size = Vector2(70, 44)
+	post.position = Vector2.ZERO   # (sized by hand - this screen's own rect isn't the viewport's)
+	post.size = vp
 	_stage_band()
 	over_panel.position = (vp - over_panel.size) / 2.0
 
@@ -232,13 +248,14 @@ func _build_cards() -> void:
 		st.border_width_left = 5
 		p.add_theme_stylebox_override("panel", st)
 		var v := VBoxContainer.new()
-		v.add_theme_constant_override("separation", 3)
+		v.add_theme_constant_override("separation", 2)
 		p.add_child(v)
 		var n := Ui.label(f.name, 15, Color("#e2e2ea"))
 		n.name = "Name"
 		v.add_child(n)
 		v.add_child(_hp_bar(stage.colour_of(f.id)))
 		v.add_child(_bar("Meter", Color("#ffd166"), 6))
+		v.add_child(_bar("Burst", Color("#6fd3ff"), 4))
 		cards.add_child(p)
 	_update_cards()
 
@@ -299,6 +316,10 @@ func _update_cards(rec: Array = []) -> void:
 		var mb := card.find_child("Meter", true, false) as ProgressBar
 		mb.max_value = Sim.METER_MAX
 		mb.value = meter
+		var bb := card.find_child("Burst", true, false) as ProgressBar   # (the Burst gauge - bright when it's full)
+		bb.max_value = Sim.BURST_FULL
+		bb.value = float(rec[f.id][8]) if not rec.is_empty() and rec[f.id].size() > 8 else float(f.burst)
+		bb.modulate = Color(1.6, 1.6, 1.6) if bb.value >= Sim.BURST_FULL else Color(0.75, 0.75, 0.75)
 		card.modulate = Color(1, 1, 1, 0.45) if hp <= 0.0 else Color.WHITE
 
 
@@ -311,11 +332,30 @@ func _next() -> void:
 	stage.deciding = free
 	if free.has(me) and not auto_me:
 		phase = "pick"
-		banner.text = "Your move"
+		_turn_left = TURN_SECONDS
+		var f := sim.fighters[me]
+		_ask = "Your move"
+		if sim.can_burst(f):
+			_ask = "You're in a combo - BURST out, or Hold and lean"
+		elif sim.reeling(f):
+			_ask = "You're in a combo - lean with the pad"
+		elif sim.interruptible(f):
+			_ask = "Your move - or Hold to carry on"
+		_banner()
+		var adv := {}   # (how many ticks each enemy is still tied up - "+N" over them)
+		for g in sim.alive():
+			if sim.enemies(f, g) and not g.actionable() and not sim.interruptible(g) and g.busy() > 0:
+				adv[g.id] = g.busy()
+		stage.advantage = adv
 		pick.open(sim, me, stage)
 		_stage_band()
 	else:
 		_commit({})
+
+
+## The line over the stage on your turn, with the seconds left.
+func _banner() -> void:
+	banner.text = "%s  ·  %d" % [_ask, ceili(_turn_left)]
 
 
 func _commit(mine: Dictionary) -> void:
@@ -330,6 +370,7 @@ func _commit(mine: Dictionary) -> void:
 	pick.close()
 	_stage_band()
 	stage.deciding = []
+	stage.advantage = {}
 	sim.apply(picks)
 	var seg := sim.run_segment()
 	_frames = seg["frames"]
@@ -342,10 +383,17 @@ func _commit(mine: Dictionary) -> void:
 
 
 func _process(delta: float) -> void:
+	_post()
 	if phase == "menu":
 		_demo_step(delta)
 		return
 	_drain(delta)
+	if phase == "pick":   # (the turn clock: when it runs out, what's picked goes in)
+		_turn_left -= delta
+		_banner()
+		if _turn_left <= 0.0:
+			pick._confirm()
+		return
 	if phase != "play" or stage.fx.frozen():   # (a hit's freeze holds the playback a moment - pick 5)
 		return
 	_play_pos += delta * 60.0 * speed
@@ -362,6 +410,20 @@ func _process(delta: float) -> void:
 		stage.show_tick(sim.record())
 		_update_cards()
 		_next()
+
+
+## The after-pass: on only while the picture splits (supers, KOs, Bursts) or with the pixel look switched on.
+func _post() -> void:
+	var split := stage.fx.split
+	post.visible = split > 0.01 or home.pixel
+	if not post.visible:
+		return
+	var mat := post.material as ShaderMaterial
+	mat.set_shader_parameter("split", split)
+	mat.set_shader_parameter("centre", stage.w2s(stage.fx.split_at) / get_viewport_rect().size)
+	var k := maxf(1.0, get_viewport().get_final_transform().get_scale().y)   # (the phone's pixels per game pixel)
+	pixel_size = PIXEL * k if home.pixel else 1.0
+	mat.set_shader_parameter("pixel", pixel_size)
 
 
 ## The white chunk on each HP bar drains down to the HP once its moment's up.

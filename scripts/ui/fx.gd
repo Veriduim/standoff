@@ -8,6 +8,13 @@ extends RefCounted
 ##             place; a small screen shake (kept small - in Life After Dark he found a big shake "way too much")
 ##   combos    the hit count and damage over whoever is being comboed, in the hitter's colour
 ##   arcs      the striking hand or foot leaves a pale arc while its hit is out
+## The second, flashier pass (18:35: "Im excited to see the flashy animations and burst effects"; scenery and the floor
+## reflection left out, "those are mods"):
+##   impacts   a hard hit flashes the one hit white for a few frames, throws out impact lines and sends speed streaks
+##             across the stage the way the hit goes (pick 7)
+##   supers    the stage dims round the one starting it, light rays and rings burst out of them, everything holds a
+##             moment and the picture splits into colours (pick 13); KOs split too
+##   after     fast movers leave fading copies of themselves (pick 8)
 ## Positions are world px (StageView draws them through its camera). The screens read frozen() before playing on.
 
 const YELLOW := Color("#ffd23f")
@@ -27,6 +34,13 @@ var shake := 0.0             ## screen px, fading
 var offset := Vector2.ZERO   ## this frame's shake (StageView adds it to the camera)
 var combos := {}             ## victim id -> {hits, dmg, by: colour, pop: 1 -> 0, end: -1 live / seconds since it ended}
 var trails := {}             ## fighter id -> {pts: [[tip, pivot], ...], c: colour, fade: -1 live / seconds}
+var streaks: Array = []      ## {p: screen fraction, d: direction, len, sp: px/s, age, life} - across the whole stage
+var flash := {}              ## fighter id -> seconds they're drawn white (the impact frame)
+var afters: Array = []       ## afterimages: {id, rec: Sim.record row, age, life}
+var dim := 0.0               ## how dark the stage goes round a super (0-1); `dim_id` is drawn over it
+var dim_id := -1
+var split := 0.0             ## the colour split (0-1, fading) - the screens' post shader reads it
+var split_at := Vector2.ZERO ## (world) where it splits from
 var _rng := RandomNumberGenerator.new()
 static var _bold: FontVariation
 
@@ -40,22 +54,45 @@ func clear() -> void:
 	jitter.clear()
 	combos.clear()
 	trails.clear()
+	streaks.clear()
+	flash.clear()
+	afters.clear()
 	hitstop = 0.0
 	shake = 0.0
+	dim = 0.0
+	dim_id = -1
+	split = 0.0
 	offset = Vector2.ZERO
 
 
 ## One sim event at a world point. `face` = the hitter's facing (sparks fly on along the hit), `reeling` = the one hit
 ## was already reeling (the combo goes on).
 func on_event(type: String, at: Vector2, face: float, dmg: int, by: Color, victim: int, victim_col: Color,
-		reeling: bool, seed_n: int) -> void:
+		reeling: bool, seed_n: int, counter := false) -> void:
 	_rng.seed = seed_n
 	match type:
+		"wall":   # (launched into the wall and off it)
+			_add("shock", at, Vector2.ZERO, 0.22, Color.WHITE, 56.0)
+			_add("spokes", at, Vector2.ZERO, 0.14, Color.WHITE, 40.0)
+			for i in 6:
+				_add("chip", at, Vector2(-face * _rng.randf_range(150.0, 380.0), _rng.randf_range(-300.0, 80.0)),
+						_rng.randf_range(0.3, 0.5), Color("#c9ccd8"), _rng.randf_range(3.0, 6.0))
+			freeze(0.06, victim)
+			kick(3.0)
 		"hit", "throw", "armor":
 			var s := clampf(float(dmg) / 32.0, 0.5, 1.8)
 			_burst(at, face, s, by, victim_col)
-			if dmg >= 30:
+			if counter:   # (they were mid-attack: a red COUNTER and a harder flash)
+				_add("text", at + Vector2(0, -46), Vector2(0, -60), 0.6, Color("#ff5d5d"), 26.0)
+				parts[-1]["txt"] = "COUNTER"
+				flash[victim] = 0.08
+			if dmg >= 30:   # (a hard one: the shockwave, impact lines, the one hit flashes white, streaks)
 				_add("shock", at, Vector2.ZERO, 0.24, Color.WHITE, 62.0 * s)
+				_add("spokes", at, Vector2.ZERO, 0.14, Color.WHITE, 46.0 * s)
+				flash[victim] = 0.06
+				rush(Vector2(face, -0.35), 14 + int(8.0 * s))
+			if dmg >= 45:
+				splash(0.35, at)
 			freeze(clampf(0.04 + float(dmg) * 0.0018, 0.05, 0.14), victim)
 			kick(clampf(float(dmg) * 0.1, 1.5, 5.0))
 			if type != "armor":
@@ -87,8 +124,71 @@ func on_event(type: String, at: Vector2, face: float, dmg: int, by: Color, victi
 			for i in 14:
 				_add("chip", at, Vector2.from_angle(_rng.randf() * TAU) * _rng.randf_range(200.0, 560.0),
 						_rng.randf_range(0.4, 0.7), victim_col if i % 3 else Color.WHITE, _rng.randf_range(3.0, 6.0))
+			_add("spokes", at, Vector2.ZERO, 0.2, Color.WHITE, 90.0)
+			flash[victim] = 0.12
+			rush(Vector2(face, -0.2), 26)
+			splash(0.8, at)
 			freeze(0.22, victim)
 			kick(6.0)
+
+
+## Someone bursts out of a combo: a white flash bursts out of them, shards and rings fly, everything nearby is blown
+## back (the sim), it holds a moment and splits.
+func burst_out(id: int, at: Vector2, col: Color, seed_n: int) -> void:
+	_rng.seed = seed_n
+	_add("flash", at, Vector2.ZERO, 0.32, Color.WHITE, 150.0)
+	_add("shock", at, Vector2.ZERO, 0.42, col.lightened(0.5), 210.0)
+	_add("shock", at, Vector2.ZERO, 0.3, Color.WHITE, 140.0)
+	_add("rays", at, Vector2.ZERO, 0.35, Color.WHITE, 170.0)
+	for i in 18:
+		var dir := Vector2.from_angle(TAU * float(i) / 18.0 + _rng.randf_range(-0.15, 0.15))
+		_add("shard", at + dir * 30.0, dir * _rng.randf_range(420.0, 820.0), _rng.randf_range(0.35, 0.6),
+				Color("#9fe8ff") if i % 3 else col.lightened(0.5), _rng.randf_range(10.0, 20.0))
+	for i in 8:
+		_add("ring", at, Vector2.from_angle(_rng.randf() * TAU) * _rng.randf_range(300.0, 600.0),
+				_rng.randf_range(0.3, 0.5), Color.WHITE, _rng.randf_range(5.0, 9.0))
+	flash[id] = 0.1
+	splash(0.9, at)
+	freeze(0.3, -1)
+	kick(5.0)
+
+
+## Someone starts a super: the stage dims round them, rays and rings burst out, it all holds a moment and splits.
+func super_start(id: int, at: Vector2, col: Color, seed_n: int) -> void:
+	_rng.seed = seed_n
+	dim = 0.62
+	dim_id = id
+	_add("rays", at, Vector2.ZERO, 0.5, col.lightened(0.45), 190.0)
+	_add("glow", at, Vector2.ZERO, 0.45, col, 95.0)
+	_add("shock", at, Vector2.ZERO, 0.4, col.lightened(0.3), 170.0)
+	_add("shock", at, Vector2.ZERO, 0.3, Color.WHITE, 110.0)
+	for i in 10:
+		_add("box" if i % 2 else "ring", at, Vector2.from_angle(_rng.randf() * TAU) * _rng.randf_range(250.0, 520.0),
+				_rng.randf_range(0.35, 0.55), Color.WHITE if i % 3 == 0 else col.lightened(0.4), _rng.randf_range(5.0, 9.0))
+	splash(1.0, at)
+	freeze(0.38, -1)
+	kick(3.0)
+
+
+## Speed streaks across the stage the way a hit sends someone (screen-wide, behind the fighters).
+func rush(dir: Vector2, n: int) -> void:
+	var d := dir.normalized()
+	for i in n:
+		streaks.append({"p": Vector2(_rng.randf(), _rng.randf()), "d": d, "len": _rng.randf_range(60.0, 220.0),
+			"sp": _rng.randf_range(900.0, 1900.0), "age": 0.0, "life": _rng.randf_range(0.22, 0.45),
+			"a": _rng.randf_range(0.15, 0.45)})
+
+
+## The colour split (the post shader): `amount` 0-1, from a world point.
+func splash(amount: float, at: Vector2) -> void:
+	if amount >= split:
+		split_at = at
+	split = maxf(split, amount)
+
+
+## A fading copy of a fast mover (StageView calls it every couple of ticks they're quick).
+func afterimage(id: int, rec: Array) -> void:
+	afters.append({"id": id, "rec": rec.duplicate(), "age": 0.0, "life": 0.22})
 
 
 func freeze(seconds: float, who: int) -> void:
@@ -200,6 +300,21 @@ func update(delta: float) -> void:
 			trails[id]["fade"] = float(trails[id]["fade"]) + delta
 			if float(trails[id]["fade"]) > TRAIL_FADE:
 				trails.erase(id)
+	for s: Dictionary in streaks:
+		s["age"] = float(s["age"]) + delta
+	streaks = streaks.filter(func(s: Dictionary) -> bool: return float(s["age"]) < float(s["life"]))
+	for a: Dictionary in afters:
+		a["age"] = float(a["age"]) + delta
+	afters = afters.filter(func(a: Dictionary) -> bool: return float(a["age"]) < float(a["life"]))
+	for id: int in flash.keys():
+		flash[id] = float(flash[id]) - delta
+		if float(flash[id]) <= 0.0:
+			flash.erase(id)
+	if hitstop <= 0.0:   # (the dim holds through a super's freeze, then lifts)
+		dim = maxf(0.0, dim - delta * 2.2)
+		if dim <= 0.0:
+			dim_id = -1
+	split = maxf(0.0, split - delta * 2.6)
 
 
 # ---------- drawing (through the stage's camera) ----------
@@ -296,6 +411,62 @@ func draw_parts(st: StageView) -> void:
 					var side := Vector2(-dir.y, dir.x) * maxf(1.5, 4.0 * z) * (1.0 - t)
 					st.draw_colored_polygon(PackedVector2Array([at + side, at + dir * len, at - side]), c)
 				st.draw_circle(at, maxf(2.0, 7.0 * z * (1.0 - t)), c, true, -1.0, true)
+			"spokes":   # (impact lines: thin wedges round the hit, pointing in)
+				c.a = 1.0 - t
+				for k in 14:
+					var u := float(k) / 14.0
+					var dir := Vector2.from_angle(float(p["r"]) + u * TAU)
+					var inner := s * (0.55 + 0.3 * t) * (0.8 + 0.4 * float(k % 3) / 2.0)
+					var outer := inner + s * (0.9 + 0.5 * float((k * 7) % 5) / 4.0)
+					var side := Vector2(-dir.y, dir.x) * maxf(1.0, 3.2 * z) * (1.0 - t)
+					st.draw_colored_polygon(PackedVector2Array([at + dir * inner, at + dir * outer + side,
+							at + dir * outer - side]), c)
+			"rays":   # (a super's light rays: long wedges turning slowly, out of the one starting it)
+				c.a = 0.75 * (1.0 - t * t)
+				for k in 16:
+					var dir := Vector2.from_angle(float(p["r"]) + t * 0.6 + float(k) / 16.0 * TAU)
+					var reach := s * (0.6 + 0.4 * minf(1.0, t / 0.15)) * (0.7 + 0.6 * float((k * 5) % 7) / 6.0)
+					var side := Vector2(-dir.y, dir.x) * s * 0.07
+					st.draw_colored_polygon(PackedVector2Array([at + dir * s * 0.25, at + dir * reach + side,
+							at + dir * reach - side]), c)
+			"glow":   # (a soft light round them - stacked see-through discs)
+				for k in 4:
+					var g := c
+					g.a = 0.12 * (1.0 - t)
+					st.draw_circle(at, s * (0.5 + 0.17 * k) * (0.9 + 0.2 * t), g, true, -1.0, true)
+			"flash":   # (a burst's white disc: full at once, then it opens out and thins away)
+				var e := 1.0 - pow(1.0 - t, 2.0)
+				c.a = 0.95 * (1.0 - t)
+				st.draw_circle(at, s * (0.45 + 0.55 * e), c, true, -1.0, true)
+			"text":   # (a word popping up off a hit - COUNTER)
+				if _bold == null:
+					_bold = FontVariation.new()
+					_bold.base_font = ThemeDB.fallback_font
+					_bold.variation_embolden = 1.1
+				var size := int(float(p["s"]) * (1.25 - 0.25 * minf(1.0, t / 0.15)))
+				var tw := _bold.get_string_size(str(p["txt"]), HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
+				c.a = 1.0 - maxf(0.0, (t - 0.6) / 0.4)
+				var ink := Color(0.02, 0.02, 0.03, c.a)
+				st.draw_string_outline(_bold, at - Vector2(tw / 2.0, 0), str(p["txt"]), HORIZONTAL_ALIGNMENT_LEFT, -1,
+						size, 7, ink)
+				st.draw_string(_bold, at - Vector2(tw / 2.0, 0), str(p["txt"]), HORIZONTAL_ALIGNMENT_LEFT, -1, size, c)
+			"shard":   # (a long triangle flying out, point first)
+				c.a = 1.0 - t * t
+				var dir := (p["v"] as Vector2).normalized() if (p["v"] as Vector2).length() > 1.0 else Vector2.RIGHT
+				var side := Vector2(-dir.y, dir.x) * s * 0.28
+				st.draw_colored_polygon(PackedVector2Array([at + dir * s, at - dir * s * 0.4 + side,
+						at - dir * s * 0.4 - side]), c)
+
+
+## The speed streaks - screen-wide thin lines racing the way the hit went, behind everyone.
+func draw_streaks(st: StageView) -> void:
+	var vp := st.get_viewport_rect().size
+	for s: Dictionary in streaks:
+		var t := float(s["age"]) / float(s["life"])
+		var d: Vector2 = s["d"]
+		var start := (s["p"] as Vector2) * vp + d * float(s["sp"]) * float(s["age"]) - d * vp.length() * 0.25
+		var c := Color(0.85, 0.87, 0.95, float(s["a"]) * sin(t * PI))
+		st.draw_line(start, start + d * float(s["len"]), c, 2.0, true)
 
 
 func _star(st: StageView, at: Vector2, s: float, rot: float, sp: Array, c: Color) -> void:

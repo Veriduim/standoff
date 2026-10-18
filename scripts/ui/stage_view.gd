@@ -46,6 +46,10 @@ var zoom := 0.8
 var _ghost_i := 0
 var _time := 0.0
 var _tip_of := {}            ## "character:move:hit" -> the joint that strikes
+var _spin := {}              ## fighter id -> how far round a launched fighter has tumbled (radians)
+var _after_n := {}           ## fighter id -> ticks they've been moving fast (an afterimage every other one)
+var _tick_n := 0
+var advantage := {}          ## your pick: enemy id -> the ticks you're free before them (drawn "+N" over them)
 
 
 func colour_of(i: int) -> Color:
@@ -56,6 +60,9 @@ func setup(chars: Array, fighter_names: Array) -> void:
 	characters = chars
 	names = fighter_names
 	fx.clear()
+	_spin.clear()
+	_after_n.clear()
+	advantage = {}
 
 
 func show_tick(rec: Array, events: Array = []) -> void:
@@ -63,13 +70,37 @@ func show_tick(rec: Array, events: Array = []) -> void:
 	frame = rec
 	if quiet:
 		fx.clear()
+		_spin.clear()
 		queue_redraw()
 		return
 	for e: Dictionary in events:
 		_effect(e, prev)
+	if prev.size() == frame.size():
+		_motion_fx(prev)
 	fx.settle_combos(frame)
 	_arcs()
 	queue_redraw()
+
+
+## What movement shows: a super starting (its flash), fast movers' afterimages, and a launched fighter tumbling.
+func _motion_fx(prev: Array) -> void:
+	for i in frame.size():
+		var r: Array = frame[i]
+		var p: Array = prev[i]
+		var mv := str(r[3])
+		var kind := str(Moves.move(_char(i), mv).get("kind", "")) if mv != "" else ""
+		if kind == "super" and int(r[4]) <= 1 and (str(p[3]) != mv or int(p[4]) > int(r[4])):
+			fx.super_start(i, _chest(i), colour_of(i), _tick_n * 13 + i)
+		var speed := maxf(absf(float(r[0]) - float(p[0])), absf(float(r[1]) - float(p[1])) * 0.8)
+		var fast := int(r[5]) != 4 and (speed > 6.5 or kind in ["super", "burst"])
+		_after_n[i] = int(_after_n.get(i, 0)) + 1 if fast else 0
+		if fast and int(_after_n[i]) % 2 == 1:
+			fx.afterimage(i, r)
+		if int(r[5]) == 1 and float(r[1]) < -20.0:   # (launched: they tumble the way they're flying)
+			_spin[i] = float(_spin.get(i, 0.0)) - 0.3 * float(r[2])
+		else:
+			_spin.erase(i)
+	_tick_n += 1
 
 
 ## One sim event -> its effect at the point it happened.
@@ -84,11 +115,20 @@ func _effect(e: Dictionary, prev: Array) -> void:
 	if type == "ko":   # (a = the one knocked out)
 		fx.on_event(type, _chest(a), face, 0, colour_of(a), a, colour_of(a), false, n + a)
 		return
+	if type == "burst":   # (a = the one bursting out)
+		fx.burst_out(a, _chest(a), colour_of(a), n + a)
+		return
+	if type == "wall":   # (a = the one bouncing off the wall)
+		var side := signf(float(frame[a][0]))
+		var at := Vector2(side * (Sim.STAGE_HALF - 4.0), _chest(a).y)
+		fx.on_event(type, at, side, 0, colour_of(a), a, colour_of(a), false, n + a)
+		return
 	if d < 0 or d >= frame.size():
 		return
 	var at := _contact(a, d) if type in ["hit", "throw", "armor", "block"] else (_chest(a) + _chest(d)) / 2.0
 	var reeling := d < prev.size() and int(prev[d][5]) == 1
-	fx.on_event(type, at, face, int(e.get("dmg", 0)), colour_of(a), d, colour_of(d), reeling, n + d)
+	fx.on_event(type, at, face, int(e.get("dmg", 0)), colour_of(a), d, colour_of(d), reeling, n + d,
+			bool(e.get("counter", false)))
 
 
 func _char(i: int) -> String:
@@ -249,6 +289,7 @@ func _draw() -> void:
 	for i in range(-steps, steps + 1):
 		var x := w2s(Vector2(i * 100.0, 0)).x
 		draw_line(Vector2(x, floor_y), Vector2(x, floor_y + (16.0 if i % 4 == 0 else 9.0)), LINE, 2.0)
+	fx.draw_streaks(self)
 	if frame.is_empty():
 		return
 	for i in frame.size():   # (a faint spot under anyone in the air, so heights read)
@@ -267,6 +308,10 @@ func _draw() -> void:
 				_figure(i, g[i], GHOST_ALPHA)
 			elif not ghost_play:   # (held: where everyone else would be on that frame)
 				_figure(i, g[i], GHOST_ALPHA * 0.6)
+	for a: Dictionary in fx.afters:   # (afterimages - fading copies behind fast movers)
+		var id := int(a["id"])
+		if id < frame.size():
+			_figure(id, a["rec"], 0.5 * (1.0 - float(a["age"]) / float(a["life"])))
 	for i in frame.size():   # (the knocked out first - the standing stay on top)
 		if int(frame[i][5]) == 4:
 			_figure(i, frame[i], 1.0)
@@ -274,12 +319,33 @@ func _draw() -> void:
 		if int(frame[i][5]) != 4:
 			_figure(i, frame[i], 1.0)
 	fx.draw_trails(self)   # (over the fighters - a kick's path mostly runs along its own leg)
+	if fx.dim > 0.0:   # (a super: the stage goes dark round the one starting it)
+		draw_rect(Rect2(Vector2(-20, -20), vp + Vector2(40, 40)), Color(0, 0, 0, fx.dim))
+		if fx.dim_id >= 0 and fx.dim_id < frame.size():
+			_figure(fx.dim_id, frame[fx.dim_id], 1.0)
 	if show_boxes:
 		var rows: Array = ghost[ghost_index()] if not ghost.is_empty() else frame
 		for i in rows.size():
 			_boxes(i, rows[i])
 	fx.draw_parts(self)
 	fx.draw_combos(self, frame)
+	_advantage_labels()
+
+
+## On your pick: "+N" over each enemy you're free before - how many ticks they're still tied up (pick 11).
+func _advantage_labels() -> void:
+	var font := ThemeDB.fallback_font
+	for id: int in advantage:
+		if id >= frame.size() or int(advantage[id]) <= 0:
+			continue
+		var r: Array = frame[id]
+		var p := w2s(Vector2(float(r[0]), 0.0)) + Vector2(0, 44)   # (under them, below the floor - clear of combo counts)
+		var text := "+%d" % int(advantage[id])
+		var w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 17).x
+		var box := Rect2(p - Vector2(w / 2.0 + 7.0, 19.0), Vector2(w + 14.0, 24.0))
+		draw_rect(box, Color(0.05, 0.06, 0.08, 0.85))
+		draw_rect(box, Color("#7ee0a1"), false, 1.5)
+		draw_string(font, p - Vector2(w / 2.0, 1.0), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Color("#7ee0a1"))
 
 
 ## The ghost frame on show.
@@ -321,9 +387,16 @@ func _figure(i: int, r: Array, alpha: float) -> void:
 		col = col.darkened(0.55)
 	if alpha < 1.0:   # (a ghost: mixed into the stage, not see-through - overlapping limbs stay one flat shape)
 		col = col.lerp(BG, 1.0 - alpha)
+	elif fx.flash.has(i):   # (the impact frame: drawn white)
+		col = Color.WHITE
 	var head_r := HEAD * h * zoom
-	var pts := Stick.draw(self, Poses.for_record(ch, r), w2s(base), h * zoom, face, col, LIMB * h * zoom, head_r,
-			alpha >= 1.0)
+	var pose := Poses.for_record(ch, r)
+	if alpha >= 1.0 and _spin.has(i):   # (launched: tumbling round their middle)
+		var hip: Vector2 = pose["hip"]
+		var mid := hip + Vector2(0, -14)
+		for j: String in Poses.JOINTS:
+			pose[j] = mid + ((pose[j] as Vector2) - mid).rotated(float(_spin[i]))
+	var pts := Stick.draw(self, pose, w2s(base), h * zoom, face, col, LIMB * h * zoom, head_r, alpha >= 1.0)
 	if alpha < 1.0:
 		return
 	if ch == "dancer":   # (her headband - two short tails off the back of the head)

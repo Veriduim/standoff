@@ -21,10 +21,18 @@ func _init(seed_value := 1) -> void:
 
 func choose(sim: Sim, id: int) -> Dictionary:
 	var f := sim.get_f(id)
-	var legal := sim.legal_moves(id)
 	var t := sim.nearest_enemy(f)
+	if sim.reeling(f):   # (in a combo: Burst when it's ready - more likely the more it's hurt - else lean away)
+		var hurt := 1.0 - float(f.hp) / float(f.max_hp)
+		if sim.can_burst(f) and rng.randf() < 0.3 + hurt * 0.5:
+			return {"move": "burst"}
+		var away := -signf(t.pos.x - f.pos.x) if t != null and absf(t.pos.x - f.pos.x) > 1.0 else 0.0
+		return {"move": "hold", "x": away, "y": rng.randf_range(-1.0, 0.3)}
+	var legal := sim.legal_moves(id)
 	if t == null or legal.is_empty():
 		return {"move": "wait"}
+	if legal.has("hold") and rng.randf() < 0.45:   # (mid-move that gives way: often carries on)
+		return {"move": "hold"}
 	var dx := t.pos.x - f.pos.x
 	var toward := signf(dx) if absf(dx) > 1.0 else float(f.facing)
 	var dist := absf(dx)

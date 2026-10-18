@@ -26,8 +26,13 @@ func run(game: Control, out: String) -> void:
 		if game.phase == "play":
 			game.finish_playback()
 	game.auto_me = false
-	while game.phase == "play":
-		game.finish_playback()
+	for _t in 60:   # (on to a turn where you're free - not reeling or mid-move)
+		if game.phase == "play":
+			game.finish_playback()
+		elif game.phase == "pick" and not game.sim.fighters[game.me].actionable():
+			game._commit({"move": "hold"})
+		else:
+			break
 	if game.phase == "pick":
 		var p: PickPanel = game.pick
 		p._tab("attack")
@@ -111,3 +116,25 @@ func _effects(game: Control, out: String) -> void:
 	var swinging := func() -> bool: return game.stage.fx.trails.has(0) and game.stage.fx.trails[0]["pts"].size() >= 7
 	await _until(swinging, 300)
 	await _snap(out.path_join("10_arc.png"))
+	# a super starting (the stage dims, rays, the colour split), then the other one bursting out of a combo
+	await _until(func() -> bool: return game.phase == "pick", 400)
+	game.sim.fighters[0].meter = 100
+	game.sim.fighters[0].pos.x = game.sim.fighters[1].pos.x - 70.0
+	game._commit({"move": "flurry", "x": 1.0})
+	await _until(func() -> bool: return game.stage.fx.dim > 0.3, 120)
+	await _wait(8)
+	await _snap(out.path_join("11_super.png"))
+	await _until(func() -> bool: return game.phase == "pick" and game.sim.reeling(game.sim.fighters[1]), 600)
+	game.sim.fighters[1].burst = Sim.BURST_FULL
+	game.sim.apply({1: {"move": "burst"}})
+	game._commit({"move": "jab", "x": 1.0})
+	await _until(func() -> bool: return game.stage.fx.split > 0.5, 120)
+	await _wait(5)
+	await _snap(out.path_join("12_burst.png"))
+	# the pixel look, mid-match
+	await _until(func() -> bool: return game.phase == "pick", 600)
+	var was: bool = game.home.pixel
+	game.home.set_pixel(true)
+	await _wait(30)
+	await _snap(out.path_join("13_pixel.png"))
+	game.home.set_pixel(was)

@@ -22,11 +22,11 @@ func _play(s: Sim, picks: Dictionary) -> Array:
 		if s.over():
 			break
 		var free := s.deciders()
-		if free.size() == s.alive().size():
+		if s.alive().all(func(f: Fighter) -> bool: return f.actionable()):
 			break
 		var hold := {}
 		for id in free:
-			hold[id] = {"move": "wait", "x": 6.0}
+			hold[id] = {"move": "hold"}   # (free: a wait; mid-move: carry on; reeling: ride it out)
 		s.apply(hold)
 	return evs
 
@@ -44,8 +44,9 @@ func _test_turns() -> void:
 	_check("at the start everyone picks", s.deciders() == [0, 1, 2])
 	s.apply({0: {"move": "wait"}, 1: {"move": "guard"}, 2: {"move": "guard"}})
 	var seg := s.run_segment()
-	_check("a 10-frame wait (the others guarding for 20) stops the run after 10 ticks with only that fighter free (got %d ticks, %s)"
-			% [seg["frames"].size(), s.deciders()], seg["frames"].size() == 10 and s.deciders() == [0])
+	_check("a 10-frame wait stops the run after 10 ticks; the two guarding may pick again or Hold - guard gives way (%d ticks, %s)"
+			% [seg["frames"].size(), s.deciders()], seg["frames"].size() == 10 and s.deciders() == [0, 1, 2]
+			and s.legal_moves(1).has("hold") and s.legal_moves(1).has("jab") and not s.legal_moves(0).has("hold"))
 	var fresh := Sim.create([{"character": "dancer"}, {"character": "dancer"}])
 	_check("ground and air menus differ: a jump on the ground, a dive kick only in the air",
 			fresh.legal_moves(1).has("jump") and not fresh.legal_moves(1).has("divekick"))
@@ -56,7 +57,10 @@ func _test_turns() -> void:
 	_check("a super needs meter", not fresh.legal_moves(1).has("flurry"))
 	fresh.fighters[1].meter = 60
 	_check("...and with 60 it's there", fresh.legal_moves(1).has("flurry"))
-	_check("someone mid-move has nothing to pick", s.legal_moves(1).is_empty())
+	var busy := _duel()
+	busy.apply({0: {"move": "sidekick"}, 1: {"move": "wait"}})
+	busy.step()
+	_check("someone mid-attack has nothing to pick", busy.legal_moves(0).is_empty())
 
 
 func _test_rules() -> void:
@@ -123,11 +127,12 @@ func _test_combos_and_ko() -> void:
 	s.apply({0: {"move": "jab"}, 1: {"move": "wait", "x": 40}})
 	s.run_segment()
 	var first := 450 - s.fighters[1].hp
-	_check("the hitter gets free while the other still reels - a combo can follow (free: %s, stun %d)"
-			% [s.deciders(), s.fighters[1].stun], s.deciders() == [0] and s.fighters[1].stun > 0)
+	_check("a landed jab frees the hitter at once (a hit cancel) while the other reels and only gets to lean (free: %s, %s)"
+			% [s.deciders(), s.legal_moves(1)], s.deciders() == [0, 1] and s.fighters[0].actionable()
+			and s.legal_moves(1) == ["hold"] and not s.legal_moves(0).has("jab"))
 	s.fighters[1].hp = 10
 	s.fighters[0].pos.x = s.fighters[1].pos.x - 70.0
-	_play(s, {0: {"move": "jab"}})
+	_play(s, {0: {"move": "straight"}})
 	_check("damage scales down in a combo, and a fighter at 0 is out (first %d)" % first,
 			first == 18 and s.fighters[1].ko and s.over() and s.winners() == [0])
 	var t := Sim.create([{"character": "dancer", "team": 0}, {"character": "dancer", "team": 0},
@@ -140,6 +145,83 @@ func _test_combos_and_ko() -> void:
 	_check("teams: no hitting your own side", t.fighters[1].hp == t.fighters[1].max_hp)
 	t.fighters[2].ko = true
 	_check("teams: one side left = it's over, both of them win", t.over() and t.winners() == [0, 1])
+
+
+## The YOMI wiki's rules for combos (Combo Mechanics / Blocking pages - Timmy 18:42 / 18:44: "Use that page more").
+func _test_escaping_combos() -> void:
+	_section("Combos and getting out of them: Burst, leaning, hit cancels, giving way, scaling, counters, walls")
+	var s := _duel()
+	_check("everyone's Burst gauge starts empty", s.fighters.all(func(f: Fighter) -> bool: return f.burst == 0))
+	_play(s, {0: {"move": "jab"}, 1: {"move": "wait"}})
+	_check("...and fills with time, faster for damage taken than dealt (%d / %d)" % [s.fighters[1].burst, s.fighters[0].burst],
+			s.fighters[1].burst > s.fighters[0].burst and s.fighters[0].burst > 0)
+	s = _duel()
+	s.fighters[1].burst = Sim.BURST_FULL
+	s.apply({0: {"move": "jab"}, 1: {"move": "wait"}})
+	s.run_segment()
+	_check("reeling with a full gauge: Burst or Hold (%s)" % [s.legal_moves(1)], s.legal_moves(1) == ["burst", "hold"])
+	var hp := s.fighters[0].hp
+	var evs := _play(s, {0: {"move": "straight"}, 1: {"move": "burst"}})
+	var on_burster := evs.filter(func(e: Dictionary) -> bool: return e["type"] == "hit" and int(e["d"]) == 1)
+	_check("a Burst ends their stun, spends the gauge, does no damage, can't be hit and blows the attacker away (%s, x %.0f)"
+			% [_types(evs), s.fighters[0].pos.x], _types(evs).has("burst") and s.fighters[1].burst < Sim.BURST_FULL
+			and s.fighters[0].hp == hp and s.fighters[0].pos.x < -150.0 and on_burster.is_empty())
+	s = _duel()
+	s.fighters[1].burst = Sim.BURST_FULL
+	s.apply({0: {"move": "jab"}, 1: {"move": "wait"}})
+	s.run_segment()
+	evs = _play(s, {0: {"move": "guard"}, 1: {"move": "burst"}})
+	_check("blocking a Burst parries it: the burster is left stuck (%s)" % [_types(evs)], _types(evs).has("parry"))
+	var leans := []
+	for lean: float in [0.0, -1.0]:
+		var d := _duel()
+		d.apply({0: {"move": "sidekick"}, 1: {"move": "wait"}})
+		d.run_segment()
+		d.apply({1: {"move": "hold", "x": lean}})
+		d.fighters[1].vel = Vector2.ZERO
+		d.fighters[0].pos.x = d.fighters[1].pos.x - 70.0
+		d.apply({0: {"move": "straight"}})
+		d.run_segment()   # (it stops on the hit - a hit cancel)
+		leans.append(d.fighters[1].vel.x)
+	_check("leaning while reeling bends the knockback (no lean %.1f, leaning back %.1f)" % [leans[0], leans[1]],
+			absf(float(leans[0]) - float(leans[1])) > 1.0)
+	s = _duel()
+	s.apply({0: {"move": "jab"}, 1: {"move": "wait"}})
+	s.run_segment()
+	var first_stun := s.fighters[1].stun
+	for mv: String in ["straight", "jab"]:
+		s.fighters[1].vel = Vector2.ZERO
+		s.fighters[0].pos.x = s.fighters[1].pos.x - 60.0
+		s.apply({0: {"move": mv}})
+		s.run_segment()
+	_check("a combo goes on, but the same move used again in it stuns for less (jab %d, then again %d)"
+			% [first_stun, s.fighters[1].stun], s.fighters[1].combo == 3 and s.fighters[1].stun < first_stun - 2)
+	s = _duel("dancer", "dancer", 80.0)
+	s.apply({0: {"move": "uppercut"}, 1: {"move": "wait"}})
+	s.run_segment()
+	_check("...not every move frees you on a hit: the uppercut doesn't", s.fighters[0].move == "uppercut")
+	s = _duel()
+	s.apply({0: {"move": "jab"}, 1: {"move": "sidekick"}})
+	evs = _play(s, {})
+	var counter := evs.filter(func(e: Dictionary) -> bool: return e["type"] == "hit" and e.get("counter", false))
+	_check("hitting someone mid-attack is a counter hit for 10%% more (%s)" % [counter],
+			not counter.is_empty() and int(counter[0]["dmg"]) == 20)
+	s = _duel("dancer", "dancer", 300.0)
+	s.apply({0: {"move": "dash", "x": 1.0}, 1: {"move": "wait"}})
+	s.run_segment()
+	_check("a dash gives way when the other can act: pick again or Hold (%s)" % [s.deciders()],
+			s.deciders().has(0) and s.legal_moves(0).has("hold"))
+	s = _duel()
+	s.fighters[1].pos.x = Sim.STAGE_HALF - 60.0
+	s.fighters[0].pos.x = Sim.STAGE_HALF - 120.0
+	s.fighters[1].pos.y = -60.0
+	s.fighters[1].stun = 30
+	s.fighters[1].vel = Vector2(14.0, -2.0)
+	var walls := false
+	for _i in 20:
+		s.step()
+		walls = walls or s.events.any(func(e: Dictionary) -> bool: return e["type"] == "wall")
+	_check("launched into the wall, they bounce off it", walls and s.fighters[1].vel.x <= 0.0)
 
 
 func _test_snapshots() -> void:

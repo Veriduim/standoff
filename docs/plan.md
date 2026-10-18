@@ -53,6 +53,25 @@ one stage; each attack aims at a picked target.
   2 (pixel look), 7 (speed streaks), 8 (afterimages), 11 (frame advantage line), 12 (tinted icons), 13 (colour-split
   flash) and 14 (floor reflection).
 
+- 18:35 "Continue working o. This feature. Leaving scenery and reflection as those are mods ... Im excited to see the
+  flashy animations and burst effects" -> 0.4.0 adds:
+  - impact frames (the one hit flashes white), impact lines and speed streaks (pick 7)
+  - afterimages (pick 8)
+  - super flashes (the stage dims, rays, rings) and colour splits on supers, KOs and Bursts (pick 13)
+  - a tumble when launched
+  - "+N" frame advantage (pick 11)
+  - tab-coloured icons (pick 12)
+  - the pixel look as a switch on the home screen (pick 2, `shaders/post.gdshader`)
+- 18:37 / 18:40 / 18:42 / 18:44 - Burst, then "Use that page more. It seems near perfect for what we need mechanics
+  wise" -> the YOMI wiki's mechanics, mapped in `docs/mechanics.md`. 0.4.0 builds:
+  - Burst, the lean (DI) and hit cancels
+  - interruptible moves with Hold
+  - the wiki's combo scaling and less stun for a reused move
+  - counter hits, wall bounces and the 7th-hit launch
+  - the 30 s turn clock
+
+  The rest is listed for 0.5.0 and later.
+
 ## To tune / later
 - **Match length with 6:** bot matches take 120-270 decision points with 6 fighters (50-90 with 2). At ~10 s a decision
   that's far too long - lower HP or more damage with more players (a lobby setting), and a turn timer.
