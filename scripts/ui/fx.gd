@@ -290,16 +290,11 @@ func kick(px: float) -> void:
 	punch = maxf(punch, clampf(px * 0.012, 0.0, 0.08))
 
 
-## The burst where a hit lands: a spiky star, rings and squares flying on the way the hit goes, a few chips.
-func _burst(at: Vector2, face: float, s: float, by: Color, victim_col: Color) -> void:
+## The burst where a hit lands: a spiky star (the dark starburst goes behind it - on_event).
+## (23:11 "remove the random shapes on hit as well": no flying rings, squares or chips - the spark and the dark
+## starburst behind it carry the hit)
+func _burst(at: Vector2, _face: float, s: float, _by: Color, _victim_col: Color) -> void:
 	_add("star", at, Vector2.ZERO, 0.15 + 0.05 * s, YELLOW, 30.0 * s)
-	for i in 5 + int(4.0 * s):
-		var c := YELLOW if i % 3 != 0 else by.lightened(0.45)
-		_add("ring" if i % 2 == 0 else "box", at, _fan(face, 1.1) * _rng.randf_range(260.0, 600.0) * (0.7 + 0.3 * s),
-				_rng.randf_range(0.28, 0.5), c, _rng.randf_range(4.5, 9.0))
-	for i in 2 + int(2.0 * s):
-		_add("chip", at, _fan(face, 0.9) * _rng.randf_range(180.0, 380.0), _rng.randf_range(0.3, 0.5), victim_col,
-				_rng.randf_range(3.0, 5.0))
 
 
 ## A direction fanned round the way a hit goes (a little upward).
