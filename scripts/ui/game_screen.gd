@@ -26,6 +26,7 @@ var pick: PickPanel
 var cards: HBoxContainer
 var banner: Label
 var home: HomeScreen
+var clock: Label
 var post: ColorRect
 var pixel_size := 1.0        ## the after-pass's block size now (screen px; 1 = smooth)
 var over_panel: PanelContainer
@@ -75,6 +76,10 @@ func _ready() -> void:
 	add_child(banner)
 	fast_btn = Ui.button("1x", func() -> void: _toggle_speed())
 	add_child(fast_btn)
+	clock = Ui.label("", 20, Color("#e8e8f0"))   # (the round: seconds of match time left)
+	clock.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	clock.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(clock)
 	pick = PickPanel.new()
 	add_child(pick)
 	pick.confirmed.connect(func(c: Dictionary) -> void:
@@ -92,6 +97,8 @@ func _layout() -> void:
 	banner.size = Vector2(vp.x - 96.0 - PickPanel.TAB_W - 20.0, 30)
 	fast_btn.position = Vector2(10, Ui.CARD_H + 8)
 	fast_btn.size = Vector2(70, 44)
+	clock.position = Vector2(vp.x - 230.0, Ui.CARD_H + 14)
+	clock.size = Vector2(120, 30)
 	post.position = Vector2.ZERO   # (sized by hand - this screen's own rect isn't the viewport's)
 	post.size = vp
 	_stage_band()
@@ -250,11 +257,36 @@ func _build_cards() -> void:
 		var v := VBoxContainer.new()
 		v.add_theme_constant_override("separation", 2)
 		p.add_child(v)
+		var head := HBoxContainer.new()   # (the name; Free Cancels as green crosses and air options as dots, right)
+		v.add_child(head)
 		var n := Ui.label(f.name, 15, Color("#e2e2ea"))
 		n.name = "Name"
-		v.add_child(n)
+		n.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		n.clip_text = true
+		head.add_child(n)
+		var extras := RichTextLabel.new()
+		extras.name = "Extras"
+		extras.bbcode_enabled = true
+		extras.fit_content = true
+		extras.scroll_active = false
+		extras.autowrap_mode = TextServer.AUTOWRAP_OFF
+		extras.custom_minimum_size = Vector2(62, 0)
+		extras.add_theme_font_size_override("normal_font_size", 13)
+		extras.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		head.add_child(extras)
 		v.add_child(_hp_bar(stage.colour_of(f.id)))
-		v.add_child(_bar("Meter", Color("#ffd166"), 6))
+		var mb := _bar("Meter", Color("#ffd166"), 6)
+		for k in [1, 2]:   # (meter in three bars: two dividers)
+			var cut := ColorRect.new()
+			cut.color = Color("#0e0f14")
+			cut.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			mb.add_child(cut)
+			cut.anchor_left = k / 3.0
+			cut.anchor_right = k / 3.0
+			cut.anchor_bottom = 1.0
+			cut.offset_left = -1.0
+			cut.offset_right = 1.0
+		v.add_child(mb)
 		v.add_child(_bar("Burst", Color("#6fd3ff"), 4))
 		cards.add_child(p)
 	_update_cards()
@@ -320,6 +352,13 @@ func _update_cards(rec: Array = []) -> void:
 		bb.max_value = Sim.BURST_FULL
 		bb.value = float(rec[f.id][8]) if not rec.is_empty() and rec[f.id].size() > 8 else float(f.burst)
 		bb.modulate = Color(1.6, 1.6, 1.6) if bb.value >= Sim.BURST_FULL else Color(0.75, 0.75, 0.75)
+		var fcs := int(rec[f.id][9]) if not rec.is_empty() and rec[f.id].size() > 9 else f.fc
+		var airs := int(rec[f.id][10]) if not rec.is_empty() and rec[f.id].size() > 10 else Sim.AIR_OPTIONS - f.air_moves
+		var ex := card.find_child("Extras", true, false) as RichTextLabel
+		var text := "[right][color=#46d17a]%s[/color][color=#3a3d4d]%s[/color] [color=#e8e8f0]%s[/color][color=#3a3d4d]%s[/color][/right]" \
+				% ["✕".repeat(fcs), "✕".repeat(Sim.FC_MAX - fcs), "●".repeat(airs), "●".repeat(Sim.AIR_OPTIONS - airs)]
+		if ex.text != text:
+			ex.text = text
 		card.modulate = Color(1, 1, 1, 0.45) if hp <= 0.0 else Color.WHITE
 
 
@@ -335,7 +374,11 @@ func _next() -> void:
 		_turn_left = TURN_SECONDS
 		var f := sim.fighters[me]
 		_ask = "Your move"
-		if sim.can_burst(f):
+		if f.down > 0:
+			_ask = "You're down - Get Up, Tech Roll, or stay down"
+		elif sim.can_whiff(f):
+			_ask = "Stuck in your move - Whiff Cancel (3/4 Burst) or Hold"
+		elif sim.can_burst(f):
 			_ask = "You're in a combo - BURST out, or Hold and lean"
 		elif sim.reeling(f):
 			_ask = "You're in a combo - lean with the pad"
@@ -384,6 +427,11 @@ func _commit(mine: Dictionary) -> void:
 
 func _process(delta: float) -> void:
 	_post()
+	clock.visible = phase != "menu" and sim != null
+	if clock.visible:
+		var left := maxi(0, Sim.ROUND_TICKS - (_first_tick + maxi(_shown, 0) if phase == "play" else sim.tick))
+		clock.text = "⏱ %d" % ceili(left / 60.0)
+		clock.modulate = Color("#ff6b6b") if left < 600 else Color.WHITE
 	if phase == "menu":
 		_demo_step(delta)
 		return
@@ -456,10 +504,14 @@ func _finish() -> void:
 	pick.close()
 	var won := sim.winners()
 	var text := "Everyone's down"
+	if sim.timed_out():   # (the round ran out - the best share of HP left wins)
+		text = "Time! It's a draw" if won.size() > 1 and sim.mode == "ffa" else text
 	if won.has(me):
 		text = "You win!" if won.size() == 1 else "Your team wins!"
 	elif not won.is_empty():
 		text = "%s wins" % sim.fighters[won[0]].name if sim.mode == "ffa" else "The other team wins"
+	if sim.timed_out() and not text.begins_with("Time"):
+		text = "Time! " + text
 	(over_panel.find_child("Result", true, false) as Label).text = text
 	over_panel.visible = true
 	banner.text = ""

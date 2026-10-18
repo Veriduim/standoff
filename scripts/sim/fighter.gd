@@ -31,6 +31,16 @@ var burst := 0           ## the Burst gauge - fills with time (and hits taken); 
 var di := Vector2.ZERO   ## the way they lean while reeling (picked on their reeling turns) - nudges their knockback
 var combo_used := {}     ## this combo, move id -> [times it's been used on them, that move's instance] (reuse = less stun)
 var cancelled := ""      ## the move they just hit-cancelled out of (not pickable again until they start another)
+var fc := 2              ## Free Cancels left (Sim.FC_MAX)
+var freed := false       ## the attack running was Free Cancelled - it gives way when anyone else can act
+var whiffed := false     ## just Whiff Cancelled: attacks only on this pick
+var down := 0            ## knocked down: ticks until they get up by themselves (0 = not down)
+var down_pick := false   ## just hit the floor - the match stops for their getting-up pick
+var kd := false          ## the hit that has them reeling knocks down when they land
+var sad := 0             ## Sadness (Sim.SAD_MAX = SADNESS!) - builds while they hang back
+var sadness := 0         ## ticks of SADNESS! left
+var sad_warned := false  ## SAD! shown for this build-up
+var dist := 1.0          ## how far the running dash / jump goes (0-1, the Distance slider)
 var ko := false
 
 
@@ -40,15 +50,15 @@ func grounded() -> bool:
 
 ## Free to choose: alive, not reeling, not in a move.
 func actionable() -> bool:
-	return not ko and stun == 0 and blockstun == 0 and lock == 0 and move == ""
+	return not ko and stun == 0 and blockstun == 0 and lock == 0 and down == 0 and move == ""
 
 
-## Ticks until they can act (reeling, blocking, locked, then what's left of their move) - the frame advantage a free
-## fighter has on them. A move that ends on landing counts its full length.
+## Ticks until they can act (reeling, blocking, locked, lying down, then what's left of their move) - the frame
+## advantage a free fighter has on them. A move that ends on landing counts its full length.
 func busy() -> int:
 	if ko:
 		return 0
-	return stun + blockstun + lock + (maxi(0, length - frame) if move != "" else 0)
+	return stun + blockstun + lock + down + (maxi(0, length - frame) if move != "" else 0)
 
 
 func to_dict() -> Dictionary:
@@ -57,7 +67,8 @@ func to_dict() -> Dictionary:
 		"move": move, "frame": frame, "length": length, "param": [param.x, param.y], "instance": instance,
 		"hit_done": hit_done.keys(), "stun": stun, "blockstun": blockstun, "lock": lock, "combo": combo,
 		"air_moves": air_moves, "burst": burst, "di": [di.x, di.y], "combo_used": combo_used.duplicate(true),
-		"cancelled": cancelled, "ko": ko}
+		"cancelled": cancelled, "fc": fc, "freed": freed, "whiffed": whiffed, "down": down, "down_pick": down_pick,
+		"kd": kd, "sad": sad, "sadness": sadness, "sad_warned": sad_warned, "dist": dist, "ko": ko}
 
 
 static func from_dict(d: Dictionary) -> Fighter:
@@ -90,5 +101,15 @@ static func from_dict(d: Dictionary) -> Fighter:
 	f.di = Vector2(float(lean[0]), float(lean[1]))
 	f.combo_used = (d.get("combo_used", {}) as Dictionary).duplicate(true)
 	f.cancelled = str(d.get("cancelled", ""))
+	f.fc = int(d.get("fc", 2))
+	f.freed = bool(d.get("freed", false))
+	f.whiffed = bool(d.get("whiffed", false))
+	f.down = int(d.get("down", 0))
+	f.down_pick = bool(d.get("down_pick", false))
+	f.kd = bool(d.get("kd", false))
+	f.sad = int(d.get("sad", 0))
+	f.sadness = int(d.get("sadness", 0))
+	f.sad_warned = bool(d.get("sad_warned", false))
+	f.dist = float(d.get("dist", 1.0))
 	f.ko = bool(d["ko"])
 	return f

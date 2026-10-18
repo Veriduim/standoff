@@ -55,12 +55,14 @@ func _test_turns() -> void:
 			and not fresh.legal_moves(1).has("jump"))
 	fresh.fighters[1].pos.y = 0.0
 	_check("a super needs meter", not fresh.legal_moves(1).has("flurry"))
-	fresh.fighters[1].meter = 60
-	_check("...and with 60 it's there", fresh.legal_moves(1).has("flurry"))
+	fresh.fighters[1].meter = Sim.BAR
+	_check("...and with a bar it's there", fresh.legal_moves(1).has("flurry") and not fresh.legal_moves(1).has("cyclone"))
 	var busy := _duel()
+	busy.fighters[0].burst = 0
 	busy.apply({0: {"move": "sidekick"}, 1: {"move": "wait"}})
 	busy.step()
-	_check("someone mid-attack has nothing to pick", busy.legal_moves(0).is_empty())
+	_check("someone mid-attack has nothing to pick (without 3/4 of a Burst gauge to Whiff Cancel)",
+			busy.legal_moves(0).is_empty())
 
 
 func _test_rules() -> void:
@@ -112,7 +114,7 @@ func _test_directions_and_kit() -> void:
 	var t := _duel("dancer", "dancer", 300.0)
 	t.apply({0: {"move": "taunt"}, 1: {"move": "guard"}})
 	_play(t, {})
-	_check("a taunt gives 25 meter when it finishes (meter %d)" % t.fighters[0].meter, t.fighters[0].meter == 25)
+	_check("a taunt gives a bar of meter when it finishes (%d)" % t.fighters[0].meter, t.fighters[0].meter >= Sim.BAR - 10)
 	var kit := Moves.of("dancer")
 	var tabs := {}
 	for mid: String in kit:
@@ -233,6 +235,99 @@ func _test_escaping_combos() -> void:
 		s.step()
 		walls = walls or s.events.any(func(e: Dictionary) -> bool: return e["type"] == "wall")
 	_check("launched into the wall, they bounce off it", walls and s.fighters[1].vel.x <= 0.0)
+
+
+## The wiki's next list (0.5.0 - Timmy 19:10 "Continue on with the other features. Same as before wiki for mechanics").
+func _test_wiki_more() -> void:
+	_section("Free / Whiff Cancels, knockdowns, bars of meter, the round, Sadness, air options, distance")
+	var s := _duel("dancer", "dancer", 300.0)
+	s.apply({0: {"move": "sidekick", "free": true}, 1: {"move": "wait"}})
+	var seg := s.run_segment()
+	_check("a Free Cancelled attack gives way when the other can act - a charge spent (%d ticks, FC %d, %s)"
+			% [seg["frames"].size(), s.fighters[0].fc, s.legal_moves(0).slice(0, 3)],
+			seg["frames"].size() == 10 and s.fighters[0].fc == Sim.FC_MAX - 1 and s.legal_moves(0).has("hold")
+			and s.legal_moves(0).has("jab"))
+	s.fighters[0].fc = 0
+	s.fighters[0].meter = Sim.BAR + 10
+	s.apply({0: {"move": "jab", "free": true}, 1: {"move": "wait"}})
+	_check("...out of charges it costs a bar", s.fighters[0].freed and s.fighters[0].meter == 10)
+	s = _duel()
+	s.fighters[0].fc = 0
+	s.fighters[1].fc = 0
+	_play(s, {0: {"move": "jab"}, 1: {"move": "wait"}})
+	_check("...and a melee hit gives both of them their charges back", s.fighters[0].fc == Sim.FC_MAX
+			and s.fighters[1].fc == Sim.FC_MAX)
+	s = _duel("dancer", "dancer", 200.0)
+	s.apply({0: {"move": "axekick"}, 1: {"move": "wait"}})
+	s.run_segment()
+	_check("stuck in a committed move when someone close can act, with 3/4 of a Burst: Whiff Cancel or Hold (%s)"
+			% [s.legal_moves(0)], s.deciders().has(0) and s.legal_moves(0) == ["whiff", "hold"])
+	s.apply({0: {"move": "whiff"}, 1: {"move": "wait"}})
+	s.run_segment()
+	_check("...it cuts the move, costs 3/4 of the gauge, and that pick is attacks only (%s)" % [s.legal_moves(0).slice(0, 4)],
+			s.fighters[0].actionable() and s.fighters[0].burst < Sim.WHIFF_COST and s.legal_moves(0).has("jab")
+			and not s.legal_moves(0).has("dash") and not s.legal_moves(0).has("guard"))
+	s = _duel("dancer", "dancer", 70.0)
+	s.fighters[1].burst = 0
+	s.apply({0: {"move": "sweep"}, 1: {"move": "wait"}})
+	var evs: Array = s.run_segment()["events"]
+	for _i in 6:
+		if s.fighters[1].down > 0:
+			break
+		s.apply({0: {"move": "wait"}, 1: {"move": "hold"}})
+		evs.append_array(s.run_segment()["events"])
+	_check("a sweep floors them when they land: lying down, untouchable, picking how to get up (%s, %s)"
+			% [_types(evs), s.legal_moves(1)], _types(evs).has("down") and s.fighters[1].down > 0
+			and s.invulnerable(s.fighters[1]) and s.legal_moves(1) == ["getup", "techroll", "hold"])
+	s.apply({1: {"move": "hold"}})
+	for _i in Sim.DOWN_TICKS + 2:
+		s.step()
+	_check("...staying down, they get up by themselves after a moment", s.fighters[1].down == 0
+			and s.fighters[1].move == "getup")
+	s = _duel("dancer", "dancer", 70.0)
+	var m0 := s.fighters[0].meter
+	s.apply({0: {"move": "walk", "x": 1.0}, 1: {"move": "wait"}})
+	s.step()
+	s.step()
+	_check("meter: moving in on someone gives some every tick (%d -> %d)" % [m0, s.fighters[0].meter],
+			s.fighters[0].meter > m0)
+	s = _duel()
+	_play(s, {0: {"move": "straight"}, 1: {"move": "wait"}})
+	_check("...landing a hit gives the hitter more than the one hit (%d / %d)" % [s.fighters[0].meter, s.fighters[1].meter],
+			s.fighters[0].meter > s.fighters[1].meter and s.fighters[1].meter > 0)
+	s = _duel("dancer", "dancer", 400.0)
+	s.fighters[1].hp = 300
+	s.tick = Sim.ROUND_TICKS - 5
+	_play(s, {0: {"move": "wait"}, 1: {"move": "wait"}})
+	_check("the round runs out at %d ticks: the best share of HP left wins (%s)" % [Sim.ROUND_TICKS, s.winners()],
+			s.over() and s.timed_out() and s.winners() == [0])
+	s = _duel("dancer", "dancer", 400.0)
+	s.fighters[0].sad = Sim.SAD_MAX - 30
+	s.fighters[0].meter = 200
+	evs = []
+	for _i in 15:
+		s.apply({0: {"move": "dash", "x": -1.0}, 1: {"move": "wait"}})
+		evs.append_array(s.run_segment()["events"])
+		if _types(evs).has("sadness"):
+			break
+	_check("Sadness: hanging back too long - SADNESS!: meter gone, no guard or parry (%s)" % [_types(evs)],
+			_types(evs).has("sadness") and s.fighters[0].sadness > 0 and s.fighters[0].meter == 0
+			and not s.legal_moves(0).has("guard") and not s.legal_moves(0).has("parry_early"))
+	s = _duel("dancer", "dancer", 400.0)
+	s.fighters[0].pos.y = -150.0
+	_check("two air options: an air jump and an air dash, then no more until they land",
+			s.legal_moves(0).has("airjump") and s.legal_moves(0).has("airdash"))
+	s.fighters[0].air_moves = Sim.AIR_OPTIONS
+	_check("...used up: neither", not s.legal_moves(0).has("airjump") and not s.legal_moves(0).has("airdash"))
+	var far := []
+	for dist: float in [15.0, 100.0]:
+		var d := _duel("dancer", "dancer", 600.0)
+		d.apply({0: {"move": "dash", "x": 1.0, "dist": dist}, 1: {"move": "wait"}})
+		for _i in 40:
+			d.step()
+		far.append(d.fighters[0].pos.x - (-300.0))
+	_check("a dash goes as far as its distance says (15: %.0f px, 100: %.0f px)" % [far[0], far[1]],
+			float(far[0]) > 10.0 and float(far[1]) > float(far[0]) * 2.0)
 
 
 func _test_snapshots() -> void:

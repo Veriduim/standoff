@@ -31,6 +31,15 @@ func choose(sim: Sim, id: int) -> Dictionary:
 	var legal := sim.legal_moves(id)
 	if t == null or legal.is_empty():
 		return {"move": "wait"}
+	if f.down > 0:   # (floored: mostly up on the spot, sometimes a roll either way, now and then stay down)
+		var r0 := rng.randf()
+		if r0 < 0.5:
+			return {"move": "getup"}
+		if r0 < 0.8:
+			return {"move": "techroll", "x": 1.0 if rng.randf() < 0.5 else -1.0}
+		return {"move": "hold"}
+	if legal.has("whiff"):   # (stuck in a move with someone close and free: sometimes cut it)
+		return {"move": "whiff" if absf(t.pos.x - f.pos.x) < 160.0 and rng.randf() < 0.2 else "hold"}
 	if legal.has("hold") and rng.randf() < 0.45:   # (mid-move that gives way: often carries on)
 		return {"move": "hold"}
 	var dx := t.pos.x - f.pos.x
@@ -56,7 +65,7 @@ func choose(sim: Sim, id: int) -> Dictionary:
 			c["move"] = pick.call(CLOSE_IN)
 		return c
 	var r := rng.randf()
-	if f.meter >= 50 and r < 0.2:
+	if f.meter >= Sim.BAR and r < 0.08:   # (supers now and then - meter comes quickly the wiki's way)
 		c["move"] = pick.call(SUPERS)
 	elif r < 0.55:
 		c["move"] = pick.call(GROUND_HITS)
@@ -70,4 +79,6 @@ func choose(sim: Sim, id: int) -> Dictionary:
 		c["move"] = pick.call(BACK_OFF)
 		if c["move"] != "backstep":
 			c["x"] = -toward
+	c["free"] = f.fc > 0 and rng.randf() < 0.5   # (Free Cancel on about half its attacks while it has charges)
+	c["dist"] = rng.randf_range(30.0, 100.0)
 	return c

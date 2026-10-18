@@ -71,6 +71,29 @@ func on_event(type: String, at: Vector2, face: float, dmg: int, by: Color, victi
 		reeling: bool, seed_n: int, counter := false) -> void:
 	_rng.seed = seed_n
 	match type:
+		"down":   # (floored: dust both ways along the ground)
+			for i in 10:
+				var side := 1.0 if i % 2 == 0 else -1.0
+				_add("chip", at, Vector2(side * _rng.randf_range(120.0, 320.0), _rng.randf_range(-160.0, -40.0)),
+						_rng.randf_range(0.25, 0.45), Color("#9a9daa"), _rng.randf_range(3.0, 6.0))
+			_add("shock", at, Vector2.ZERO, 0.2, Color("#c9ccd8"), 40.0)
+			kick(2.0)
+		"whiff":   # (a Whiff Cancel: a quick white ring off them)
+			_add("shock", at, Vector2.ZERO, 0.18, Color.WHITE, 46.0)
+			_add("text", at + Vector2(0, -60), Vector2(0, -50), 0.5, Color.WHITE, 18.0)
+			parts[-1]["txt"] = "WHIFF CANCEL"
+		"sad":   # (Sadness building: SAD!)
+			_add("text", at + Vector2(0, -80), Vector2(0, -40), 0.9, Color("#7fa6ff"), 24.0)
+			parts[-1]["txt"] = "SAD!"
+		"sadness":   # (SADNESS!: a blue wash and the word)
+			_add("text", at + Vector2(0, -80), Vector2(0, -40), 1.2, Color("#5d7bd6"), 30.0)
+			parts[-1]["txt"] = "SADNESS!"
+			_add("shock", at, Vector2.ZERO, 0.4, Color("#5d7bd6"), 120.0)
+		"time":   # (the round's out)
+			_add("text", at + Vector2(0, -120), Vector2.ZERO, 1.6, Color.WHITE, 64.0)
+			parts[-1]["txt"] = "TIME!"
+			splash(0.6, at)
+			freeze(0.4, -1)
 		"wall":   # (launched into the wall and off it)
 			_add("shock", at, Vector2.ZERO, 0.22, Color.WHITE, 56.0)
 			_add("spokes", at, Vector2.ZERO, 0.14, Color.WHITE, 40.0)
@@ -158,7 +181,7 @@ func super_start(id: int, at: Vector2, col: Color, seed_n: int) -> void:
 	_rng.seed = seed_n
 	dim = 0.62
 	dim_id = id
-	_add("rays", at, Vector2.ZERO, 0.5, col.lightened(0.45), 190.0)
+	_add("rays", at, Vector2.ZERO, 0.4, col.lightened(0.45), 190.0)
 	_add("glow", at, Vector2.ZERO, 0.45, col, 95.0)
 	_add("shock", at, Vector2.ZERO, 0.4, col.lightened(0.3), 170.0)
 	_add("shock", at, Vector2.ZERO, 0.3, Color.WHITE, 110.0)
@@ -166,7 +189,7 @@ func super_start(id: int, at: Vector2, col: Color, seed_n: int) -> void:
 		_add("box" if i % 2 else "ring", at, Vector2.from_angle(_rng.randf() * TAU) * _rng.randf_range(250.0, 520.0),
 				_rng.randf_range(0.35, 0.55), Color.WHITE if i % 3 == 0 else col.lightened(0.4), _rng.randf_range(5.0, 9.0))
 	splash(1.0, at)
-	freeze(0.38, -1)
+	freeze(0.3, -1)
 	kick(3.0)
 
 

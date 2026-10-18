@@ -63,10 +63,27 @@ func _test_your_pick() -> void:
 	_check("the direction steers the ghost: a walk right ends at %.0f, left at %.0f (you at %.0f)"
 			% [x_right, x_left, g.sim.fighters[0].pos.x], x_right > g.sim.fighters[0].pos.x + 30.0
 			and x_left < g.sim.fighters[0].pos.x - 30.0 and float(p.choice["x"]) == -1.0)
+	p.select("dash")
+	var long_x: float = g.stage.ghost[-1][0][0]
+	p.dist_slider.value = 20.0
+	var short_x: float = g.stage.ghost[-1][0][0]
+	_check("a dash shows the Distance slider; a short one ends nearer (100: %.0f, 20: %.0f)" % [long_x, short_x],
+			p.dist_row.visible and short_x < long_x - 40.0 and float(p.choice["dist"]) == 20.0)
+	p.select("jab")
+	_check("an attack has the Free switch, on while there's a charge (%s)" % p.free_btn.text, p.free_btn.visible
+			and bool(p.choice["free"]) and not p.dist_row.visible)
+	var foe := 1
+	p._on_tap(foe)
+	_check("tapping an opponent who's picking too: the tabs and pad are theirs (%s)" % p.picked_label.text.replace("\n", " "),
+			p.who == foe and p.back_btn.visible and g.stage.guessing == foe and p.guesses.has(foe))
+	p.select("sidekick")
+	_check("...guessing their side kick plays their ghost against yours", str(p.guesses[foe]["move"]) == "sidekick"
+			and g.stage.ghost_only == -1 and str(p.choice["move"]) == "jab")
+	p.guess(g.me)
+	_check("...and back to you, your pick as it was", p.who == g.me and not p.back_btn.visible
+			and str(p.choice["move"]) == "jab")
+	p.select("walk")
 	p.set_dir(Vector2(1, 0))
-	p.scrub.value = 7.0
-	_check("dragging the scrubber holds the ghost on that frame (frame 8 shown)", not g.stage.ghost_play
-			and g.stage.ghost_index() == 7 and p.scrub_label.text.begins_with("Frame 8"))
 	p.boxes_btn.button_pressed = true
 	p._toggle_boxes()
 	_check("Boxes shows the hit / hurt boxes", g.stage.show_boxes)
@@ -112,6 +129,7 @@ func _test_hit_effects() -> void:
 	var g := _screen()
 	g.start_local(1, "ffa")
 	g.bots.clear()   # (the other one just stands there)
+	g.sim.fighters[0].burst = 0   # (no Whiff Cancel offers while the other stands about)
 	g.sim.fighters[0].pos.x = -35.0
 	g.sim.fighters[1].pos.x = 35.0
 	var seen := _watch(g, {"move": "jab", "x": 1.0})

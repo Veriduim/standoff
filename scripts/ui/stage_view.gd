@@ -49,7 +49,8 @@ var _tip_of := {}            ## "character:move:hit" -> the joint that strikes
 var _spin := {}              ## fighter id -> how far round a launched fighter has tumbled (radians)
 var _after_n := {}           ## fighter id -> ticks they've been moving fast (an afterimage every other one)
 var _tick_n := 0
-var advantage := {}          ## your pick: enemy id -> the ticks you're free before them (drawn "+N" over them)
+var advantage := {}          ## your pick: enemy id -> the ticks you're free before them (drawn "+N" under them)
+var guessing := -1           ## the opponent whose move you're guessing (a "?" over them)
 
 
 func colour_of(i: int) -> Color:
@@ -117,6 +118,13 @@ func _effect(e: Dictionary, prev: Array) -> void:
 		return
 	if type == "burst":   # (a = the one bursting out)
 		fx.burst_out(a, _chest(a), colour_of(a), n + a)
+		return
+	if type in ["down", "whiff", "sad", "sadness"]:   # (a = who it happened to)
+		var at := _chest(a) if type != "down" else Vector2(float(frame[a][0]), -6.0)
+		fx.on_event(type, at, face, 0, colour_of(a), a, colour_of(a), false, n + a)
+		return
+	if type == "time":
+		fx.on_event(type, cam, 1.0, 0, Color.WHITE, -1, Color.WHITE, false, n)
 		return
 	if type == "wall":   # (a = the one bouncing off the wall)
 		var side := signf(float(frame[a][0]))
@@ -306,6 +314,8 @@ func _draw() -> void:
 				continue
 			if ghost_only < 0 or i == ghost_only:
 				_figure(i, g[i], GHOST_ALPHA)
+				if _free(g[i]) and ghost_index() > 0:   # (the ghost starts in its move - free again = READY)
+					_ready_label(i, g[i])
 			elif not ghost_play:   # (held: where everyone else would be on that frame)
 				_figure(i, g[i], GHOST_ALPHA * 0.6)
 	for a: Dictionary in fx.afters:   # (afterimages - fading copies behind fast movers)
@@ -330,6 +340,18 @@ func _draw() -> void:
 	fx.draw_parts(self)
 	fx.draw_combos(self, frame)
 	_advantage_labels()
+
+
+func _free(r: Array) -> bool:
+	return str(r[3]) == "" and int(r[5]) == 0
+
+
+func _ready_label(i: int, r: Array) -> void:
+	var font := ThemeDB.fallback_font
+	var h := float(Moves.stats(_char(i))["height"])
+	var p := w2s(Vector2(float(r[0]), float(r[1]) - h * 1.45))
+	var w := font.get_string_size("READY", HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x
+	draw_string(font, p - Vector2(w / 2.0, 0), "READY", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, colour_of(i).lerp(Color.WHITE, 0.6))
 
 
 ## On your pick: "+N" over each enemy you're free before - how many ticks they're still tied up (pick 11).
@@ -385,6 +407,8 @@ func _figure(i: int, r: Array, alpha: float) -> void:
 	var col := colour_of(i)
 	if int(r[5]) == 4:
 		col = col.darkened(0.55)
+	elif r.size() > 11 and int(r[11]) == 2:   # (SADNESS!: washed out blue)
+		col = col.lerp(Color("#5d7bd6"), 0.55)
 	if alpha < 1.0:   # (a ghost: mixed into the stage, not see-through - overlapping limbs stay one flat shape)
 		col = col.lerp(BG, 1.0 - alpha)
 	elif fx.flash.has(i):   # (the impact frame: drawn white)
@@ -410,6 +434,11 @@ func _figure(i: int, r: Array, alpha: float) -> void:
 	if deciding.has(i):
 		var pulse := 0.5 + 0.5 * sin(_time * 6.0)
 		draw_arc(pts["head"], head_r + (7.0 + 3.0 * pulse) * zoom, 0, TAU, 24, Color(1, 1, 1, 0.5 + 0.4 * pulse), 2.0)
+	if i == guessing:   # (the one you're guessing for: a yellow "?" over them)
+		var font := ThemeDB.fallback_font
+		var q: Vector2 = pts["head"] - Vector2(8, head_r + 12.0 * zoom)
+		draw_string_outline(font, q, "?", HORIZONTAL_ALIGNMENT_LEFT, -1, 30, 6, Color(0.02, 0.02, 0.03))
+		draw_string(font, q, "?", HORIZONTAL_ALIGNMENT_LEFT, -1, 30, Color("#ffd23f"))
 	if i == you:   # (a small white arrow over your head)
 		var tip: Vector2 = pts["head"] - Vector2(0, head_r + 16.0 * zoom)
 		var s := maxf(6.0, 9.0 * zoom)

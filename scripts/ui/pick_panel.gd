@@ -7,9 +7,12 @@ extends Control
 ##   - a slim tab column on the right (Attack / Air / Grab / Move / Defend / Super); a tab slides out a grid of move
 ##     icons (MoveIcon - the character's own stick figure in the move's key pose); picking one tucks it away
 ##   - a slim bar along the bottom: the move picked (its icon, name, frame data), the direction pad - the only thing you
-##     pick with a move - the frame scrubber over the ghost (frame by frame, everyone's predicted spot, marks where hits
-##     land, Boxes for hit / hurt boxes) and Confirm
+##     pick with a move - a Distance slider for dashes and jumps, the Free (Cancel) switch for attacks, Boxes (hit / hurt
+##     boxes) and Confirm. (19:12: "Remove the frame thing from the bottom" - the frame scrubber's gone; the ghost loops.)
 ##   - a line over the stage saying what the pick does (hits, blocks, clashes, getting hit)
+##   - guessing (19:14: "How do I see how my and my opponents moves will interact?" - the wiki's predictions): tap an
+##     opponent who's picking too and the tabs are theirs - pick what you think they'll do; their ghost plays against
+##     yours. Tap yourself (or Back to you) to carry on with your own. Guesses only change the preview.
 
 signal confirmed(choice: Dictionary)
 
@@ -23,8 +26,10 @@ const ARROWS := ["↖", "↑", "↗", "←", "", "→", "↙", "↓", "↘"]
 
 var sim: Sim
 var me := 0
+var who := 0                 ## whose move the tabs / pad are setting now: you, or an opponent you're guessing
 var stage: StageView
-var choice := {}
+var choice := {}             ## your pick
+var guesses := {}            ## opponent id -> the move you think they'll pick (the preview only)
 var tab := ""                ## the drawer open ("" = closed)
 var preview_events: Array = []
 
@@ -35,10 +40,11 @@ var bar: PanelContainer
 var picked_icon: MoveIcon
 var picked_label: Label
 var pad: GridContainer
-var timeline: Control
-var scrub: HSlider
-var scrub_label: Label
-var play_btn: Button
+var dist_row: HBoxContainer
+var dist_slider: HSlider
+var dist_label: Label
+var free_btn: Button
+var back_btn: Button
 var boxes_btn: Button
 var confirm_btn: Button
 var info: Label
@@ -103,30 +109,43 @@ func _ready() -> void:
 	var top := HBoxContainer.new()
 	top.add_theme_constant_override("separation", 8)
 	mid.add_child(top)
-	play_btn = Ui.button("⏸", func() -> void: _toggle_play(), 20)
-	play_btn.custom_minimum_size = Vector2(52, 38)
-	top.add_child(play_btn)
-	scrub_label = Ui.label("Frame 1", 16, Color("#c9c9d6"))
-	scrub_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	top.add_child(scrub_label)
+	free_btn = Ui.button("Free", func() -> void: _toggle_free(), 16)
+	free_btn.toggle_mode = true
+	free_btn.custom_minimum_size = Vector2(150, 40)
+	free_btn.add_theme_stylebox_override("pressed", Ui.box(Color("#2b6e4a"), 8))
+	top.add_child(free_btn)
+	back_btn = Ui.button("Back to you", func() -> void: guess(me), 16)
+	back_btn.custom_minimum_size = Vector2(140, 40)
+	top.add_child(back_btn)
+	var gap := Control.new()
+	gap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	top.add_child(gap)
 	boxes_btn = Ui.button("Boxes", func() -> void: _toggle_boxes(), 16)
 	boxes_btn.toggle_mode = true
-	boxes_btn.custom_minimum_size = Vector2(80, 38)
+	boxes_btn.custom_minimum_size = Vector2(80, 40)
 	top.add_child(boxes_btn)
-	timeline = Timeline.new()
-	timeline.custom_minimum_size = Vector2(0, 12)
-	mid.add_child(timeline)
-	scrub = HSlider.new()
-	scrub.custom_minimum_size = Vector2(0, 34)
-	scrub.step = 1.0
+	dist_row = HBoxContainer.new()
+	dist_row.add_theme_constant_override("separation", 10)
+	mid.add_child(dist_row)
+	dist_row.add_child(Ui.label("Distance", 15, Color("#a7a7b8")))
+	dist_slider = HSlider.new()
+	dist_slider.min_value = 0.0
+	dist_slider.max_value = 100.0
+	dist_slider.step = 5.0
+	dist_slider.value = 100.0
+	dist_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	dist_slider.custom_minimum_size = Vector2(0, 40)
 	var track := StyleBoxFlat.new()
 	track.bg_color = Color("#3a3d4d")
 	track.set_corner_radius_all(3)
 	track.content_margin_top = 3
 	track.content_margin_bottom = 3
-	scrub.add_theme_stylebox_override("slider", track)
-	scrub.value_changed.connect(_on_scrub)
-	mid.add_child(scrub)
+	dist_slider.add_theme_stylebox_override("slider", track)
+	dist_slider.value_changed.connect(_on_dist)
+	dist_row.add_child(dist_slider)
+	dist_label = Ui.label("100", 16, Color("#e2e2ea"))
+	dist_label.custom_minimum_size = Vector2(36, 0)
+	dist_row.add_child(dist_label)
 	confirm_btn = Ui.button("Confirm", func() -> void: _confirm(), 26)
 	confirm_btn.custom_minimum_size = Vector2(170, 0)
 	for st in ["normal", "hover", "focus"]:
@@ -158,8 +177,12 @@ func _layout() -> void:
 func open(the_sim: Sim, id: int, the_stage: StageView) -> void:
 	sim = the_sim
 	me = id
+	who = id
 	stage = the_stage
+	if not stage.fighter_tapped.is_connected(_on_tap):
+		stage.fighter_tapped.connect(_on_tap)
 	visible = true
+	guesses = {}
 	_build_tabs()
 	choice = {}
 	var legal := sim.legal_moves(me)
@@ -188,6 +211,7 @@ func close() -> void:
 	if stage != null:
 		stage.ghost = []
 		stage.show_boxes = false
+		stage.guessing = -1
 		boxes_btn.set_pressed_no_signal(false)
 
 
@@ -200,8 +224,8 @@ func menu_moves() -> Array:
 
 
 func _moves_in(tab_id: String) -> Array:
-	var f := sim.fighters[me]
-	return sim.legal_moves(me).filter(func(mid: String) -> bool:
+	var f := sim.fighters[who]
+	return sim.legal_moves(who).filter(func(mid: String) -> bool:
 		return str(Moves.move(f.character, mid).get("tab", "")) == tab_id)
 
 
@@ -240,13 +264,13 @@ func _tab(tid: String) -> void:
 	for c in drawer_grid.get_children():
 		drawer_grid.remove_child(c)
 		c.queue_free()
-	var f := sim.fighters[me]
+	var f := sim.fighters[who]
 	for mid: String in _moves_in(tab):
 		var pick := func() -> void:
 			select(mid)
 			_close_drawer()
 		var icon := MoveIcon.make(f.character, mid, MoveIcon.tab_colour(f.character, mid), pick)
-		icon.selected = mid == str(choice.get("move", ""))
+		icon.selected = mid == str(_c().get("move", ""))
 		drawer_grid.add_child(icon)
 	drawer.visible = true
 
@@ -287,10 +311,24 @@ static func frame_data(m: Dictionary) -> String:
 	return " · ".join(parts)
 
 
-## Pick a move: it starts aimed at the nearest enemy (the way it can be aimed).
+## The pick being set: yours, or your guess for the opponent you tapped.
+func _c() -> Dictionary:
+	if who == me:
+		return choice
+	if not guesses.has(who):
+		guesses[who] = {}
+	return guesses[who]
+
+
+## Pick a move (yours, or the one you're guessing for them): it starts aimed at the nearest enemy, full distance, Free
+## on for attacks when there's a charge or a bar to pay with (the wiki: on by default).
 func select(mid: String) -> void:
-	choice["move"] = mid
-	var f := sim.fighters[me]
+	var c := _c()
+	c["move"] = mid
+	c["dist"] = 100.0
+	var f := sim.fighters[who]
+	var mk := str(Moves.move(f.character, mid).get("kind", ""))
+	c["free"] = mk == "attack" and (f.fc > 0 or f.meter >= Sim.BAR)
 	var m := Moves.move(f.character, mid)
 	var near := sim.nearest_enemy(f)
 	var toward := float(f.facing) if near == null or absf(near.pos.x - f.pos.x) < 1.0 \
@@ -305,19 +343,21 @@ func select(mid: String) -> void:
 			d = Vector2.ZERO
 	picked_icon.character = f.character
 	picked_icon.move_id = mid
-	picked_icon.colour = MoveIcon.tab_colour(f.character, mid)
+	picked_icon.colour = MoveIcon.tab_colour(f.character, mid) if who == me else stage.colour_of(who)
 	picked_icon.queue_redraw()
-	picked_label.text = "%s\n%s" % [m["name"], frame_data(m)]
+	picked_label.text = "%s\n%s" % [m["name"], frame_data(m)] if who == me \
+			else "Your guess for %s:\n%s" % [f.name, m["name"]]
 	set_dir(d)
 
 
 ## The direction (the only thing picked with a move); the pad shows the arrows this move takes.
 func set_dir(d: Vector2) -> void:
-	var f := sim.fighters[me]
-	var kind := str(Moves.move(f.character, str(choice["move"])).get("aim", "none"))
+	var f := sim.fighters[who]
+	var c := _c()
+	var kind := str(Moves.move(f.character, str(c["move"])).get("aim", "none"))
 	var a := Sim.aim(kind, d, f.facing)
-	choice["x"] = a.x
-	choice["y"] = a.y
+	c["x"] = a.x
+	c["y"] = a.y
 	for k in 9:
 		var dk: Vector2 = DIRS[k]
 		if dk == Vector2.ZERO:
@@ -340,9 +380,10 @@ func set_dir(d: Vector2) -> void:
 
 ## A pad arrow: aims the move that way. A lean is optional - tapping the lit arrow again takes it off.
 func _pad_tap(d: Vector2) -> void:
-	var f := sim.fighters[me]
-	var kind := str(Moves.move(f.character, str(choice["move"])).get("aim", "none"))
-	var now := Vector2(float(choice.get("x", 0.0)), float(choice.get("y", 0.0)))
+	var f := sim.fighters[who]
+	var c := _c()
+	var kind := str(Moves.move(f.character, str(c["move"])).get("aim", "none"))
+	var now := Vector2(float(c.get("x", 0.0)), float(c.get("y", 0.0)))
 	set_dir(Vector2.ZERO if kind == "lean" and now.is_equal_approx(d.normalized()) else d)
 
 
@@ -350,38 +391,33 @@ func _pad_tap(d: Vector2) -> void:
 func refresh() -> void:
 	var f := sim.fighters[me]
 	var m := Moves.move(f.character, str(choice["move"]))
-	var pv := sim.preview({me: choice}, 80)
+	var picks := guesses.duplicate()
+	picks[me] = choice
+	var pv := sim.preview(picks, 80)
 	preview_events = pv["events"]
 	stage.ghost = pv["frames"]
-	stage.ghost_only = me
+	stage.ghost_only = me if guesses.is_empty() else -1   # (guessing: their ghosts play against yours)
 	stage.ghost_play = true
-	play_btn.text = "⏸"
-	scrub.max_value = maxf(0.0, stage.ghost.size() - 1.0)
-	scrub.set_value_no_signal(0.0)
-	(timeline as Timeline).marks = _marks()
-	timeline.queue_redraw()
-	info.text = "%s%s" % [m["name"], _outcome()]
+	stage.guessing = who if who != me else -1
+	var c := _c()
+	var cm := Moves.move(sim.fighters[who].character, str(c.get("move", "")))
+	dist_row.visible = cm.has("dist")
+	dist_slider.set_value_no_signal(float(c.get("dist", 100.0)))
+	dist_label.text = str(int(dist_slider.value))
+	var fw := sim.fighters[who]
+	free_btn.visible = str(cm.get("kind", "")) == "attack"
+	free_btn.disabled = fw.fc == 0 and fw.meter < Sim.BAR
+	free_btn.set_pressed_no_signal(bool(c.get("free", false)))
+	free_btn.text = "Free · %d left" % fw.fc if fw.fc > 0 else ("Free · 1 bar" if fw.meter >= Sim.BAR else "Free · none")
+	back_btn.visible = who != me
+	var guessed := ""
+	for id in guesses:
+		var gm := Moves.move(sim.fighters[id].character, str(guesses[id].get("move", "")))
+		if not gm.is_empty():
+			guessed += "\nIf %s picks %s:" % [sim.fighters[id].name, gm["name"]]
+	var hint := "" if not guesses.is_empty() or sim.deciders().size() < 2 else "\n(tap an opponent to guess their move)"
+	info.text = "%s%s%s%s" % [m["name"], guessed, _outcome(), hint]
 	info.reset_size()
-
-
-## Where things land on the scrubber: [fraction along, colour].
-func _marks() -> Array:
-	var out: Array = []
-	var n := maxi(1, stage.ghost.size() - 1)
-	for e: Dictionary in preview_events:
-		var k := int(e["t"]) - sim.tick - 1
-		var c := Color("#8ecae6")
-		var type := str(e["type"])
-		if int(e["a"]) == me and type in ["hit", "throw", "armor"]:
-			c = Color("#ffd166")
-		elif int(e["d"]) == me and type in ["hit", "throw"]:
-			c = Color("#ef476f")
-		elif type == "parry":
-			c = Color.WHITE
-		elif type in ["clash", "tech"]:
-			c = Color("#ff9f1c")
-		out.append([clampf(float(k) / n, 0.0, 1.0), c])
-	return out
 
 
 ## What the preview says happens, a line each (others standing still): your hits, blocks, parries, clashes, armour - and
@@ -420,42 +456,57 @@ func _outcome() -> String:
 	return "" if lines.is_empty() else "\n" + "\n".join(lines)
 
 
-func _on_scrub(v: float) -> void:
-	stage.ghost_play = false
-	stage.scrub_to(int(v))
-	play_btn.text = "▶"
-	scrub_label.text = "Frame %d / %d" % [int(v) + 1, stage.ghost.size()]
+func _on_dist(v: float) -> void:
+	_c()["dist"] = v
+	refresh()
 
 
-func _toggle_play() -> void:
-	stage.ghost_play = not stage.ghost_play
-	play_btn.text = "⏸" if stage.ghost_play else "▶"
+func _toggle_free() -> void:
+	_c()["free"] = free_btn.button_pressed
+	refresh()
 
 
 func _toggle_boxes() -> void:
 	stage.show_boxes = boxes_btn.button_pressed
 
 
-func _process(_delta: float) -> void:
-	if visible and stage != null and stage.ghost_play and not stage.ghost.is_empty():
-		var i := stage.ghost_index()
-		scrub.set_value_no_signal(float(i))
-		scrub_label.text = "Frame %d / %d" % [i + 1, stage.ghost.size()]
+## A fighter tapped on the stage: an opponent picking too -> guess their move; you -> back to your own pick.
+func _on_tap(id: int) -> void:
+	if not visible:
+		return
+	if id == me or (sim.enemies(sim.fighters[me], sim.fighters[id]) and sim.deciders().has(id)):
+		guess(id)
+	else:
+		info.text = "%s is mid-move - it plays out as shown" % sim.fighters[id].name
+		info.reset_size()
+
+
+## Set the tabs and pad to `id`'s move (you, or an opponent whose move you're guessing - their first attack, aimed at
+## you, to start).
+func guess(id: int) -> void:
+	who = id
+	_close_drawer()
+	_build_tabs()
+	if id != me and not guesses.has(id):
+		var first := ""
+		for mid in sim.legal_moves(id):
+			if str(Moves.move(sim.fighters[id].character, mid)["kind"]) == "attack":
+				first = mid
+				break
+		select(first if first != "" else str(sim.legal_moves(id)[0]))
+		return
+	var c := _c()
+	var mid := str(c.get("move", ""))
+	var keep := c.duplicate()
+	select(mid)
+	for k in ["x", "y", "dist", "free"]:
+		if keep.has(k):
+			c[k] = keep[k]
+	set_dir(Vector2(float(c.get("x", 0.0)), float(c.get("y", 0.0))))
 
 
 func _confirm() -> void:
 	if visible:
+		who = me
+		stage.guessing = -1
 		confirmed.emit(choice.duplicate())
-
-
-## The thin strip over the scrubber with a mark where each thing lands (yours yellow, on you red, blocks blue, clashes
-## orange).
-class Timeline:
-	extends Control
-	var marks: Array = []
-
-	func _draw() -> void:
-		draw_rect(Rect2(Vector2(0, size.y / 2.0 - 1.0), Vector2(size.x, 2.0)), Color("#3a3d4d"))
-		for m: Array in marks:
-			var x := float(m[0]) * size.x
-			draw_rect(Rect2(x - 2.0, 0, 4.0, size.y), m[1])

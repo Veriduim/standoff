@@ -141,7 +141,7 @@ static func for_record(character: String, r: Array) -> Dictionary:
 	var state := int(r[5])
 	var air := float(r[1]) < -2.0
 	var mv := str(r[3])
-	if state == 4:
+	if state == 4 or state == 5:   # (KO'd, or knocked down)
 		return get_pose("down")
 	if state == 1:
 		return get_pose("hurt")

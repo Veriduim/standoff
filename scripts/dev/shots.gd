@@ -48,7 +48,6 @@ func run(game: Control, out: String) -> void:
 		p._close_drawer()
 		await _wait(40)
 		await _snap(out.path_join("3_pick.png"))
-		p.scrub.value = 9.0
 		p.boxes_btn.button_pressed = true
 		p._toggle_boxes()
 		await _wait(6)
@@ -92,6 +91,7 @@ func _effects(game: Control, out: String) -> void:
 	game.auto_me = false
 	game.start_local(1, "ffa", 0)
 	game.bots.clear()   # (the other one just stands there)
+	game.sim.fighters[0].burst = 0
 	game.sim.fighters[0].pos.x = -60.0
 	game.sim.fighters[1].pos.x = 30.0
 	game.stage.show_tick(game.sim.record())

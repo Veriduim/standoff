@@ -6,7 +6,7 @@ extends Control
 
 signal fight(opponents: int, mode: String, colour: int)
 
-const VERSION := "v0.4.1"
+const VERSION := "v0.5.0"
 
 const SETTINGS := "user://settings.cfg"
 

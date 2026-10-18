@@ -21,6 +21,26 @@ extends RefCounted
 ##   fresh combo can start); a combo can go on forever but the same move
 ##   used again in it stuns for less (REUSE_DECAY); and someone reeling gets a pick at every stop - lean (a direction
 ##   that nudges their knockback, LEAN_PUSH) or Burst when the gauge is full.
+##
+## 0.5.0 - the wiki's next list (Timmy 19:10: "Continue on with the other features. Same as before wiki for mechanics"):
+## - Free Cancel: an attack picked with Free on gives way when anyone else can act, like a dash. Two charges (FC_MAX),
+##   both refilled whenever a melee hit lands on either of the two; +1 to the attacker on a blocked hit, +1 each on a
+##   clash; with none left it costs a bar of meter. Holding a freed attack makes it committed again.
+## - Whiff Cancel: stuck in a committed move when the match stops for someone else, with 3/4 of the Burst gauge: cut it
+##   (WHIFF_COST); 2 ticks later they're free, attacks only for that pick.
+## - Knockdown: hits marked "knockdown" floor them when they land (at once if they're never off the ground). Lying
+##   down nothing touches them; the match stops for them to pick Get Up, Tech Roll (either way) or Hold (stay down);
+##   after DOWN_TICKS they get up anyway. The combo carries on until they're up.
+## - Meter in bars (BAR, up to 3): dealing damage (METER_PER_DMG a point), taking it (a third), whiffing an attack,
+##   moving toward an enemy (at least 1 a tick), parrying (PARRY_METER), blocking (both, a third of that), a taunt (a
+##   bar); combo scaling and Sadness shrink it.
+## - The round: ROUND_TICKS (60 s of match time); when it runs out, the best share of HP left wins.
+## - Sadness: builds every tick, faster backing away, drops moving in and on every melee hit (it goes below 0 after a
+##   combo). SAD! at 2/3; at full, SADNESS! for SADNESS_TICKS: all meter gone, none gained, no guarding or parrying,
+##   1.5x damage taken and a little lost over time.
+## - Air options: AIR_OPTIONS air moves (air jump, air dash) until they land.
+## - Distance (Timmy 19:12: "how do I decide how far I dash?" - the wiki's dash takes a distance 0-100): dashes and
+##   jumps take a distance; a short one is slower, shorter and over sooner (Moves `dist`).
 
 const STAGE_HALF := 800.0
 const GRAVITY := 0.6
@@ -31,7 +51,21 @@ const CLASH_LOCK := 10
 const CLASH_PUSH := 5.0
 const PARRY_STUN := 18
 const TECH_LOCK := 12
-const METER_MAX := 100
+const BAR := 125              ## meter per bar (the wiki's "level")...
+const METER_MAX := BAR * 3    ## ...three of them
+const METER_PER_DMG := 3      ## meter for each point of damage dealt (a third of it for damage taken)
+const WHIFF_METER := 9        ## an attack that hits nothing
+const PARRY_METER := 50       ## a parry (a block gives each side a third)
+const FC_MAX := 2             ## Free Cancels
+const WHIFF_COST := 1125      ## a Whiff Cancel takes this much of the Burst gauge (3/4 of BURST_FULL)
+const WHIFF_LOCK := 2         ## ...and they're free this many ticks later
+const DOWN_TICKS := 20        ## lying down before getting up by themselves
+const ROUND_TICKS := 3600     ## the round (the wiki's default ruleset)
+const SAD_MAX := 900          ## Sadness at SADNESS!...
+const SAD_MIN := -300         ## ...and as low as it goes after a combo
+const SAD_HIT := 150          ## a melee hit takes this much off both
+const SADNESS_TICKS := 120    ## how long SADNESS! lasts
+const AIR_OPTIONS := 2        ## air moves until they land
 ## The Burst gauge, in ticks of match time to fill (Timmy 19:02: "You can kind of burst a lot im seeing which is weird" -
 ## it was 600 ticks + 3 per point of damage taken: bots burst 2-3 times in a 30 s match). The wiki's Glossary: "Burst
 ## will slowly regenerate over time, and at an increased rate while being comboed".
@@ -70,6 +104,7 @@ static func create(players: Array, match_mode := "ffa") -> Sim:
 		f.max_hp = int(st["hp"])
 		f.hp = f.max_hp
 		f.burst = BURST_FULL   # (one Burst to start - YOMI's HUD shows both gauges full at the round start)
+		f.fc = FC_MAX
 		var x := lerpf(-STAGE_HALF * 0.75, STAGE_HALF * 0.75, (i + 0.5) / n) if n > 1 else 0.0
 		f.pos = Vector2(x, 0.0)
 		f.facing = 1 if x <= 0.0 else -1
@@ -92,17 +127,39 @@ func alive() -> Array[Fighter]:
 
 
 func over() -> bool:
+	return _teams_left() <= 1 or timed_out()
+
+
+func timed_out() -> bool:
+	return tick >= ROUND_TICKS and _teams_left() > 1
+
+
+func _teams_left() -> int:
 	var teams := {}
 	for f in alive():
 		teams[f.team] = true
-	return teams.size() <= 1
+	return teams.size()
 
 
-## The ids still standing when it's over (one fighter, or one team's survivors; empty = everyone fell together).
+## The ids still standing when it's over: the last fighter or team; on time, the side with the best share of HP left
+## (ties all win; empty = everyone fell together).
 func winners() -> Array[int]:
 	var out: Array[int] = []
-	if over():
+	if not over():
+		return out
+	if not timed_out():
 		for f in alive():
+			out.append(f.id)
+		return out
+	var share := {}
+	for f in fighters:
+		var t: Array = share.get(f.team, [0.0, 0.0])
+		share[f.team] = [float(t[0]) + maxf(0.0, float(f.hp)), float(t[1]) + float(f.max_hp)]
+	var best := -1.0
+	for team in share:
+		best = maxf(best, float(share[team][0]) / float(share[team][1]))
+	for f in alive():
+		if is_equal_approx(float(share[f.team][0]) / float(share[f.team][1]), best):
 			out.append(f.id)
 	return out
 
@@ -114,11 +171,11 @@ func deciders() -> Array[int]:
 	if over():
 		return out
 	for f in fighters:
-		if f.actionable():
+		if f.actionable() or (f.down > 0 and f.down_pick):
 			out.append(f.id)
 	if not out.is_empty():
 		for f in fighters:
-			if reeling(f) or interruptible(f):
+			if not out.has(f.id) and (reeling(f) or interruptible(f) or can_whiff(f) or (f.down > 0 and not f.ko)):
 				out.append(f.id)
 	return out
 
@@ -130,8 +187,24 @@ func reeling(f: Fighter) -> bool:
 ## In a move that gives way when anyone else can act (walking, dashing, jumping, guarding, taunting, waiting): they
 ## pick again then - something new, or Hold to carry on.
 func interruptible(f: Fighter) -> bool:
-	return f != null and not f.ko and f.stun == 0 and f.blockstun == 0 and f.lock == 0 and f.move != "" \
-			and bool(Moves.move(f.character, f.move).get("interrupt", false))
+	if f == null or f.ko or f.stun > 0 or f.blockstun > 0 or f.lock > 0 or f.down > 0 or f.move == "":
+		return false
+	return bool(Moves.move(f.character, f.move).get("interrupt", false)) or (f.freed and _kind(f) == "attack")
+
+
+## Stuck in a committed move with 3/4 of the Burst gauge: they may Whiff Cancel when the match stops for someone else.
+func can_whiff(f: Fighter) -> bool:
+	return f != null and not f.ko and f.stun == 0 and f.blockstun == 0 and f.lock == 0 and f.down == 0 \
+			and f.move != "" and not interruptible(f) and f.burst >= WHIFF_COST \
+			and not _kind(f) in ["burst", "getup", "whiff"] and _threatened(f)
+
+
+## A free enemy close enough to make a Whiff Cancel worth offering (with six on the stage, not every stop is a threat).
+func _threatened(f: Fighter) -> bool:
+	for g in alive():
+		if enemies(f, g) and g.actionable() and absf(g.pos.x - f.pos.x) < 300.0:
+			return true
+	return false
 
 
 ## Reeling with a full Burst gauge.
@@ -146,6 +219,12 @@ func legal_moves(id: int) -> Array[String]:
 	if reeling(f):
 		out.assign(["burst", "hold"] if can_burst(f) else ["hold"])
 		return out
+	if f != null and f.down > 0 and not f.ko:
+		out.assign(["getup", "techroll", "hold"])
+		return out
+	if can_whiff(f):
+		out.assign(["whiff", "hold"])
+		return out
 	if f == null or not (f.actionable() or interruptible(f)):
 		return out
 	var air := not f.grounded()
@@ -155,11 +234,16 @@ func legal_moves(id: int) -> Array[String]:
 		var where := str(m["where"])
 		if (air and where == "ground") or (not air and where == "air"):
 			continue
-		if str(m["kind"]) in ["burst", "hold"]:
+		var kind := str(m["kind"])
+		if kind in ["burst", "hold", "whiff", "getup"]:   # (only offered in their own moments)
 			continue
 		if int(m.get("cost", 0)) > f.meter:
 			continue
-		if mid == "airdash" and f.air_moves >= 1:
+		if bool(m.get("air_option", false)) and f.air_moves >= AIR_OPTIONS:
+			continue
+		if f.sadness > 0 and kind in ["guard", "parry"]:   # (SADNESS!: no defensive options)
+			continue
+		if f.whiffed and not kind in ["attack", "grab"]:   # (just Whiff Cancelled: attacks only)
 			continue
 		if mid == f.cancelled:   # (just landed it and cancelled out - something else this turn)
 			continue
@@ -185,15 +269,63 @@ func apply(choices: Dictionary) -> void:
 		if f == null:
 			continue
 		var c: Dictionary = choices[id]
+		var mid := str(c.get("move", "hold"))
 		if f.actionable():
 			_start(f, c)
-		elif interruptible(f):   # (Hold carries on; anything else starts now)
-			if str(c.get("move", "hold")) != "hold":
+		elif f.down > 0 and not f.ko:   # (lying down: up, a roll, or stay down)
+			f.down_pick = false
+			if mid in ["getup", "techroll"]:
+				_get_up(f, mid, c)
+		elif interruptible(f):   # (Hold carries on - a freed attack becomes committed again; anything else starts now)
+			if mid != "hold":
 				_start(f, c)
+			else:
+				f.freed = false
+		elif can_whiff(f):
+			if mid == "whiff":
+				_whiff(f)
 		elif can_burst(f) and str(c.get("move", "")) == "burst":
 			_burst(f)
 		elif reeling(f):   # (Take It: the lean they picked, none = ride it straight)
 			f.di = aim("lean", Vector2(float(c.get("x", 0.0)), float(c.get("y", 0.0))), f.facing)
+
+
+## Up off the floor: standing up on the spot or rolling away (picked left or right) - untouchable while they do.
+func _get_up(f: Fighter, mid: String, c: Dictionary) -> void:
+	var m := Moves.move(f.character, mid)
+	f.down = 0
+	f.down_pick = false
+	f.param = aim(str(m.get("aim", "none")), Vector2(float(c.get("x", 0.0)), float(c.get("y", 0.0))), f.facing)
+	if absf(f.param.x) > 0.2:
+		f.facing = 1 if f.param.x > 0.0 else -1
+	f.move = mid
+	f.length = int(m["frames"])
+	f.frame = 0
+	f.instance += 1
+	f.hit_done.clear()
+
+
+## A Whiff Cancel: the committed move is cut, 3/4 of the Burst gauge goes, and they're free in WHIFF_LOCK ticks -
+## attacks only.
+func _whiff(f: Fighter) -> void:
+	f.burst -= WHIFF_COST
+	f.move = ""
+	f.frame = 0
+	f.freed = false
+	f.lock = WHIFF_LOCK
+	f.whiffed = true
+	_event("whiff", f, null)
+
+
+## Meter gained: shrunk by the combo it's part of (c hits in) and by Sadness; none at all during SADNESS!.
+func _gain(f: Fighter, amount: float, c := 0) -> void:
+	if f.ko or f.sadness > 0 or amount <= 0.0:
+		return
+	var cc := float(mini(c, 15))
+	amount *= 0.8 * pow((15.0 - cc) / 15.0, 2.0) + 0.2
+	if f.sad > 0:
+		amount *= 1.0 - 0.5 * float(f.sad) / float(SAD_MAX)
+	f.meter = mini(METER_MAX, f.meter + maxi(1, int(round(amount))))
 
 
 ## Out of the stun lock: the stun's gone, the gauge is spent, and the Burst move runs (untouchable, blows people back).
@@ -223,15 +355,28 @@ func _start(f: Fighter, c: Dictionary) -> void:
 	f.param = aim(str(m.get("aim", "none")), Vector2(float(c.get("x", 0.0)), float(c.get("y", 0.0))), f.facing)
 	if absf(f.param.x) > 0.2:
 		f.facing = 1 if f.param.x > 0.0 else -1   # (aimed left or right - they turn that way)
+	f.dist = clampf(float(c.get("dist", 100.0)) / 100.0, 0.0, 1.0)
 	f.length = int(m["frames"])
+	if m.has("dist"):   # (a short dash / jump is over sooner)
+		var d: Array = m["dist"]
+		f.length = int(round(lerpf(float(d[0]), float(d[1]), f.dist)))
 	f.meter -= int(m.get("cost", 0))
-	if mid == "airdash":
+	if bool(m.get("air_option", false)):
 		f.air_moves += 1
+	f.freed = false
+	if bool(c.get("free", false)) and str(m["kind"]) == "attack":   # (Free Cancel: a charge, or a bar without one)
+		if f.fc > 0:
+			f.fc -= 1
+			f.freed = true
+		elif f.meter >= BAR:
+			f.meter -= BAR
+			f.freed = true
 	f.move = mid
 	f.frame = 0
 	f.instance += 1
 	f.hit_done.clear()
 	f.cancelled = ""
+	f.whiffed = false
 
 
 ## A picked direction made to fit the move (17:37 Timmy: "Just have the direction functionality"): "facing" -> ← or →
@@ -280,10 +425,11 @@ func preview(choices: Dictionary, ticks := 90) -> Dictionary:
 		copy.step()
 		frames.append(copy.record())
 		var free := copy.deciders()
-		if not free.is_empty():   # (whoever's free again stands still - the preview keeps going)
+		if not free.is_empty():   # (whoever's free again stands there, free; anyone mid-something carries on)
 			var hold := {}
 			for id in free:
-				hold[id] = {"move": "hold"}
+				if not copy.fighters[id].actionable():
+					hold[id] = {"move": "hold"}
 			copy.apply(hold)
 	return {"frames": frames, "events": copy.events}
 
@@ -302,6 +448,42 @@ func step() -> void:
 	for f in fighters:
 		if not hit_now.has(f.id):
 			_count(f)
+		_upkeep(f)
+	if tick == ROUND_TICKS and timed_out():
+		_event("time", fighters[0], null)
+
+
+## Every tick: meter for moving in, Sadness, lying down.
+func _upkeep(f: Fighter) -> void:
+	if f.ko:
+		return
+	var n := nearest_enemy(f)
+	var v := f.vel.x * signf(n.pos.x - f.pos.x) if n != null and absf(n.pos.x - f.pos.x) > 1.0 else 0.0
+	if v > 0.5 and f.stun == 0:   # (moving in on someone: at least 1 a tick)
+		_gain(f, maxf(1.0, v / 4.0))
+	if f.sadness > 0:   # (SADNESS!: a little HP lost over time, then it starts again from nothing)
+		f.sadness -= 1
+		if f.sadness % 10 == 0 and f.hp > 1:
+			f.hp -= 1
+		if f.sadness == 0:
+			f.sad = 0
+	elif f.stun == 0 and f.down == 0:
+		var d := 1 + (2 if v < -0.5 else 0) - (2 if v > 0.5 else 0)
+		f.sad = clampi(f.sad + d, SAD_MIN, SAD_MAX)
+		if f.sad >= SAD_MAX * 2 / 3 and not f.sad_warned:
+			f.sad_warned = true
+			_event("sad", f, null)
+		elif f.sad < SAD_MAX * 2 / 3:
+			f.sad_warned = false
+		if f.sad >= SAD_MAX:
+			f.sadness = SADNESS_TICKS
+			f.meter = 0
+			f.sad_warned = false
+			_event("sadness", f, null)
+	if f.down > 0:
+		f.down -= 1
+		if f.down == 0:   # (they get up by themselves)
+			_get_up(f, "getup", {})
 
 
 func _val(v: Variant, f: Fighter) -> float:
@@ -321,11 +503,12 @@ func _motion(f: Fighter) -> void:
 	if f.ko or f.stun > 0 or f.blockstun > 0 or f.lock > 0 or f.move == "":
 		return
 	var m := Moves.move(f.character, f.move)
+	var k := lerpf(float(m["dist"][2]), 1.0, f.dist) if m.has("dist") else 1.0   # (a short one goes slower)
 	for seg: Array in m.get("motion", []):
 		if f.frame >= int(seg[0]) and f.frame <= int(seg[1]):
-			var vx := _val(seg[2], f)
+			var vx := _val(seg[2], f) * k
 			f.vel.x = vx if seg[2] is Array else vx * f.facing   # (a picked direction is already left / right)
-			f.vel.y = _val(seg[3], f)
+			f.vel.y = _val(seg[3], f) * k
 
 
 func _floating(f: Fighter) -> bool:
@@ -343,6 +526,9 @@ func _physics(f: Fighter) -> void:
 			f.vel.y = 0.0
 		if was_air:
 			f.air_moves = 0
+			if f.stun > 0 and f.kd:   # (a knockdown hit: floored on landing)
+				_floor(f)
+			f.kd = false
 			if f.move != "" and bool(Moves.move(f.character, f.move).get("land_ends", false)):
 				f.lock = int(Moves.move(f.character, f.move).get("landing", 6))
 				f.move = ""
@@ -360,6 +546,17 @@ func _physics(f: Fighter) -> void:
 			_event("wall", f, null)
 		else:
 			f.vel.x = 0.0
+
+
+## Knocked down: out of the stun, lying there untouchable; the match stops for their getting-up pick.
+func _floor(f: Fighter) -> void:
+	f.stun = 0
+	f.move = ""
+	f.down = DOWN_TICKS
+	f.down_pick = true
+	f.kd = false
+	f.vel.x *= 0.3
+	_event("down", f, null)
 
 
 func _pushing(f: Fighter) -> bool:
@@ -406,9 +603,16 @@ func _count(f: Fighter) -> void:
 	elif f.move != "":
 		f.frame += 1
 		if f.frame >= f.length:
-			f.meter = mini(METER_MAX, f.meter + int(Moves.move(f.character, f.move).get("meter_gain", 0)))
+			var m := Moves.move(f.character, f.move)
+			_gain(f, float(m.get("meter_gain", 0)))
+			if str(m["kind"]) == "attack" and f.hit_done.is_empty():   # (it hit nothing)
+				_gain(f, WHIFF_METER)
+			if str(m["kind"]) == "getup":   # (up again - the combo's over)
+				f.combo = 0
+				f.combo_used.clear()
 			f.move = ""
 			f.frame = 0
+			f.freed = false
 
 
 func hurtbox(f: Fighter) -> Rect2:
@@ -441,6 +645,8 @@ func active_hits(f: Fighter) -> Array:
 
 ## In a move's invulnerable frames (a roll, a flash kick's start) - nothing touches them.
 func invulnerable(f: Fighter) -> bool:
+	if f.down > 0:   # (lying down - nothing reaches them)
+		return true
 	if f.move == "" or f.stun > 0:
 		return false
 	var inv: Array = Moves.move(f.character, f.move).get("invuln", [])
@@ -485,6 +691,7 @@ func _resolve_hits() -> Dictionary:
 		f.move = ""
 		f.lock = CLASH_LOCK
 		f.vel.x = -f.facing * CLASH_PUSH
+		f.fc = mini(FC_MAX, f.fc + 1)
 		touched[f.id] = true
 		if f.id < (clashed[id] as Fighter).id:
 			_event("clash", f, clashed[id])
@@ -545,7 +752,7 @@ func _strike(a: Fighter, d: Fighter, e: Dictionary, d_kind: String, d_frame: int
 			a.stun = PARRY_STUN
 			a.vel = Vector2.ZERO
 			d.move = ""
-			d.meter += 15
+			_gain(d, PARRY_METER)
 			_event("parry", d, a)
 			return
 	if (d_kind == "guard" or d.blockstun > 0) and not reeling:
@@ -553,15 +760,16 @@ func _strike(a: Fighter, d: Fighter, e: Dictionary, d_kind: String, d_frame: int
 		d.hp -= chip
 		d.blockstun = int(e.get("block", 8))
 		d.vel.x = (signf(d.pos.x - a.pos.x) if e.get("away", false) and absf(d.pos.x - a.pos.x) > 1.0 else float(a.facing)) * 3.0
-		a.meter += 2
-		d.meter += 3
+		_gain(a, PARRY_METER / 3.0)
+		_gain(d, PARRY_METER / 3.0)
+		a.fc = mini(FC_MAX, a.fc + 1)
 		_event("block", a, d, chip)
 		return
 	if d.move != "" and dm.has("armor") and not reeling:
 		var arm: Array = dm["armor"]
 		if d_frame >= int(arm[0]) and d_frame <= int(arm[1]):
 			d.hp -= dmg
-			a.meter += dmg / 6
+			_gain(a, dmg * METER_PER_DMG)
 			_event("armor", a, d, dmg)
 			return
 	_hurt(a, d, e, "hit")
@@ -573,7 +781,7 @@ func _hurt(a: Fighter, d: Fighter, e: Dictionary, type: String) -> void:
 	var scale := 0.8 * pow((15.0 - c) / 15.0, 2.0) + 0.2
 	# a counter hit (they were mid-attack) does 10% more
 	var counter := type == "hit" and int(e["dmg"]) > 0 and d.move != "" and _kind(d) in ["attack", "super", "grab"]
-	var dmg := int(round(float(e["dmg"]) * scale * (1.1 if counter else 1.0)))
+	var dmg := int(round(float(e["dmg"]) * scale * (1.1 if counter else 1.0) * (1.5 if d.sadness > 0 else 1.0)))
 	d.hp -= dmg
 	# (the same move again in this combo stuns for less - a combo can last forever, but not on one move)
 	var used: Array = d.combo_used.get(a.move, [0, -1])
@@ -600,8 +808,16 @@ func _hurt(a: Fighter, d: Fighter, e: Dictionary, type: String) -> void:
 	if d.combo == LAUNCH_HIT and d.pos.y >= 0.0 and d.vel.y > -4.0:   # (the 7th hit on the ground always launches)
 		d.vel.y = -9.0
 	d.facing = -int(side)
-	a.meter += dmg / 5
-	d.meter += dmg / 8
+	_gain(a, dmg * METER_PER_DMG, d.combo)
+	_gain(d, dmg * METER_PER_DMG / 3.0, d.combo)
+	for f in [a, d]:   # (a melee hit: both their Free Cancels back, and their Sadness down)
+		f.fc = FC_MAX
+		if f.sadness == 0:
+			f.sad = maxi(SAD_MIN, f.sad - SAD_HIT)
+	if e.get("knockdown", false):   # (floored when they land - at once if they never leave the ground)
+		d.kd = true
+		if d.pos.y >= 0.0 and d.vel.y >= 0.0:
+			_floor(d)
 	# a landed attack frees the attacker at once (most do) - the next hit is a new turn
 	if type == "hit" and _kind(a) == "attack" and not bool(Moves.move(a.character, a.move).get("no_cancel", false)):
 		_cancels[a.id] = true
@@ -625,13 +841,17 @@ func _grab(a: Fighter, d: Fighter, e: Dictionary, kind: Dictionary, live: Dictio
 	return true
 
 
-## One tick's picture of every fighter, for playback: [x, y, facing, move, frame, state, hp, meter, burst gauge].
-## state: 0 free / in a move, 1 hit, 2 blocking, 3 locked, 4 KO.
+## One tick's picture of every fighter, for playback: [x, y, facing, move, frame, state, hp, meter, burst gauge, Free
+## Cancels, air options left, sad (0, 1 SAD!, 2 SADNESS!)].
+## state: 0 free / in a move, 1 hit, 2 blocking, 3 locked, 4 KO, 5 lying down.
 func record() -> Array:
 	var out: Array = []
 	for f in fighters:
-		var state := 4 if f.ko else (1 if f.stun > 0 else (2 if f.blockstun > 0 else (3 if f.lock > 0 else 0)))
-		out.append([f.pos.x, f.pos.y, f.facing, f.move, f.frame, state, f.hp, f.meter, f.burst])
+		var state := 4 if f.ko else (5 if f.down > 0 else (1 if f.stun > 0 else (2 if f.blockstun > 0 \
+				else (3 if f.lock > 0 else 0))))
+		var sad := 2 if f.sadness > 0 else (1 if f.sad_warned else 0)
+		out.append([f.pos.x, f.pos.y, f.facing, f.move, f.frame, state, f.hp, f.meter, f.burst, f.fc,
+			AIR_OPTIONS - f.air_moves, sad])
 	return out
 
 

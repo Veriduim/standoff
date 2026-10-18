@@ -72,6 +72,13 @@ one stage; each attack aims at a picked target.
 
   The rest is listed for 0.5.0 and later.
 
+- 19:02 "You can kind of burst a lot" -> 0.4.1: one Burst to start, refilling slowly (about one each a match).
+- 19:10 "Continue on with the other features. Same as before wiki for mechanics and then the videos and images for
+  looks and feel" -> 0.5.0: Free / Whiff Cancels, knockdowns and getting up, meter in bars, the round, Sadness, air
+  options (docs/mechanics.md). 19:12 "Remove the frame thing from the bottom. Also how do I decide how far I dash?" ->
+  the scrubber's gone; a Distance slider. 19:14 "How do I see how my and my opponents moves will interact?" -> tap an
+  opponent to guess their move; their ghost plays against yours. READY over your ghost (the YOMI screenshots).
+
 ## To tune / later
 - **Match length with 6:** bot matches take 120-270 decision points with 6 fighters (50-90 with 2). At ~10 s a decision
   that's far too long - lower HP or more damage with more players (a lobby setting), and a turn timer.
