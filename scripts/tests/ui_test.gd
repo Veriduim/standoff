@@ -210,16 +210,30 @@ func _test_full_matches() -> void:
 
 
 func _test_xfactor_screen() -> void:
-	_section("The x-factors on trial through the screen: switched on at home, on the cards, a whole match")
+	_section("The Dancer's own styles through the screen (Fans + Tempo, 23:31): on the cards, Undo, a whole match")
 	var g := _screen()
-	var saved: Dictionary = g.home.xf.duplicate()
-	g.home.xf = {"fans": true, "forms": true}
 	g.start_local(1, "ffa")
 	g._update_cards()
 	var ex := (g.cards.get_child(0).find_child("Extras", true, false) as RichTextLabel).text
-	_check("Fans + Forms on at home: the match has them, the cards show the form and the fans (%s)" % [g.sim.xf.keys()],
-			g.sim.xf.has("fans") and g.sim.xf.has("forms") and not g.sim.xf.has("tempo") and ex.contains("Flow")
-			and ex.contains("◆"))
+	_check("Fans + Tempo every match: the cards show her fans and beats (%s)" % [g.sim.xf.keys()],
+			g.sim.xf.has("fans") and g.sim.xf.has("tempo") and not g.sim.xf.has("forms") and ex.contains("◆")
+			and ex.contains("▮"))
+	g.bots.clear()
+	g.sim.fighters[0].pos.x = -60.0
+	g.sim.fighters[1].pos.x = 60.0
+	var t0: int = g.sim.tick
+	var hp0: int = g.sim.fighters[1].hp
+	g._commit({"move": "straight", "x": 1.0})
+	var wait_n := 0
+	while g.phase != "pick" and wait_n < 3000:
+		g.finish_playback()
+		wait_n += 1
+	var moved: bool = g.sim.tick > t0
+	var undo_shown: bool = g.pick.undo_btn.visible
+	g.undo()
+	_check("Undo (against bots): back to before your last pick (tick %d -> %d, their HP %d)" % [t0, g.sim.tick,
+			g.sim.fighters[1].hp], moved and undo_shown and g.sim.tick == t0 and g.sim.fighters[1].hp == hp0
+			and g.phase == "pick")
 	g.auto_me = true
 	g._next()
 	var guard := 0
@@ -227,7 +241,6 @@ func _test_xfactor_screen() -> void:
 		g.finish_playback()
 		guard += 1
 	_check("...and a whole match plays to the end", g.phase == "over")
-	g.home.xf = saved
 	g.queue_free()
 
 

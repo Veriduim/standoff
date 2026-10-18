@@ -17,7 +17,7 @@ const SETTINGS := "user://settings.cfg"
 const RULE_ROWS := [["turn", "Turn clock", 10, 120, 5, "%d s"], ["round", "Round", 20, 120, 10, "%d s"],
 	["start", "Start distance (1v1)", 0, 600, 50, "%d"], ["width", "Stage width", 1200, 3200, 200, "%d"],
 	["damage", "Damage", 0.5, 2.0, 0.25, "x%.2f"], ["hitstun", "Hitstun", 0.5, 2.0, 0.25, "x%.2f"],
-	["meter", "Starting meter", 0.0, 3.0, 0.5, "%.1f bars"]]
+	["meter", "Starting meter", 0.0, 3.0, 0.5, "%.1f bars"], ["ceiling", "Ceiling", 400, 2000, 100, "%d"]]
 const PRESETS := {"Default": {}, "Quick": {"round": 2400, "damage": 1.25}, "Thinking": {"turn": 90},
 	"Big stage": {"width": 2800}}
 const LIST_COLS := [440, 200, 120]   ## the list's columns: lobby name, version, players
@@ -274,12 +274,6 @@ func _on_status(state: String, detail: String) -> void:
 		"open":
 			note.text = ""
 			net.set_member({"status": "idle", "colour": my_colour, "match": ""})
-			if net.is_owner() and not (net.lobby.get("rules", {}) as Dictionary).has("xf"):   # (a new lobby: the
-				var cfg := ConfigFile.new()                                                 # styles switched on at home)
-				if cfg.load(SETTINGS) == OK and str(cfg.get_value("trial", "xf", "")) != "":
-					var rules := rules_now()
-					rules["xf"] = str(cfg.get_value("trial", "xf", ""))
-					_set_rules(rules)
 			_show("room")
 		"error", "closed":
 			note.text = detail
@@ -477,25 +471,6 @@ func _fill_rules() -> void:
 			more.custom_minimum_size = Vector2(46, 40)
 			row.add_child(more)
 		rules_box.add_child(row)
-	var xrow := HBoxContainer.new()   # (the Dancer's x-factors on trial - one, or two together)
-	xrow.add_theme_constant_override("separation", 4)
-	var xl := Ui.label("Dancer x-factor", 15, Color("#c9c9d6"))
-	xl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	xrow.add_child(xl)
-	var on := Sim.xf_set(str(rules.get("xf", "")))
-	if owner:
-		for k: String in Sim.XF:
-			var key := k
-			var xb := Ui.button(k.capitalize(), func() -> void: _toggle_xf(key), 14)
-			xb.name = "XF" + k.capitalize()
-			xb.toggle_mode = true
-			xb.set_pressed_no_signal(on.has(k))
-			xb.custom_minimum_size = Vector2(70, 40)
-			xrow.add_child(xb)
-	else:
-		var names := PackedStringArray(Sim.XF.filter(func(k: String) -> bool: return on.has(k)))
-		xrow.add_child(Ui.label(", ".join(names).capitalize() if not names.is_empty() else "none", 15, Color("#f2f2f7")))
-	rules_box.add_child(xrow)
 	if owner:
 		var pre := HBoxContainer.new()
 		pre.add_theme_constant_override("separation", 6)

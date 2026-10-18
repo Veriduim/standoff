@@ -124,9 +124,8 @@ func on_event(type: String, at: Vector2, face: float, dmg: int, by: Color, victi
 				var off := Vector2(face * _rng.randf_range(-20.0, 60.0), _rng.randf_range(-20.0, 30.0))
 				_add("wind", at + off, Vector2(face * _rng.randf_range(0.0, 80.0), -_rng.randf_range(650.0, 950.0)),
 						_rng.randf_range(0.35, 0.5), Color("#dff3ff"), _rng.randf_range(26.0, 44.0))
-		"beat":   # (Tempo: a beat - a pink tick)
-			_add("text", at + Vector2(0, -70), Vector2(0, -50), 0.45, Color("#ff7ab6"), 17.0)
-			parts[-1]["txt"] = "BEAT"
+		"beat":   # (Tempo: a beat - a small pink flick off her, no word: Tempo's always on now, it'd be noise)
+			_add("glint", at + Vector2(0, -40), Vector2(0, -60), 0.3, Color("#ff7ab6"), 14.0)
 		"onbeat":   # (Tempo full: ON BEAT!)
 			_add("shock", at, Vector2.ZERO, 0.3, Color("#ff7ab6"), 70.0)
 			_add("text", at + Vector2(0, -80), Vector2(0, -40), 0.9, Color("#ff7ab6"), 24.0)

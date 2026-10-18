@@ -19,6 +19,8 @@ extends Control
 ##     yours. Tap yourself (or Back to you) to carry on with your own. Guesses only change the preview.
 
 signal confirmed(choice: Dictionary)
+signal undone                ## Undo pressed (the game screen takes the turn back)
+var can_undo := false        ## (set by the game screen each turn: against bots, with a turn to go back to)
 
 const TAB_W := 96.0
 const COLS := 4
@@ -93,6 +95,7 @@ var boxes_btn: Button
 var cards := {}              ## the two pick cards along the bottom: "me" (yours, left) and "foe" (the enemy's, right)
 var confirm_btn: Button
 var hold_btn: Button
+var undo_btn: Button
 var info: Label
 
 
@@ -151,6 +154,9 @@ func _ready() -> void:
 	hold_btn.add_theme_color_override("font_color", Color("#f2f2f7"))
 	hold_btn.add_theme_color_override("font_disabled_color", Color("#4a4b57"))
 	side.add_child(hold_btn)
+	undo_btn = Ui.button("↶ Undo", func() -> void: undone.emit(), 16)   # (against bots: take back your last turn -
+	undo_btn.name = "Undo"                                              # top right, where Leave is online)
+	add_child(undo_btn)
 	confirm_btn = Ui.button("Confirm", func() -> void: _confirm(), 24)
 	confirm_btn.custom_minimum_size = Vector2(150, 0)
 	for st in ["normal", "hover", "focus"]:
@@ -189,6 +195,9 @@ func _layout() -> void:
 	var right := who != me   # (the drawer opens from the side whose tabs it is)
 	drawer.position = Vector2(vp.x - TAB_W - 14.0 - DRAWER_W if right else TAB_W + 14.0, Ui.CARD_H + 52.0)   # (under
 	drawer.size = Vector2(DRAWER_W, vp.y - BAR_H - Ui.CARD_H - 62.0)                                          # the banner)
+	if undo_btn != null:
+		undo_btn.position = Vector2(vp.x - 230.0, Ui.CARD_H + 44.0)
+		undo_btn.size = Vector2(100, 40)
 	bar.position = Vector2(0, vp.y - BAR_H)
 	bar.size = Vector2(vp.x, BAR_H)
 	info.position = Vector2(TAB_W + 20.0, Ui.CARD_H + 62.0)   # (top left, beside your tabs - the fighters stand low)
@@ -203,6 +212,7 @@ func open(the_sim: Sim, id: int, the_stage: StageView) -> void:
 	if not stage.fighter_tapped.is_connected(_on_tap):
 		stage.fighter_tapped.connect(_on_tap)
 	visible = true
+	undo_btn.visible = can_undo
 	guesses = {}
 	foe = _nearest_foe()
 	_build_tabs()
@@ -639,7 +649,7 @@ func _show_card(side: String) -> void:
 	if mid == "":   # (no guess for them yet)
 		icon.move_id = ""
 		icon.queue_redraw()
-		(k["label"] as Label).text = "%s\nno guess yet - their tabs" % fw.name
+		(k["label"] as Label).text = "%s\nWhat will they do?\nGuess with their tabs" % fw.name
 		for b in pad_grid.get_children():
 			if b is Button:
 				(b as Button).disabled = true

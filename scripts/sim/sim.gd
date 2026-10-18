@@ -97,7 +97,7 @@ const DEFAULT := {"move": "wait"}   ## a pick that never came (a turn timer ran 
 ## The match's rules (a lobby's owner sets them - YOMI's lobby rules panel; defaults = the game as it is). "xf": the
 ## Dancer's x-factors on trial, e.g. "fans,tempo" (Timmy 21:14 / 21:17 - one of them, or two together).
 const RULES := {"turn": 30, "round": 3600, "start": 0, "width": 1600, "damage": 1.0, "hitstun": 1.0, "meter": 0.0,
-	"xf": ""}
+	"xf": "fans,tempo", "ceiling": 900}   # (23:31: the Dancer is Fans + Tempo; the wiki's Ceiling Height)
 const XF := ["fans", "tempo", "forms"]
 const FANS_MAX := 2           ## Fans: in hand to start
 const FAN_OUT := 24           ## ...a thrown one flies out this long, then turns for home
@@ -127,6 +127,7 @@ var shots: Array = []    ## projectiles in flight: {id, owner, team, kind, pos, 
                          ## parry, height, grav, src}
 var _shot_n := 0
 var xf := {}             ## the x-factors on: "fans" / "tempo" / "forms" -> true
+var ceiling := 900.0     ## how high anyone can go (the wiki's Ceiling Height) - they bump their head on it
 
 
 ## "fans,tempo" -> {fans: true, tempo: true} (unknown names dropped).
@@ -150,6 +151,7 @@ static func create(players: Array, match_mode := "ffa", rules := {}) -> Sim:
 	s.dmg_mult = clampf(float(r["damage"]), 0.25, 4.0)
 	s.stun_mult = clampf(float(r["hitstun"]), 0.25, 4.0)
 	s.xf = xf_set(str(r["xf"]))
+	s.ceiling = clampf(float(r["ceiling"]), 300.0, 3000.0)
 	var n := players.size()
 	for i in n:
 		var p: Dictionary = players[i]
@@ -714,6 +716,10 @@ func _physics(f: Fighter) -> void:
 			f.vel.x *= CARRY if _in_startup(f) else FRICTION   # (an attack's startup slides on with her momentum)
 			if absf(f.vel.x) < 0.05:
 				f.vel.x = 0.0
+	if f.pos.y < -ceiling:   # (the ceiling: bump off it)
+		f.pos.y = -ceiling
+		if f.vel.y < 0.0:
+			f.vel.y = 0.0
 	var half := float(Moves.stats(f.character)["width"]) / 2.0
 	if absf(f.pos.x) > self.half - half:
 		f.pos.x = signf(f.pos.x) * (self.half - half)
@@ -842,6 +848,10 @@ func hurtbox(f: Fighter) -> Rect2:
 	var h := float(st["height"])
 	if xf.has("forms") and f.form == "floor" and f.stun == 0:   # (low on the floor - high hits pass over)
 		h = FLOOR_HEIGHT
+	if f.move != "" and f.stun == 0:   # (a low-profile move: ducked under high hits - the wiki's Low Profile)
+		var lp: Array = Moves.move(f.character, f.move).get("low_profile", [])
+		if not lp.is_empty() and f.frame >= int(lp[0]) and f.frame <= int(lp[1]):
+			h = FLOOR_HEIGHT
 	return Rect2(f.pos.x - w / 2.0, f.pos.y - h, w, h)
 
 
@@ -1345,7 +1355,7 @@ func to_dict() -> Dictionary:
 		flying.append(c)
 	return {"mode": mode, "tick": tick, "fighters": fighters.map(func(f: Fighter) -> Dictionary: return f.to_dict()),
 		"shots": flying, "shot_n": _shot_n, "half": half, "round": round_len, "dmg": dmg_mult, "stun": stun_mult,
-		"xf": ",".join(PackedStringArray(xf.keys()))}
+		"xf": ",".join(PackedStringArray(xf.keys())), "ceiling": ceiling}
 
 
 static func from_dict(d: Dictionary) -> Sim:
@@ -1357,6 +1367,7 @@ static func from_dict(d: Dictionary) -> Sim:
 	s.dmg_mult = float(d.get("dmg", 1.0))
 	s.stun_mult = float(d.get("stun", 1.0))
 	s.xf = xf_set(str(d.get("xf", "")))
+	s.ceiling = float(d.get("ceiling", 900.0))
 	for fd: Dictionary in d["fighters"]:
 		s.fighters.append(Fighter.from_dict(fd))
 	for sd: Dictionary in d.get("shots", []):

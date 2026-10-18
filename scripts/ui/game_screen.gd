@@ -45,6 +45,7 @@ var _shown := -1
 var _lag := {}               ## fighter id -> [HP shown by the white chunk, seconds before it drains, HP now]
 var _turn_left := 0.0        ## seconds left on your turn
 var _ask := ""               ## what your turn asks (the banner)
+var _history: Array = []     ## against bots: the match as it was at each of your picks (Undo - YOMI's single player)
 var _demo: Sim               ## the bot match behind the home screen
 var _demo_bots: Array = []
 var _demo_frames: Array = []
@@ -91,6 +92,7 @@ func _ready() -> void:
 	add_child(clock)
 	pick = PickPanel.new()
 	add_child(pick)
+	pick.undone.connect(undo)
 	pick.confirmed.connect(func(c: Dictionary) -> void:
 		if phase == "pick":
 			_commit(c))
@@ -241,7 +243,9 @@ func start_local(opponents: int, mode: String, colour := 0) -> void:
 		players.append({"name": "Bot %d" % (i + 1), "character": "dancer", "team": (i + 1) % 2})
 	if mode == "teams" and opponents < 2:
 		mode = "ffa"
-	sim = Sim.create(players, mode, {"xf": home.xf_rule()})   # (the x-factors switched on, on the home screen)
+	sim = Sim.create(players, mode)   # (the Dancer as she is: Fans + Tempo - 23:31)
+	_history.clear()
+	stage.ceiling = sim.ceiling
 	bots.clear()
 	for i in range(1, players.size()):
 		bots[i] = Bot.new(i * 7 + 3)
@@ -429,6 +433,7 @@ func start_online(nm: NetMatch) -> void:
 		return StageView.COLOURS[int(s.get("colour", 0)) % StageView.COLOURS.size()])
 	stage.you = me
 	stage.half = sim.half
+	stage.ceiling = sim.ceiling
 	stage.time_scale = speed
 	stage.show_tick(sim.record(), [], sim.record_shots())
 	_lag.clear()
@@ -547,12 +552,29 @@ func _next() -> void:
 			if sim.enemies(f, g) and not g.actionable() and not sim.interruptible(g) and g.busy() > 0:   # (+N)
 				adv[g.id] = g.busy()
 		stage.advantage = adv
+		pick.can_undo = can_undo()
 		pick.open(sim, me, stage)
 		_stage_band()
 		if net_match != null and net_match.is_host():
 			net_match.open_turn(sim)
 	else:
 		_commit({})
+
+
+## Undo (against bots only): back to your last pick - the match as it was, everyone's ghosts and cards with it.
+func undo() -> void:
+	if net_match != null or _history.is_empty() or phase != "pick":
+		return
+	sim = Sim.from_dict(_history.pop_back())
+	pick.close()
+	stage.fx.clear()
+	stage.show_tick(sim.record(), [], sim.record_shots())
+	_update_cards()
+	_next()
+
+
+func can_undo() -> bool:
+	return net_match == null and not _history.is_empty()
 
 
 ## The line over the stage on your turn, with the seconds left.
@@ -570,6 +592,10 @@ func _commit(mine: Dictionary) -> void:
 		banner.text = "Waiting for the others..."
 		net_match.submit(me, mine if not mine.is_empty() else {"move": "hold"}, sim.tick)
 		return
+	if not auto_me and sim.deciders().has(me):   # (Undo: the match as it was before this pick)
+		_history.append(sim.to_dict())
+		if _history.size() > 40:
+			_history.pop_front()
 	var picks := {}
 	for id in sim.deciders():
 		if id == me and not mine.is_empty():

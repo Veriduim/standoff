@@ -44,6 +44,7 @@ var cam := Vector2(0, -120)
 var view_top := 70.0        ## the screen area the stage may use (under the cards, above the bar, left of the tabs -
 var view_bottom := 680.0    ## the screens set it)
 var view_left := 0.0
+var ceiling := 900.0         ## (the match's ceiling, for its line)
 var view_right := 1280.0
 var ghost_play := true      ## the ghost loops; false = held on the scrubbed frame, everyone's predicted spot shown
 var show_boxes := false     ## hurt boxes (outlines) and live hit boxes (red) - testing the frames
@@ -202,6 +203,10 @@ func hurt_rect(i: int, r: Array) -> Rect2:
 	var h := float(st["height"])
 	if r.size() > 14 and int(r[14]) == 2 and int(r[5]) != 1:   # (the Floor form: low)
 		h = Sim.FLOOR_HEIGHT
+	if int(r[5]) == 0 and str(r[3]) != "":   # (a low-profile move)
+		var lp: Array = Moves.move(_char(i), str(r[3])).get("low_profile", [])
+		if not lp.is_empty() and int(r[4]) >= int(lp[0]) and int(r[4]) <= int(lp[1]):
+			h = Sim.FLOOR_HEIGHT
 	return Rect2(float(r[0]) - w / 2.0, float(r[1]) - h, w, h)
 
 
@@ -356,8 +361,11 @@ func _draw() -> void:
 	var wr := w2s(Vector2(half, 0)).x
 	draw_rect(Rect2(wl - vp.x, -20, vp.x, vp.y + 40), BEYOND)
 	draw_rect(Rect2(wr, -20, vp.x, vp.y + 40), BEYOND)
+	var top_y := w2s(Vector2(0, -ceiling)).y   # (the ceiling - a faint line where heads bump)
 	for wx in [wl, wr]:
-		draw_line(Vector2(wx, -20), Vector2(wx, floor_y), WALL, 3.0)
+		draw_line(Vector2(wx, maxf(-20.0, top_y)), Vector2(wx, floor_y), WALL, 3.0)
+	if top_y > -10.0:
+		draw_line(Vector2(wl, top_y), Vector2(wr, top_y), Color(WALL, 0.6), 2.0)
 	# the floor: one white line, a mark every 100 px (longer every 400) so distance reads
 	draw_line(Vector2(wl, floor_y), Vector2(wr, floor_y), LINE, 3.0)
 	var steps := int(half / 100.0)

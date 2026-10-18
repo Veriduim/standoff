@@ -21,9 +21,10 @@ func run(game: Control, arg: String) -> void:
 	var list := arg.get_slice(":", arg.get_slice_count(":") - 1).split(",", false)
 	DirAccess.make_dir_recursive_absolute(out)
 	var beats := 0
+	var styles := ""
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--xf="):
-			game.home.xf = Sim.xf_set(a.trim_prefix("--xf="))
+			styles = a.trim_prefix("--xf=")
 		elif a.begins_with("--beats="):
 			beats = int(a.trim_prefix("--beats="))
 	for item in list:
@@ -35,6 +36,8 @@ func run(game: Control, arg: String) -> void:
 		game.sim.fighters[1].burst = 0
 		game.sim.fighters[0].meter = Sim.METER_MAX   # (supers too)
 		game.sim.fighters[0].tempo = beats
+		if styles != "":
+			game.sim.xf = Sim.xf_set(styles)
 		game.sim.fighters[0].pos = Vector2(-gap / 2.0, 0.0)
 		game.sim.fighters[1].pos = Vector2(gap / 2.0, 0.0)
 		game.sim.fighters[0].facing = 1

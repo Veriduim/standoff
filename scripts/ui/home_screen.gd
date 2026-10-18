@@ -15,10 +15,6 @@ var colour := 0
 var opponents := 3
 var mode := "ffa"
 var pixel := false   ## the pixel look (Timmy 18:35 - pick 2 from the YOMI study, as a switch); kept between plays
-## The Dancer's x-factors on trial (Timmy 21:14 "Can we try the fans, temp and dance forms? Maybe combine two of them
-## honestly"; 21:17 "We may pick one or a combination of two"): switched on here, any mix; kept between plays.
-var xf := {}
-var xf_panel: PanelContainer
 
 var dim: ColorRect
 var card: PanelContainer
@@ -118,64 +114,14 @@ func _ready() -> void:
 	for s in ["normal", "hover", "focus"]:
 		lobbies.add_theme_stylebox_override(s, Ui.box(Color("#2b4f8a"), 12))
 	v.add_child(lobbies)
-	var ver := Ui.label(VERSION + "  ·  one fighter for now: the Dancer", 15, Color("#6b6b78"))
+	var ver := Ui.label(VERSION + "  ·  the Dancer: her war fans and her Tempo", 15, Color("#6b6b78"))
 	ver.name = "Version"
 	add_child(ver)
-	_build_xf()
 	var saved := ConfigFile.new()   # (your colour, kept between plays - 21:37 "remember the last option we choice")
 	_set_colour(int(saved.get_value("home", "colour", 0)) if saved.load(SETTINGS) == OK else 0)
 	_set_count(3)
 	get_viewport().size_changed.connect(_layout)
 	_layout()
-
-
-## Bottom left: DANCER'S X-FACTOR (trying out) - Fans / Tempo / Forms, each on or off.
-func _build_xf() -> void:
-	var cfg := ConfigFile.new()
-	if cfg.load(SETTINGS) == OK:
-		xf = Sim.xf_set(str(cfg.get_value("trial", "xf", "")))
-	xf_panel = PanelContainer.new()
-	var st := Ui.box(Color("#15161ee0"), 14)
-	st.set_content_margin_all(14)
-	st.border_color = Color("#2c2f3c")
-	st.set_border_width_all(2)
-	xf_panel.add_theme_stylebox_override("panel", st)
-	add_child(xf_panel)
-	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", 8)
-	xf_panel.add_child(v)
-	v.add_child(_heading("DANCER'S X-FACTOR  ·  TRYING OUT (ONE, OR TWO TOGETHER)"))
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 8)
-	v.add_child(row)
-	var tips := {"fans": "Fans", "tempo": "Tempo", "forms": "Forms"}
-	for k: String in Sim.XF:
-		var key := k
-		var b := Ui.button(str(tips[k]), func() -> void: _toggle_xf(key), 20)
-		b.name = "XF" + str(tips[k])
-		b.toggle_mode = true
-		b.button_pressed = xf.has(k)
-		b.custom_minimum_size = Vector2(140, 50)
-		b.add_theme_stylebox_override("pressed", Ui.box(Color("#7a3d8f"), 10))
-		b.add_theme_stylebox_override("hover_pressed", Ui.box(Color("#8c4aa3"), 10))
-		b.add_theme_stylebox_override("normal", Ui.box(Color("#1e2029"), 10))
-		row.add_child(b)
-
-
-func _toggle_xf(k: String) -> void:
-	if xf.has(k):
-		xf.erase(k)
-	else:
-		xf[k] = true
-	var cfg := ConfigFile.new()
-	cfg.load(SETTINGS)
-	cfg.set_value("trial", "xf", xf_rule())
-	cfg.save(SETTINGS)
-
-
-## The rules' "xf": "fans,tempo" (in Sim.XF's order).
-func xf_rule() -> String:
-	return ",".join(PackedStringArray(Sim.XF.filter(func(k: String) -> bool: return xf.has(k))))
 
 
 func _heading(text: String) -> Label:
@@ -235,9 +181,7 @@ func _layout() -> void:
 	title.size = Vector2(maxf(300.0, card.position.x - 60.0), vp.y)
 	var ver := get_node("Version") as Label
 	ver.position = Vector2(24, vp.y - 36)
-	if xf_panel != null:
-		xf_panel.reset_size()
-		xf_panel.position = Vector2(30, vp.y - xf_panel.size.y - 52)
+
 
 
 ## The title: STANDOFF over two fighters squaring off - you (your colour) and a rival.

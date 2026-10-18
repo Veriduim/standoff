@@ -566,15 +566,13 @@ func _test_movement() -> void:
 	_check("Fans: Fan Step blinks her to her thrown fan and she catches it (from %.0f to %.0f, the fan at %.0f, fans %d)"
 			% [from, s.fighters[0].pos.x, fan_x, s.fighters[0].fans], can and absf(s.fighters[0].pos.x - fan_x) < 30.0
 			and s.fighters[0].pos.x - from > 100.0 and s.fighters[0].fans == 2 and s.shots.is_empty())
-	s = _xf("forms", 600.0)
-	s.apply({0: {"move": "snapform"}, 1: {"move": "wait"}})
-	s.run_segment()
+	s = _xf("fans,tempo", 600.0)
 	var x0 := s.fighters[0].pos.x
 	var has_step := s.legal_moves(0).has("snapstep")
 	s.apply({0: {"move": "snapstep", "x": 1.0}})
 	for _i in 10:
 		s.step()
-	_check("Forms: Snap Step - a quick sharp step in the Snap form (%.0f px)" % (s.fighters[0].pos.x - x0),
+	_check("Snap Step - a quick sharp step, now in her normal kit (%.0f px)" % (s.fighters[0].pos.x - x0),
 			has_step and s.fighters[0].pos.x - x0 > 50.0)
 	var slow := _xf("tempo", 900.0)
 	var fast := _xf("tempo", 900.0)
@@ -586,6 +584,51 @@ func _test_movement() -> void:
 	_check("Tempo: on the beat she moves faster (a dash: %.0f px, at four beats %.0f px)"
 			% [slow.fighters[0].pos.x + 450.0, fast.fighters[0].pos.x + 450.0],
 			fast.fighters[0].pos.x > slow.fighters[0].pos.x + 15.0)
+
+
+func _test_wiki_mechanics_2() -> void:
+	_section("More of the wiki (23:34): Air Fan is an air option, the Ceiling, Land Cancel, Low Profile")
+	var s := _duel("dancer", "dancer", 600.0)
+	s.fighters[0].pos.y = -300.0
+	s.fighters[0].fans = 2
+	var fans_thrown := 0
+	for _i in 6:   # (throw Air Fans as often as she's allowed before she lands)
+		if s.legal_moves(0).has("airfan"):
+			s.apply({0: {"move": "airfan", "x": 1.0, "y": 1.0}})
+			fans_thrown += 1
+		for _t in 22:
+			s.step()
+	_check("Air Fan uses an air option - two before she lands, and she falls (%d thrown, y %.0f)" % [fans_thrown,
+			s.fighters[0].pos.y], fans_thrown <= 2 and s.fighters[0].pos.y > -300.0)
+	s = _duel("dancer", "dancer", 600.0)
+	var top := 0.0
+	s.apply({0: {"move": "superjump", "x": 0.0, "y": -1.0}, 1: {"move": "wait"}})
+	for _i in 30:
+		s.step()
+		if s.fighters[0].air_moves < Sim.AIR_OPTIONS and s.legal_moves(0).has("airjump"):
+			s.apply({0: {"move": "airjump", "x": 0.0, "y": -1.0}})
+		top = minf(top, s.fighters[0].pos.y)
+	s.fighters[0].vel.y = -60.0   # (a launch far too strong)
+	for _i in 5:
+		s.step()
+		top = minf(top, s.fighters[0].pos.y)
+	_check("the Ceiling (the wiki's rules): nobody goes above it (highest %.0f, ceiling %.0f)" % [-top, s.ceiling],
+			-top <= s.ceiling + 0.5)
+	s = _duel("dancer", "dancer", 600.0)
+	s.fighters[0].pos.y = -20.0
+	s.fighters[0].vel.y = 4.0
+	s.apply({0: {"move": "airspin", "x": 1.0}, 1: {"move": "wait"}})
+	for _i in 8:
+		s.step()
+	_check("Land Cancel: an air attack ends as she lands, a little landing lag instead (move '%s', lock %d)"
+			% [s.fighters[0].move, s.fighters[0].lock], s.fighters[0].grounded() and s.fighters[0].move == ""
+			and s.fighters[0].lock > 0 or s.fighters[0].move == "" and s.fighters[0].grounded())
+	s = _duel("dancer", "dancer", 70.0)
+	s.fighters[0].burst = 0
+	s.apply({0: {"move": "glide", "x": 1.0, "dist": 0.0}, 1: {"move": "straight", "x": -1.0}})
+	var evs: Array = s.run_segment()["events"]
+	var hit_on_me: bool = evs.any(func(e: Dictionary) -> bool: return str(e["type"]) == "hit" and int(e["d"]) == 0)
+	_check("Low Profile: Silk Glide ducks under a Straight (%s)" % [_types(evs)], not hit_on_me)
 
 
 ## Two Dancers with these x-factors on (Sim RULES "xf"), gap apart, facing each other.
@@ -614,11 +657,13 @@ func _steps(s: Sim, ticks: int, done := Callable()) -> bool:
 
 func _test_xfactors() -> void:
 	_section("The Dancer's x-factors on trial (Timmy 21:14): Fans, Tempo, Forms - each a rule, two together")
-	var plain := _duel()
-	var trial := ["fanslash", "recall", "encore", "snapform", "floorform", "pop", "snapkick", "windmill", "kipup",
-		"floorslide"]
-	_check("off by default: none of their moves are there", trial.all(func(m: String) -> bool:
+	var plain := _xf("")
+	var trial := ["fanslash", "recall", "encore", "snapform", "floorform", "pop", "snapkick", "kipup", "floorslide"]
+	_check("with none on: none of their moves are there", trial.all(func(m: String) -> bool:
 			return not plain.legal_moves(0).has(m)))
+	var dancer := _duel()
+	_check("the Dancer's own: Fans + Tempo on by default (23:31), Forms off", dancer.xf.has("fans")
+			and dancer.xf.has("tempo") and not dancer.xf.has("forms"))
 	# ---- Fans
 	var s := _xf("fans", 260.0)
 	s.fighters[1].burst = 0
@@ -682,7 +727,7 @@ func _test_xfactors() -> void:
 	s = _xf("forms", 60.0)
 	_check("Forms: Snap / Floor Form there, Flow Form not (in it), their moves not yet", s.legal_moves(0).has("snapform")
 			and s.legal_moves(0).has("floorform") and not s.legal_moves(0).has("flowform")
-			and not s.legal_moves(0).has("pop") and not s.legal_moves(0).has("windmill"))
+			and not s.legal_moves(0).has("pop") and not s.legal_moves(0).has("kipup"))
 	s.apply({0: {"move": "floorform"}, 1: {"move": "wait"}})
 	s.run_segment()
 	var lm := s.legal_moves(0)
