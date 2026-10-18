@@ -17,6 +17,9 @@ const DEFAULT_URL := "wss://standoff-relay.blissfulzephyr.workers.dev"
 static var url := DEFAULT_URL
 static var use_loop := false
 var reached := true          ## the last list fetch got an answer from the server
+var last_code := ""          ## the lobby this phone was in, and the name it used - to get back in (00:11)
+var last_name := ""
+var want_back := false       ## in a lobby, not left on purpose: rejoin when the phone comes back / the line drops
 
 var id := 0                  ## this phone's number in the lobby
 var owner_id := 0
@@ -45,6 +48,8 @@ func join(code: String, my_name: String) -> void:
 
 
 func _open(code: String, q: Dictionary) -> void:
+	last_code = code
+	last_name = str(q["name"])
 	id = 0
 	members.clear()
 	log.clear()
@@ -105,7 +110,22 @@ func on_channel(ch: String, msg: Dictionary) -> void:
 	send({"t": "chan", "ch": ch, "msg": msg})
 
 
+## Back into the lobby this phone was in (the same code and name) - after the app was put aside or the line dropped.
+func rejoin() -> void:
+	if last_code != "" and not in_lobby():
+		join(last_code, last_name)
+
+
+## The phone back from another app: if the lobby was lost meanwhile, straight back in.
+func _notification(what: int) -> void:
+	if what in [NOTIFICATION_APPLICATION_RESUMED, NOTIFICATION_APPLICATION_FOCUS_IN] and want_back and ws == null \
+			and not in_lobby() and not use_loop:
+		status.emit("reconnecting", "")
+		rejoin()
+
+
 func leave() -> void:
+	want_back = false
 	if loop != null:
 		loop.leave(self)
 		loop = null
@@ -179,6 +199,7 @@ func _handle(d: Dictionary) -> void:
 			members.clear()
 			for m: Dictionary in d["members"]:
 				members[int(m["id"])] = {"name": str(m["name"]), "data": m.get("data", {})}
+			want_back = true
 			status.emit("open", "")
 		"joined":
 			members[int(d["id"])] = {"name": str(d["name"]), "data": {}}

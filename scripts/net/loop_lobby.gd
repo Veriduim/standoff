@@ -12,6 +12,9 @@ var members: Array = []      ## [{id, name, data, subs: [], net: LobbyNet}]
 var _next := 0
 
 
+const GRACE_MS := 120000   ## an empty lobby waits this long for someone to come back (Timmy 00:11)
+
+
 static func list() -> Array:
 	var out: Array = []
 	for c in lobbies:
@@ -41,7 +44,7 @@ static func connect_net(net: LobbyNet, room: String, q: Dictionary) -> bool:
 				"public": bool(q.get("public", true)), "max": clampi(int(q.get("max", 8)), 2, 16),
 				"version": str(q.get("v", "?")), "owner": 0, "rules": {}}
 			lobbies[room] = l
-	elif l == null or l.members.is_empty():
+	elif l == null or (l.members.is_empty() and Time.get_ticks_msec() - int(l.meta.get("empty_at", -999999)) > GRACE_MS):
 		err = "No lobby with that code"
 	elif l.members.size() >= int(l.meta["max"]):
 		err = "That lobby is full"
@@ -118,8 +121,8 @@ func leave(net: LobbyNet) -> void:
 		return
 	members.erase(me)
 	_all({"t": "left", "id": me["id"]})
-	if members.is_empty():
-		lobbies.erase(code)
+	if members.is_empty():   # (it waits GRACE_MS for them to come back, off the list - as the server does)
+		meta["empty_at"] = Time.get_ticks_msec()
 	elif int(meta["owner"]) == int(me["id"]):
 		var ids: Array = members.map(func(m: Dictionary) -> int: return int(m["id"]))
 		meta["owner"] = ids.min()

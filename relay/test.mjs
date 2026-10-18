@@ -67,6 +67,12 @@ for (const s of [ana, ben, four]) s.close();
 await sleep(500);
 const after = await (await fetch(HTTP + "/lobbies")).json();
 check("the empty lobby leaves the list", !after.some((l) => l.code === code));
+const back = await open(`/lobby/${code}?name=Timmy`);
+await sleep(400);
+check("an empty lobby waits for them to come back (Timmy 00:11 - the phone put aside)", has(back, (m) => m.t === "welcome"
+  && m.owner === m.id));
+back.close();
+await sleep(300);
 const failed = results.filter((r) => !r[1]).length;
 console.log(`${results.length - failed}/${results.length} lobby checks passed`);
 process.exit(failed ? 1 : 0);

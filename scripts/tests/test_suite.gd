@@ -16,7 +16,7 @@ func run() -> void:
 	for m in get_method_list():
 		var n: String = m["name"]
 		if n.begins_with("_test_"):
-			call(n)
+			await call(n)   # (a test may wait for real time - the rejoin's retries)
 			_close()
 
 

@@ -80,7 +80,7 @@ the rules of play. The names, art, characters and code are not ours to take, and
 | Momentum | Ninja's Boost and momentum carry into attacks; Beating Backdash | An attack started on the move slides on through its startup (`CARRY`), and its lunge never slows a faster slide |
 | Attack distance | (dash distance) | Distance on the lunging attacks (Straight, Side Kick, Sweep, Knee Dash, Silk Glide) |
 | Ceiling | Rules: Ceiling Height 800 | Rule "ceiling", 900 by default (in the lobby rules); heads bump off it; a faint line shows it |
-| Air options | Air jump / air dash, 2 a jump | Air Fan uses one too (23:34 "Air Fan spam!!!") and only hangs briefly |
+| Air options | Air jump / air dash, 2 a jump; air attacks keep falling | Air Fan no longer hangs - she keeps falling as she throws (23:34 "Air Fan spam!!!", 00:09 "We should fall"); two fans limit it |
 | Land Cancel | Landing ends the move with a little landing lag | Air Kick, Air Knee, Air Spin, Air Throw, Air Fan (Dive Kick already) |
 | Low Profile | The hurtbox goes low; high hits pass over | Sweep, Silk Glide, Windmill (`low_profile`) |
 | Undo | Single player only: undo a turn | ↶ Undo at the top right against bots (up to 40 turns back) |

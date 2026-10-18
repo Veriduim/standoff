@@ -52,7 +52,8 @@ var modal_body: VBoxContainer
 
 var _out := {}                ## my match invite going out: {ch, invited: [ids], answers: {id: true/false}, bots, mode}
 var _in := {}                 ## the invite I'm looking at: {from, ch, ...}
-var _waiting: NetMatch        ## accepted - waiting for the host to start
+var _waiting: NetMatch
+var _tries := 0               ## reconnect tries since the line dropped        ## accepted - waiting for the host to start
 
 
 func _ready() -> void:
@@ -273,9 +274,21 @@ func _on_status(state: String, detail: String) -> void:
 	match state:
 		"open":
 			note.text = ""
+			_tries = 0
 			net.set_member({"status": "idle", "colour": my_colour, "match": ""})
 			_show("room")
+		"reconnecting":
+			code_label.text = "Reconnecting to lobby %s..." % net.last_code
+		"closed" when net.want_back and _tries < 8:   # (the line dropped / the phone was put aside: back in, 00:11)
+			_tries += 1
+			code_label.text = "Reconnecting to lobby %s..." % net.last_code
+			get_tree().create_timer(0.3 if _tries == 1 else 1.5).timeout.connect(func() -> void:
+				if not net.in_lobby() and net.want_back:
+					net.rejoin())
 		"error", "closed":
+			if net.want_back and view == "room":   # (it couldn't get back in - the lobby's gone)
+				net.want_back = false
+				detail = "That lobby closed while you were away"
 			note.text = detail
 			if view == "room":
 				_show("list")
@@ -300,8 +313,16 @@ func _build_room() -> void:
 	room_view.add_child(mid)
 	title = Ui.label("", 26, Color("#f2f2f7"))
 	mid.add_child(title)
+	var code_row := HBoxContainer.new()
+	code_row.add_theme_constant_override("separation", 8)
+	mid.add_child(code_row)
 	code_label = Ui.label("", 16, Color("#a7a7b8"))
-	mid.add_child(code_label)
+	code_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	code_row.add_child(code_label)
+	var copy := Ui.button("Copy code", func() -> void: _copy_code(), 15)   # (send it without the lobby going - 00:11)
+	copy.name = "CopyCode"
+	copy.custom_minimum_size = Vector2(0, 38)
+	code_row.add_child(copy)
 	mid.add_child(Ui.label("MATCHES", 15, Color("#8a8a9c")))
 	matches_box = _scroll_list(mid)
 	var new_match := _main(Ui.button("New match...", func() -> void: _new_match(), 20))
@@ -349,6 +370,18 @@ func _scroll_list(parent: Control) -> VBoxContainer:
 	v.add_theme_constant_override("separation", 6)
 	s.add_child(v)
 	return v
+
+
+func _copy_code() -> void:
+	var code := str(net.lobby.get("code", ""))
+	if code == "":
+		return
+	DisplayServer.clipboard_set(code)
+	var b := room_view.find_child("CopyCode", true, false) as Button
+	b.text = "Copied %s" % code
+	get_tree().create_timer(2.0).timeout.connect(func() -> void:
+		if is_instance_valid(b):
+			b.text = "Copy code")
 
 
 func _send_chat() -> void:

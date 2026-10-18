@@ -190,8 +190,8 @@ const DANCER := {
 				"kb": [4.0, -2.0], "block": 8, "chip": 2, "life": 70},
 			"pose": [[0, "throw_wind"], [8, "throw_out"], [17, "idle"]], "icon": "throw_out"},
 		"airfan": {"name": "Air Fan", "tab": "special", "kind": "special", "fans": 1, "frames": 20, "where": "air",
-			"aim": "down", "air_option": true, "land_ends": true, "landing": 4,
-			"motion": [[0, 7, 0.0, 0.0]],   # (a brief hang, then she falls - 23:34 "Air Fan spam!!!")
+			"aim": "down", "land_ends": true, "landing": 4,   # (she keeps falling as she throws - YOMI's way; the two
+			# fans are its limit - 23:34 "Air Fan spam!!!", 00:09 "We should fall")
 			"spawn": {"at": 6, "kind": "fan", "speed": 11.0, "from": [24, -60], "box": [26, 20], "dmg": 18, "stun": 14,
 				"kb": [3.0, 2.0], "block": 8, "chip": 2, "life": 50},
 			"pose": [[0, "throw_wind"], [6, "throw_out"], [14, "fall"]], "icon": "throw_out"},

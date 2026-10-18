@@ -19,8 +19,8 @@ are study only.
   - Ground Ripple runs along the floor (low, can't be parried);
   - Recall turns her fans home;
   - Fan Step blinks her to a thrown fan.
-- **Zoning isn't running away.** While a fan of hers is in the air, Sadness doesn't build. Without this, YOMI's anti-
-  passivity rule would punish the thing she's built to do.
+- **Sadness:** as for anyone (00:06-00:09: YOMI's universal rules stay faithful; its zoners, Cowboy and Wizard, live
+  with it too). Her fan's edge rewards spacing instead.
 - **Getting out:** Silk Glide (low profile, passes under projectiles), Snap Step, Sway, Dodge.
 - **Tempo:** beats from landing, being blocked or dodging through a hit. Each beat adds damage and movement speed.
   At four she gets Encore.
@@ -30,7 +30,7 @@ are study only.
   and leave her 3 worse on block. She wants space, not a brawl.
 - **No fan, no guard.** With both fans out she blocks worse: chip x1.5 and blockstun +3. She also can't use Fan Throw,
   Air Fan or Fan Slash until a fan comes home or she catches one with Fan Step.
-- **Two fans only** (`FANS_MAX`). Air Fan also uses an air option, two a jump.
+- **Two fans only** (`FANS_MAX`). She keeps falling while she throws an Air Fan, as in YOMI.
 - **Light:** 450 HP and weight 0.85, so she flies further and dies sooner when she's caught.
 - **Losing the beat:** getting hit drops all her Tempo, and beats fade when she isn't landing anything.
 

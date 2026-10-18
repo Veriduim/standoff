@@ -18,6 +18,7 @@
 
 const CODE = /^\/lobby\/([0-9]{4,6})$/;
 const MAX_MEMBERS = 16;
+const GRACE = 120 * 1000;   // an empty lobby waits this long for someone to come back (Timmy 00:11)
 const STALE_MS = 3 * 60 * 1000;
 const json = (d, status = 200) => new Response(JSON.stringify(d), {
   status, headers: { "content-type": "application/json", "access-control-allow-origin": "*" },
@@ -128,7 +129,8 @@ export class Lobby {
         max: Math.max(2, Math.min(MAX_MEMBERS, parseInt(p.get("max") || "8", 10) || 8)),
         version: (p.get("v") || "?").slice(0, 16), owner: 0, rules: {},
       };
-    } else if (!meta || socks.length === 0) error = "No lobby with that code";
+    } else if (!meta || (socks.length === 0 && !(meta.empty_at && Date.now() - meta.empty_at < GRACE)))
+      error = "No lobby with that code";
     else if (socks.length >= meta.max) error = "That lobby is full";
     if (error) {
       this.send(server, { t: "error", msg: error });
@@ -138,6 +140,7 @@ export class Lobby {
     const id = ((await this.ctx.storage.get("next")) || 0) + 1;
     await this.ctx.storage.put("next", id);
     if (!meta.owner || socks.length === 0) meta.owner = id;
+    delete meta.empty_at;
     await this.ctx.storage.put("meta", meta);
     server.serializeAttachment({ id, name, data: {}, subs: [] });
     this.send(server, { t: "welcome", id, owner: meta.owner, lobby: meta, members: this.members() });
@@ -150,8 +153,13 @@ export class Lobby {
   async alarm() {
     const meta = await this.meta();
     const n = this.open().length;
+    if (n === 0) {   // (empty: closed once its wait is over)
+      if (!meta || !meta.empty_at || Date.now() - meta.empty_at >= GRACE - 1000) await this.ctx.storage.deleteAll();
+      else await this.ctx.storage.setAlarm(meta.empty_at + GRACE);
+      return;
+    }
     if (meta) await this.listing(meta, n);
-    if (n > 0) await this.ctx.storage.setAlarm(Date.now() + 60 * 1000);
+    await this.ctx.storage.setAlarm(Date.now() + 60 * 1000);
   }
 
   async webSocketMessage(ws, msg) {
@@ -216,9 +224,11 @@ export class Lobby {
     this.all({ t: "left", id: me.id }, ws);
     const meta = await this.meta();
     if (!meta) return;
-    if (others.length === 0) {
+    if (others.length === 0) {   // (the last one out: off the list, but it waits GRACE for them to come back -
+      meta.empty_at = Date.now();  // a phone put aside to send the code, 00:11)
+      await this.ctx.storage.put("meta", meta);
       await this.listing(meta, 0);
-      await this.ctx.storage.deleteAll();
+      await this.ctx.storage.setAlarm(meta.empty_at + GRACE);
       return;
     }
     if (meta.owner === me.id) {   // the owner left - the next one in takes over

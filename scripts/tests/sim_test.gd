@@ -600,8 +600,8 @@ func _test_wiki_mechanics_2() -> void:
 			fans_thrown += 1
 		for _t in 22:
 			s.step()
-	_check("Air Fan uses an air option - two before she lands, and she falls (%d thrown, y %.0f)" % [fans_thrown,
-			s.fighters[0].pos.y], fans_thrown <= 2 and s.fighters[0].pos.y > -300.0)
+	_check("Air Fan: she keeps falling as she throws, two fans at most before she lands (%d thrown, y %.0f)"
+			% [fans_thrown, s.fighters[0].pos.y], fans_thrown <= 2 and s.fighters[0].pos.y > -300.0)
 	s = _duel("dancer", "dancer", 600.0)
 	var top := 0.0
 	s.apply({0: {"move": "superjump", "x": 0.0, "y": -1.0}, 1: {"move": "wait"}})
@@ -634,7 +634,7 @@ func _test_wiki_mechanics_2() -> void:
 
 
 func _test_spacer() -> void:
-	_section("The Dancer, a spacer (Timmy 23:59): the fan's edge, point blank weaker, zoning isn't Sadness, her limits")
+	_section("The Dancer, a spacer (Timmy 23:59): the fan's edge, point blank weaker, her limits")
 	var far := _duel("dancer", "dancer", 95.0)
 	far.fighters[1].burst = 0
 	far.apply({0: {"move": "sidekick", "x": 1.0, "dist": 0.0}, 1: {"move": "wait"}})
@@ -648,19 +648,6 @@ func _test_spacer() -> void:
 	_check("a Side Kick at the fan's edge hits harder than point blank (%s vs %s)" % [hf, hn], not hf.is_empty()
 			and not hn.is_empty() and int(hf[0].get("spot", 0)) == 1 and int(hn[0].get("spot", 0)) == -1
 			and int(hf[0]["dmg"]) > int(hn[0]["dmg"]))
-	var z := _duel("dancer", "dancer", 700.0)
-	z.fighters[0].sad = 100
-	z.apply({0: {"move": "fan", "x": 1.0}, 1: {"move": "wait"}})
-	var sad_first := -1
-	var sad_max := 0
-	for _i in 40:
-		z.step()
-		if not z.shots.is_empty():
-			if sad_first < 0:
-				sad_first = z.fighters[0].sad
-			sad_max = maxi(sad_max, z.fighters[0].sad)
-	_check("Sadness doesn't build while her fan's in the air (%d when it left her hand, at most %d after)"
-			% [sad_first, sad_max], sad_first >= 0 and sad_max <= sad_first)
 	var t := _duel("dancer", "dancer", 600.0)
 	var thrown := 0
 	for _i in 4:

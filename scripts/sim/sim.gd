@@ -635,8 +635,6 @@ func _upkeep(f: Fighter) -> void:
 			f.sad = 0
 	elif f.stun == 0 and f.down == 0:
 		var d := 1 + (2 if v < -0.5 else 0) - (2 if v > 0.5 else 0)
-		if xf.has("fans") and d > 0 and _fans_out(f):   # (a fan of hers in the air: she's zoning, not running away)
-			d = 0
 		f.sad = clampi(f.sad + d, SAD_MIN, SAD_MAX)
 		if f.sad >= SAD_MAX * 2 / 3 and not f.sad_warned:
 			f.sad_warned = true

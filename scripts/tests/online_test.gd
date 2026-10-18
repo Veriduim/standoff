@@ -119,3 +119,51 @@ func _test_online_match() -> void:
 	for g: Control in [a, b, c]:
 		g.queue_free()
 	LobbyNet.use_loop = false
+
+
+## The line dropping (the phone put aside to send the code - Timmy 00:11): what the lobby server would do, then the
+## screen gets it back.
+func _drop(g: Control) -> void:
+	var n: LobbyNet = g.lobby.net
+	n.loop.leave(n)
+	n.loop = null
+	n.id = 0
+	n.status.emit("closed", "Lost the lobby server")
+
+
+func _test_rejoin() -> void:
+	_section("Put aside and back (Timmy 00:11): the lobby waits, the phone gets back in by itself; Copy code")
+	LobbyNet.use_loop = true
+	LoopLobby.reset()
+	var a := _screen()
+	var b := _screen()
+	a.lobby.open(0)
+	a.lobby.create_lobby()
+	_poll([a, b])
+	var code := str(a.lobby.net.lobby["code"])
+	_drop(a)   # (alone in it, and gone)
+	for _i in 4:
+		_poll([a, b])
+		await get_tree().create_timer(0.35).timeout
+	_check("alone, dropped: the lobby waited and the phone's back in it (view %s, code %s)" % [a.lobby.view,
+			a.lobby.net.lobby.get("code", "")], a.lobby.view == "room" and a.lobby.net.in_lobby()
+			and str(a.lobby.net.lobby.get("code", "")) == code)
+	b.lobby.open(1)
+	b.lobby.join(code)
+	_poll([a, b])
+	_drop(b)
+	for _i in 4:
+		_poll([a, b])
+		await get_tree().create_timer(0.35).timeout
+	_check("a friend dropped and back: both in it again", b.lobby.net.in_lobby() and a.lobby.net.members.size() == 2
+			and b.lobby.net.members.size() == 2)
+	a.lobby._copy_code()
+	var copy := a.lobby.room_view.find_child("CopyCode", true, false) as Button
+	_check("Copy code copies it and says so (%s)" % copy.text, copy.text == "Copied %s" % code
+			and (DisplayServer.get_name() == "headless" or DisplayServer.clipboard_get() == code))
+	b.lobby.leave_lobby()
+	_poll([a, b])
+	_check("leaving on purpose doesn't come back", not b.lobby.net.in_lobby() and not b.lobby.net.want_back)
+	a.queue_free()
+	b.queue_free()
+	LobbyNet.use_loop = false
