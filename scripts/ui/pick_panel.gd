@@ -84,13 +84,13 @@ var bar: PanelContainer
 var picked_icon: MoveIcon
 var picked_label: Label
 var pad: GridContainer
-var dist_row: HBoxContainer   ## a dash / jump's Distance, or a Block's parry frame
+var dist_row: Control         ## a dash / jump's Distance, or a Block's parry frame
 var dist_name: Label
 var dist_slider: HSlider
 var dist_label: Label
 var free_btn: Button
-var back_btn: Button
 var boxes_btn: Button
+var cards := {}              ## the two pick cards along the bottom: "me" (yours, left) and "foe" (the enemy's, right)
 var confirm_btn: Button
 var hold_btn: Button
 var info: Label
@@ -124,93 +124,43 @@ func _ready() -> void:
 	bar.add_theme_stylebox_override("panel", Ui.box(Color("#16171ff0"), 0))
 	add_child(bar)
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 12)
+	row.add_theme_constant_override("separation", 10)
 	bar.add_child(row)
-	picked_icon = MoveIcon.make("dancer", "", Color.WHITE, func() -> void: pass)
-	picked_icon.custom_minimum_size = Vector2(84, 0)
-	picked_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	row.add_child(picked_icon)
-	picked_label = Ui.label("", 15, Color("#c9c9d6"))
-	picked_label.custom_minimum_size = Vector2(170, 0)
-	picked_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	row.add_child(picked_label)
-	pad = GridContainer.new()
-	pad.columns = 3
-	pad.add_theme_constant_override("h_separation", 2)
-	pad.add_theme_constant_override("v_separation", 2)
-	row.add_child(pad)
-	for k in 9:
-		var d: Vector2 = DIRS[k]
-		if d == Vector2.ZERO:
-			pad.add_child(Control.new())
-			continue
-		var aim_at := func() -> void: _pad_tap(d)
-		var b := Ui.button(ARROWS[k], aim_at, 18)
-		b.name = "d%d" % k
-		b.custom_minimum_size = Vector2(44, 30)
-		var on := Ui.box(Color("#3e8ed0"), 6)
-		on.set_content_margin_all(2)
-		b.add_theme_stylebox_override("pressed", on)
-		b.add_theme_stylebox_override("hover_pressed", on)
-		b.toggle_mode = true
-		pad.add_child(b)
-	var mid := VBoxContainer.new()
-	mid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	mid.add_theme_constant_override("separation", 2)
-	row.add_child(mid)
-	var top := HBoxContainer.new()
-	top.add_theme_constant_override("separation", 8)
-	mid.add_child(top)
-	free_btn = Ui.button("Free", func() -> void: _toggle_free(), 16)
-	free_btn.toggle_mode = true
-	free_btn.custom_minimum_size = Vector2(150, 40)
-	free_btn.add_theme_stylebox_override("pressed", Ui.box(Color("#2b6e4a"), 8))
-	top.add_child(free_btn)
-	back_btn = Ui.button("Back to you", func() -> void: guess(me), 16)
-	back_btn.custom_minimum_size = Vector2(140, 40)
-	top.add_child(back_btn)
-	var gap := Control.new()
-	gap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	top.add_child(gap)
-	boxes_btn = Ui.button("Boxes", func() -> void: _toggle_boxes(), 16)
+	cards["me"] = _build_card(row, "me")
+	var centre := HBoxContainer.new()   # (in the middle, as YOMI's Lock In)
+	centre.add_theme_constant_override("separation", 6)
+	row.add_child(centre)
+	var side := VBoxContainer.new()
+	side.add_theme_constant_override("separation", 4)
+	centre.add_child(side)
+	boxes_btn = Ui.button("Boxes", func() -> void: _toggle_boxes(), 15)
 	boxes_btn.toggle_mode = true
-	boxes_btn.custom_minimum_size = Vector2(80, 40)
-	top.add_child(boxes_btn)
-	dist_row = HBoxContainer.new()
-	dist_row.add_theme_constant_override("separation", 10)
-	mid.add_child(dist_row)
-	dist_name = Ui.label("Distance", 15, Color("#a7a7b8"))
-	dist_row.add_child(dist_name)
-	dist_slider = HSlider.new()
-	dist_slider.min_value = 0.0
-	dist_slider.max_value = 100.0
-	dist_slider.step = 5.0
-	dist_slider.value = 100.0
-	dist_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	dist_slider.custom_minimum_size = Vector2(0, 40)
-	var track := StyleBoxFlat.new()
-	track.bg_color = Color("#3a3d4d")
-	track.set_corner_radius_all(3)
-	track.content_margin_top = 3
-	track.content_margin_bottom = 3
-	dist_slider.add_theme_stylebox_override("slider", track)
-	dist_slider.value_changed.connect(_on_dist)
-	dist_row.add_child(dist_slider)
-	dist_label = Ui.label("100", 16, Color("#e2e2ea"))
-	dist_label.custom_minimum_size = Vector2(36, 0)
-	dist_row.add_child(dist_label)
-	hold_btn = Ui.button("Hold", func() -> void: select("hold"), 20)   # (carry on / ride it out - by Confirm, as in YOMI)
+	boxes_btn.custom_minimum_size = Vector2(92, 0)
+	boxes_btn.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	side.add_child(boxes_btn)
+	hold_btn = Ui.button("Hold", func() -> void: select("hold"), 17)   # (carry on / ride it out - by Confirm, as in YOMI)
 	hold_btn.name = "Hold"
 	hold_btn.toggle_mode = true
-	hold_btn.custom_minimum_size = Vector2(96, 0)
+	hold_btn.custom_minimum_size = Vector2(92, 0)
+	hold_btn.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	hold_btn.add_theme_stylebox_override("pressed", Ui.box(Color("#2b4f8a")))
-	row.add_child(hold_btn)
-	confirm_btn = Ui.button("Confirm", func() -> void: _confirm(), 26)
-	confirm_btn.custom_minimum_size = Vector2(170, 0)
+	side.add_child(hold_btn)
+	confirm_btn = Ui.button("Confirm", func() -> void: _confirm(), 24)
+	confirm_btn.custom_minimum_size = Vector2(150, 0)
 	for st in ["normal", "hover", "focus"]:
 		confirm_btn.add_theme_stylebox_override(st, Ui.box(Color("#2f9e5b")))
 	confirm_btn.add_theme_stylebox_override("pressed", Ui.box(Color("#24804a")))
-	row.add_child(confirm_btn)
+	centre.add_child(confirm_btn)
+	cards["foe"] = _build_card(row, "foe")
+	var mine: Dictionary = cards["me"]   # (yours, by their old names - the tests and the screenshots use them)
+	picked_icon = mine["icon"]
+	picked_label = mine["label"]
+	pad = mine["pad"]
+	dist_row = mine["dist_row"]
+	dist_name = mine["dist_name"]
+	dist_slider = mine["dist_slider"]
+	dist_label = mine["dist_label"]
+	free_btn = mine["free"]
 	info = Ui.label("", 17, Color("#e2e2ea"))
 	info.add_theme_stylebox_override("normal", Ui.box(Color("#0e0f14bb"), 8))
 	info.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -323,7 +273,7 @@ func _moves_of(id: int, tab_id: String) -> Array:
 
 ## Both sides' tabs: yours down the left, the enemy's down the right (their name over them, in their colour).
 func _build_tabs() -> void:
-	hold_btn.disabled = not sim.legal_moves(who).has("hold")
+	hold_btn.disabled = not sim.legal_moves(me).has("hold")
 	hold_btn.set_pressed_no_signal(str(choice.get("move", "")) == "hold")
 	_build_side(tabs_box, me, false)
 	foe_box.visible = foe >= 0
@@ -436,26 +386,120 @@ static func frame_data(m: Dictionary) -> String:
 	return " · ".join(parts)
 
 
-## The pick being set: yours, or your guess for the opponent you tapped.
-func _c() -> Dictionary:
-	if who == me:
+## A pick card along the bottom - YOMI's two panels: yours bottom left, the enemy's bottom right (mirrored: their
+## icon on the outer edge). Your colour / theirs down the outer edge; the move's icon in it, its name and frame data, the
+## direction pad, and Distance (a dash or jump's) or the parry frame (a Block's); Free on yours.
+func _build_card(parent: Control, side: String) -> Dictionary:
+	var right := side == "foe"
+	var panel := PanelContainer.new()
+	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	parent.add_child(panel)
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override("separation", 8)
+	panel.add_child(h)
+	var icon := MoveIcon.make("dancer", "", Color.WHITE, func() -> void: pass)
+	icon.custom_minimum_size = Vector2(72, 0)
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var label := Ui.label("", 14, Color("#c9c9d6"))
+	label.custom_minimum_size = Vector2(132, 0)
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT if right else HORIZONTAL_ALIGNMENT_LEFT
+	var grid := GridContainer.new()
+	grid.columns = 3
+	grid.add_theme_constant_override("h_separation", 2)
+	grid.add_theme_constant_override("v_separation", 2)
+	grid.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	for k in 9:
+		var d: Vector2 = DIRS[k]
+		if d == Vector2.ZERO:
+			grid.add_child(Control.new())
+			continue
+		var aim_at := func() -> void: _pad_tap(side, d)
+		var b := Ui.button(ARROWS[k], aim_at, 17)
+		b.name = "d%d" % k
+		b.custom_minimum_size = Vector2(40, 30)
+		var on := Ui.box(Color("#3e8ed0"), 6)
+		on.set_content_margin_all(2)
+		b.add_theme_stylebox_override("pressed", on)
+		b.add_theme_stylebox_override("hover_pressed", on)
+		b.toggle_mode = true
+		grid.add_child(b)
+	var ctl := VBoxContainer.new()
+	ctl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	ctl.alignment = BoxContainer.ALIGNMENT_CENTER
+	ctl.add_theme_constant_override("separation", 2)
+	var free: Button = null
+	if not right:
+		free = Ui.button("Free", func() -> void: _toggle_free(), 15)
+		free.toggle_mode = true
+		free.custom_minimum_size = Vector2(0, 36)
+		free.add_theme_stylebox_override("pressed", Ui.box(Color("#2b6e4a"), 8))
+		ctl.add_child(free)
+	var drow := VBoxContainer.new()
+	drow.add_theme_constant_override("separation", 0)
+	ctl.add_child(drow)
+	var top := HBoxContainer.new()
+	drow.add_child(top)
+	var dn := Ui.label("Distance", 14, Color("#a7a7b8"))
+	dn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	top.add_child(dn)
+	var dl := Ui.label("100", 15, Color("#e2e2ea"))
+	top.add_child(dl)
+	var slider := HSlider.new()
+	slider.min_value = 0.0
+	slider.max_value = 100.0
+	slider.step = 5.0
+	slider.value = 100.0
+	slider.custom_minimum_size = Vector2(96, 30)
+	var track := StyleBoxFlat.new()
+	track.bg_color = Color("#3a3d4d")
+	track.set_corner_radius_all(3)
+	track.content_margin_top = 3
+	track.content_margin_bottom = 3
+	slider.add_theme_stylebox_override("slider", track)
+	slider.value_changed.connect(func(v: float) -> void: _on_dist(side, v))
+	drow.add_child(slider)
+	var order: Array = [ctl, grid, label, icon] if right else [icon, label, grid, ctl]
+	for n: Control in order:
+		h.add_child(n)
+	return {"panel": panel, "icon": icon, "label": label, "pad": grid, "dist_row": drow, "dist_name": dn,
+		"dist_label": dl, "dist_slider": slider, "free": free, "right": right}
+
+
+## Whose card it is: "me" -> you; "foe" -> the enemy down the right (-1 = none).
+func _side_id(side: String) -> int:
+	return me if side == "me" else foe
+
+
+## A fighter's pick being set: yours, or your guess for them.
+func _pick_of(id: int) -> Dictionary:
+	if id == me:
 		return choice
-	if not guesses.has(who):
-		guesses[who] = {}
-	return guesses[who]
+	if not guesses.has(id):
+		guesses[id] = {}
+	return guesses[id]
+
+
+## The pick the tabs are setting now: yours, or your guess for the enemy whose tabs you opened.
+func _c() -> Dictionary:
+	return _pick_of(who)
 
 
 ## Pick a move (yours, or the one you're guessing for them): it starts aimed at the nearest enemy, full distance, Free
 ## on for attacks when there's a charge or a bar to pay with (the wiki: on by default).
 func select(mid: String) -> void:
-	var c := _c()
+	_select_for(who, mid)
+
+
+func _select_for(id: int, mid: String) -> void:
+	var c := _pick_of(id)
 	c["move"] = mid
-	hold_btn.set_pressed_no_signal(mid == "hold")
+	if id == me:
+		hold_btn.set_pressed_no_signal(mid == "hold")
 	c["dist"] = 100.0
-	var f := sim.fighters[who]
-	var mk := str(Moves.move(f.character, mid).get("kind", ""))
-	c["free"] = mk == "attack" and (f.fc > 0 or f.meter >= Sim.BAR)
+	var f := sim.fighters[id]
 	var m := Moves.move(f.character, mid)
+	c["free"] = str(m.get("kind", "")) == "attack" and (f.fc > 0 or f.meter >= Sim.BAR)
 	var near := sim.nearest_enemy(f)
 	var toward := float(f.facing) if near == null or absf(near.pos.x - f.pos.x) < 1.0 \
 			else signf(near.pos.x - f.pos.x)
@@ -469,28 +513,119 @@ func select(mid: String) -> void:
 			d = Vector2.ZERO
 		"height":
 			d = Vector2(0.0, -1.0)
-	picked_icon.character = f.character
-	picked_icon.move_id = mid
-	picked_icon.colour = MoveIcon.tab_colour(f.character, mid) if who == me else stage.colour_of(who)
-	picked_icon.queue_redraw()
-	picked_label.text = "%s\n%s" % [m["name"], frame_data(m)] if who == me \
-			else "Your guess for %s:\n%s" % [f.name, m["name"]]
-	set_dir(d)
+	_set_dir_for(id, d)
 
 
-## The direction (the only thing picked with a move); the pad shows the arrows this move takes.
+## The direction (the only thing picked with a move) - for the pick the tabs are on.
 func set_dir(d: Vector2) -> void:
-	var f := sim.fighters[who]
-	var c := _c()
-	var kind := str(Moves.move(f.character, str(c["move"])).get("aim", "none"))
-	var a := Sim.aim(kind, d, f.facing)
+	_set_dir_for(who, d)
+
+
+func _set_dir_for(id: int, d: Vector2) -> void:
+	var f := sim.fighters[id]
+	var c := _pick_of(id)
+	var a := Sim.aim(str(Moves.move(f.character, str(c["move"])).get("aim", "none")), d, f.facing)
 	c["x"] = a.x
 	c["y"] = a.y
-	for k in 9:
-		var dk: Vector2 = DIRS[k]
+	refresh()
+
+
+## A pad arrow on a card: aims that pick that way. A lean is optional - tapping the lit arrow again takes it off.
+func _pad_tap(side: String, d: Vector2) -> void:
+	var id := _side_id(side)
+	if id < 0 or (id != me and str(_pick_of(id).get("move", "")) == ""):
+		return
+	var f := sim.fighters[id]
+	var c := _pick_of(id)
+	var kind := str(Moves.move(f.character, str(c["move"])).get("aim", "none"))
+	var now := Vector2(float(c.get("x", 0.0)), float(c.get("y", 0.0)))
+	_set_dir_for(id, Vector2.ZERO if kind == "lean" and now.is_equal_approx(d.normalized()) else d)
+
+
+## The ghost and the line about it for the picks as they stand; then both cards.
+func refresh() -> void:
+	var f := sim.fighters[me]
+	var m := Moves.move(f.character, str(choice["move"]))
+	var picks := {}
+	for id in guesses:
+		if str(guesses[id].get("move", "")) != "":
+			picks[id] = guesses[id]
+	picks[me] = choice
+	var pv := sim.preview(picks, 80)
+	var pf := _parry_frame(pv["events"])
+	if pf > 0 and pf != int(choice.get("pf", 0)):   # (a Block: parry on the frame the first hit would land)
+		choice["pf"] = pf
+		pv = sim.preview(picks, 80)
+	preview_events = pv["events"]
+	stage.ghost = pv["frames"]
+	stage.ghost_shots = pv.get("shots", [])
+	stage.ghost_only = me
+	stage.ghost_ids = [me] + picks.keys().filter(func(id: int) -> bool: return id != me)   # (their ghosts vs yours)
+	stage.ghost_play = true
+	stage.guessing = who if who != me else -1
+	_show_card("me")
+	_show_card("foe")
+	var guessed := ""
+	for id in picks:
+		if id == me:
+			continue
+		var gm := Moves.move(sim.fighters[id].character, str(picks[id].get("move", "")))
+		if not gm.is_empty():
+			guessed += "\nIf %s picks %s:" % [sim.fighters[id].name, gm["name"]]
+	var hint := "" if not picks.size() > 1 or sim.deciders().size() < 2 else ""
+	if picks.size() == 1 and foe >= 0:
+		hint = "\n(guess %s's move with their tabs on the right)" % sim.fighters[foe].name
+	info.text = "%s%s%s%s" % [m["name"], guessed, _outcome(), hint]
+	info.reset_size()
+
+
+## A card as its pick stands: the icon in the fighter's colour, the name and frame data, the pad lit the way it's aimed
+## (only the arrows the move takes), Distance or the parry frame, Free (yours).
+func _show_card(side: String) -> void:
+	var k: Dictionary = cards[side]
+	var id := _side_id(side)
+	(k["panel"] as Control).visible = id >= 0
+	if id < 0:
+		return
+	var fw := sim.fighters[id]
+	var col := stage.colour_of(id)
+	var st := Ui.box(Color("#1c1d26"), 10)
+	st.set_content_margin_all(6)
+	st.border_color = col
+	if bool(k["right"]):
+		st.border_width_right = 5
+	else:
+		st.border_width_left = 5
+	(k["panel"] as PanelContainer).add_theme_stylebox_override("panel", st)
+	var c: Dictionary = choice if id == me else guesses.get(id, {})
+	var mid := str(c.get("move", ""))
+	var icon: MoveIcon = k["icon"]
+	var pad_grid: GridContainer = k["pad"]
+	var free: Button = k["free"]
+	if mid == "":   # (no guess for them yet)
+		icon.move_id = ""
+		icon.queue_redraw()
+		(k["label"] as Label).text = "%s\nno guess yet - their tabs" % fw.name
+		for b in pad_grid.get_children():
+			if b is Button:
+				(b as Button).disabled = true
+				(b as Button).set_pressed_no_signal(false)
+		(k["dist_row"] as Control).visible = false
+		return
+	var cm := Moves.move(fw.character, mid)
+	icon.character = fw.character
+	icon.move_id = mid
+	icon.colour = col
+	icon.queue_redraw()
+	(k["label"] as Label).text = "%s\n%s" % [cm["name"], frame_data(cm)] if id == me \
+			else "%s: %s\n%s" % [fw.name, cm["name"], frame_data(cm)]
+	var kind := str(cm.get("aim", "none"))
+	var a := Vector2(float(c.get("x", 0.0)), float(c.get("y", 0.0)))
+	for n in 9:
+		var dk: Vector2 = DIRS[n]
 		if dk == Vector2.ZERO:
 			continue
-		var b := pad.get_node("d%d" % k) as Button
+		var b := pad_grid.get_node("d%d" % n) as Button
 		var usable := false
 		match kind:
 			"facing":
@@ -504,63 +639,23 @@ func set_dir(d: Vector2) -> void:
 			"dir8", "lean":
 				usable = true
 		b.disabled = not usable
-		b.set_pressed_no_signal(usable and Sim.aim(kind, dk, f.facing).is_equal_approx(a))
-	refresh()
-
-
-## A pad arrow: aims the move that way. A lean is optional - tapping the lit arrow again takes it off.
-func _pad_tap(d: Vector2) -> void:
-	var f := sim.fighters[who]
-	var c := _c()
-	var kind := str(Moves.move(f.character, str(c["move"])).get("aim", "none"))
-	var now := Vector2(float(c.get("x", 0.0)), float(c.get("y", 0.0)))
-	set_dir(Vector2.ZERO if kind == "lean" and now.is_equal_approx(d.normalized()) else d)
-
-
-## The ghost and the line about it for the pick as it stands; the scrubber starts over, playing.
-func refresh() -> void:
-	var f := sim.fighters[me]
-	var m := Moves.move(f.character, str(choice["move"]))
-	var picks := guesses.duplicate()
-	picks[me] = choice
-	var pv := sim.preview(picks, 80)
-	var pf := _parry_frame(pv["events"])
-	if pf > 0 and pf != int(choice.get("pf", 0)):   # (a Block: parry on the frame the first hit would land)
-		choice["pf"] = pf
-		pv = sim.preview(picks, 80)
-	preview_events = pv["events"]
-	stage.ghost = pv["frames"]
-	stage.ghost_shots = pv.get("shots", [])
-	stage.ghost_only = me
-	stage.ghost_ids = [me] + guesses.keys()   # (guessing: their ghosts play against yours)
-	stage.ghost_play = true
-	stage.guessing = who if who != me else -1
-	var c := _c()
-	var cm := Moves.move(sim.fighters[who].character, str(c.get("move", "")))
+		b.set_pressed_no_signal(usable and Sim.aim(kind, dk, fw.facing).is_equal_approx(a))
 	var parrying := bool(cm.get("parry_frame", false))
-	dist_row.visible = cm.has("dist") or parrying
-	dist_name.text = "Parry on frame" if parrying else "Distance"
-	dist_slider.set_block_signals(true)   # (a new range clamps the value - not a pick)
-	dist_slider.max_value = 20.0 if parrying else 100.0
-	dist_slider.step = 1.0 if parrying else 5.0
-	dist_slider.value = float(c.get("pf", 0)) if parrying else float(c.get("dist", 100.0))
-	dist_slider.set_block_signals(false)
-	dist_label.text = ("off" if int(dist_slider.value) == 0 else str(int(dist_slider.value))) if parrying \
-			else str(int(dist_slider.value))
-	var fw := sim.fighters[who]
-	free_btn.visible = str(cm.get("kind", "")) == "attack"
-	free_btn.disabled = fw.fc == 0 and fw.meter < Sim.BAR
-	free_btn.set_pressed_no_signal(bool(c.get("free", false)))
-	free_btn.text = "Free · %d left" % fw.fc if fw.fc > 0 else ("Free · 1 bar" if fw.meter >= Sim.BAR else "Free · none")
-	back_btn.visible = who != me
-	var guessed := ""
-	for id in guesses:
-		var gm := Moves.move(sim.fighters[id].character, str(guesses[id].get("move", "")))
-		if not gm.is_empty():
-			guessed += "\nIf %s picks %s:" % [sim.fighters[id].name, gm["name"]]
-	var hint := "" if not guesses.is_empty() or sim.deciders().size() < 2 else "\n(tap an opponent to guess their move)"
-	info.text = "%s%s%s%s" % [m["name"], guessed, _outcome(), hint]
-	info.reset_size()
+	var slider: HSlider = k["dist_slider"]
+	(k["dist_row"] as Control).visible = cm.has("dist") or parrying
+	(k["dist_name"] as Label).text = "Parry on frame" if parrying else "Distance"
+	slider.set_block_signals(true)   # (a new range clamps the value - not a pick)
+	slider.max_value = 20.0 if parrying else 100.0
+	slider.step = 1.0 if parrying else 5.0
+	slider.value = float(c.get("pf", 0)) if parrying else float(c.get("dist", 100.0))
+	slider.set_block_signals(false)
+	(k["dist_label"] as Label).text = ("off" if int(slider.value) == 0 else str(int(slider.value))) if parrying \
+			else str(int(slider.value))
+	if free != null:
+		free.visible = str(cm.get("kind", "")) == "attack"
+		free.disabled = fw.fc == 0 and fw.meter < Sim.BAR
+		free.set_pressed_no_signal(bool(c.get("free", false)))
+		free.text = "Free · %d left" % fw.fc if fw.fc > 0 else ("Free · 1 bar" if fw.meter >= Sim.BAR else "Free · none")
 
 
 ## What the preview says happens, a line each (others standing still): your hits, blocks, parries, clashes, armour - and
@@ -614,9 +709,13 @@ func _parry_frame(evs: Array) -> int:
 	return 0
 
 
-func _on_dist(v: float) -> void:
-	var c := _c()
-	if bool(Moves.move(sim.fighters[who].character, str(c.get("move", ""))).get("parry_frame", false)):
+## A card's Distance / parry-frame slider: how far that dash or jump goes (yours, or how far you guess theirs will).
+func _on_dist(side: String, v: float) -> void:
+	var id := _side_id(side)
+	if id < 0:
+		return
+	var c := _pick_of(id)
+	if bool(Moves.move(sim.fighters[id].character, str(c.get("move", ""))).get("parry_frame", false)):
 		c["pf"] = int(v)
 		c["pf_set"] = true   # (picked by hand - no more filling it in from the preview)
 	else:
@@ -625,7 +724,7 @@ func _on_dist(v: float) -> void:
 
 
 func _toggle_free() -> void:
-	_c()["free"] = free_btn.button_pressed
+	choice["free"] = free_btn.button_pressed
 	refresh()
 
 

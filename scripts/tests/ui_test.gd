@@ -83,12 +83,12 @@ func _test_your_pick() -> void:
 	var foe := 1
 	p._on_tap(foe)
 	_check("tapping an opponent who's picking too: the tabs and pad are theirs (%s)" % p.picked_label.text.replace("\n", " "),
-			p.who == foe and p.back_btn.visible and g.stage.guessing == foe and p.guesses.has(foe))
+			p.who == foe and g.stage.guessing == foe and p.guesses.has(foe) and (p.cards["foe"]["panel"] as Control).visible)
 	p.select("sidekick")
 	_check("...guessing their side kick plays their ghost against yours", str(p.guesses[foe]["move"]) == "sidekick"
 			and g.stage.ghost_ids.has(foe) and g.stage.ghost_ids.has(g.me) and str(p.choice["move"]) == "jab")
 	p.guess(g.me)
-	_check("...and back to you, your pick as it was", p.who == g.me and not p.back_btn.visible
+	_check("...and back to you, your pick as it was", p.who == g.me
 			and str(p.choice["move"]) == "jab")
 	p.select("walk")
 	p.set_dir(Vector2(1, 0))
@@ -249,6 +249,24 @@ func _test_multiplayer_qol() -> void:
 	_check("...yours: back to your pick, the drawer from the left", p.who == g.me and p.drawer.visible
 			and p.drawer.position.x < vp.x / 2.0)
 	p._close_drawer()
+	var mine: Dictionary = p.cards["me"]
+	var theirs: Dictionary = p.cards["foe"]
+	_check("bottom left your card in your colour, bottom right theirs (%s)" % (theirs["label"] as Label).text.replace("
+", " "),
+			(mine["panel"] as Control).get_index() == 0
+			and (theirs["panel"] as Control).get_index() == (theirs["panel"] as Control).get_parent().get_child_count() - 1
+			and (theirs["panel"] as Control).visible
+			and ((mine["panel"] as PanelContainer).get_theme_stylebox("panel") as StyleBoxFlat).border_color
+				== g.stage.colour_of(g.me))
+	p.guess(1)
+	p.select("dash")   # (a guess of their dash)
+	var far: float = g.stage.ghost[-1][1][0]
+	(theirs["dist_slider"] as HSlider).value = 30.0
+	var near: float = g.stage.ghost[-1][1][0]
+	_check("...guess their dash and how far: their card's Distance (30) - their ghost stops short (%.0f -> %.0f)"
+			% [far, near], str(p.guesses[1]["move"]) == "dash" and float(p.guesses[1]["dist"]) == 30.0
+			and (theirs["dist_row"] as Control).visible and absf(near - g.sim.fighters[1].pos.x) < absf(far - g.sim.fighters[1].pos.x)
+			and (theirs["label"] as Label).text.contains("Dash"))
 	p._on_tap(2)
 	_check("tapping another enemy puts them down the right", p.foe == 2 and p.who == 2)
 	p.guess(g.me)

@@ -79,6 +79,11 @@ func _test_online_match() -> void:
 			a.net_match != null and b.net_match != null and a.sim.fighters.size() == 3
 			and b.sim.fighters.size() == 3 and a.me == 0 and b.me == 1)
 	_check("...the lobby lists it", c.lobby.matches().size() == 1)
+	var bp: PickPanel = b.pick
+	_check("the other phone sees itself on the left (its tabs, its card in its colour) and its enemy on the right",
+			bp.visible and bp.me == 1 and bp.foe == 0 and bp.tabs_box.position.x < 200.0
+			and ((bp.cards["me"]["panel"] as PanelContainer).get_theme_stylebox("panel") as StyleBoxFlat).border_color
+				== b.stage.colour_of(1))
 	c.lobby.spectate(str(c.lobby.matches()[0]["ch"]), a.lobby.net.id)
 	a.auto_me = true   # (bots play for both from here - their turns already up go in now)
 	b.auto_me = true

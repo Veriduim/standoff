@@ -110,6 +110,12 @@ one stage; each attack aims at a picked target.
   the right ("Guess <name>" - their tabs set your guess; tap another enemy to swap); moves with no direction (Mirror,
   Wait, Block) turn you to the nearest enemy (aimed moves already default to them); your last pick (move, Free,
   Distance) is picked first next turn and kept between plays; your colour is kept too.
+- 21:51 "Show me the enemy frame stuff on the bottom right side similar to your only move is hustle so I see my own with
+  my colour bottom left then enemy selected bottom right and also make guesses on how much they will move with dash or
+  something" -> 0.9.2: the bottom bar is two pick cards as YOMI's panels - yours bottom left in your colour, the enemy
+  down the right bottom right in theirs (their guessed move, its frame data, their pad, their Distance / parry frame);
+  Boxes, Hold, Confirm in the middle. 21:52 "The other player should see themselves on the left side and have a
+  simialr interface to me" -> each phone's panel is its own player's (tested online).
 
 ## To tune / later
 - **Match length with 6:** bot matches take 120-270 decision points with 6 fighters (50-90 with 2). At ~10 s a decision
