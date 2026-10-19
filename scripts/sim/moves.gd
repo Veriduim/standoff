@@ -263,42 +263,44 @@ const DANCER := {
 		"taunt": {"name": "Taunt", "tab": "defend", "kind": "wait", "interrupt": true, "frames": 50, "where": "ground", "aim": "facing",
 			"meter_gain": 125, "pose": [[0, "taunt"]]},
 		# ---- supers
-		"flurry": {"name": "Flurry", "tab": "super", "kind": "super", "frames": 44, "where": "ground",
-			"aim": "facing", "cost": 125, "motion": [[6, 30, 4.0, 0.0]],
-			"hits": [
-				{"from": 8, "to": 9, "box": [8, -90, 60, 40], "dmg": 25, "stun": 14, "kb": [1.0, 0.0], "block": 6, "chip": 3, "group": 0},
-				{"from": 14, "to": 15, "box": [8, -90, 60, 40], "dmg": 25, "stun": 14, "kb": [1.0, 0.0], "block": 6, "chip": 3, "group": 1},
-				{"from": 20, "to": 21, "box": [8, -90, 60, 40], "dmg": 25, "stun": 14, "kb": [1.0, 0.0], "block": 6, "chip": 3, "group": 2},
-				{"from": 28, "to": 30, "box": [8, -100, 70, 50], "dmg": 45, "stun": 28, "kb": [10.0, -8.0], "block": 12, "chip": 5, "group": 3, "splat": true, "min_dmg": 12, "knockdown": true},
+		# (03:03 "Why are all the supers for Dancer melee supers when she is supposed to be a zoner char?" - a zoner's:
+		# fans from range, wind to get room, a whirlwind that holds the space, fans from the sky. Spectral fans - her two
+		# stay in her hands.)
+		"fanstorm": {"name": "Fan Storm", "tab": "super", "kind": "super", "frames": 34, "where": "ground", "aim": "facing",
+			"cost": 125, "invuln": [0, 4],
+			"spawn": [
+				{"at": 8, "kind": "fan", "speed": 13.0, "from": [30, -84], "dir": [1.0, -0.7], "box": [26, 20], "dmg": 14, "stun": 13, "kb": [3.0, -3.0], "block": 6, "chip": 2, "life": 60},
+				{"at": 10, "kind": "fan", "speed": 13.0, "from": [30, -80], "dir": [1.0, -0.38], "box": [26, 20], "dmg": 14, "stun": 13, "kb": [3.0, -3.0], "block": 6, "chip": 2, "life": 60},
+				{"at": 12, "kind": "fan", "speed": 13.0, "from": [30, -76], "dir": [1.0, 0.0], "box": [26, 20], "dmg": 14, "stun": 13, "kb": [3.0, -3.0], "block": 6, "chip": 2, "life": 60},
+				{"at": 14, "kind": "fan", "speed": 13.0, "from": [30, -64], "dir": [1.0, 0.2], "box": [26, 20], "dmg": 14, "stun": 13, "kb": [3.0, -3.0], "block": 6, "chip": 2, "life": 60},
+				{"at": 16, "kind": "fan", "speed": 13.0, "from": [30, -78], "dir": [1.0, -0.16], "box": [26, 20], "dmg": 14, "stun": 13, "kb": [3.0, -3.0], "block": 6, "chip": 2, "life": 60},
 			],
-			"pose": [[0, "jab_wind"], [8, "jab_hit"], [12, "kick_hit"], [18, "jab_hit"], [24, "spin1"], [28, "heavy_hit"], [36, "idle"]],
-			"icon": "kick_hit"},
-		"finale": {"name": "Grand Finale", "tab": "super", "kind": "super", "frames": 64, "where": "ground",
-			"aim": "facing", "cost": 375, "motion": [[3, 12, 16.0, 0.0]], "invuln": [0, 6],
-			"hits": [
-				{"from": 10, "to": 11, "box": [6, -96, 70, 60], "dmg": 20, "stun": 16, "kb": [2.0, -1.0], "block": 6, "chip": 2, "group": 0},
-				{"from": 16, "to": 17, "box": [6, -96, 70, 60], "dmg": 20, "stun": 16, "kb": [2.0, -1.0], "block": 6, "chip": 2, "group": 1},
-				{"from": 22, "to": 23, "box": [6, -96, 70, 60], "dmg": 20, "stun": 16, "kb": [2.0, -1.0], "block": 6, "chip": 2, "group": 2},
-				{"from": 28, "to": 29, "box": [6, -96, 70, 60], "dmg": 20, "stun": 16, "kb": [2.0, -1.0], "block": 6, "chip": 2, "group": 3},
-				{"from": 34, "to": 35, "box": [6, -96, 70, 60], "dmg": 20, "stun": 18, "kb": [2.0, -1.0], "block": 6, "chip": 2, "group": 4},
-				{"from": 44, "to": 47, "box": [-20, -150, 100, 150], "dmg": 70, "stun": 40, "kb": [4.0, -16.0], "block": 16, "chip": 8, "group": 5, "min_dmg": 30, "knockdown": true},
+			"pose": [[0, "throw_wind"], [8, "throw_out"], [11, "throw_wind"], [14, "throw_out"], [24, "idle"]],
+			"icon": "throw_out"},
+		"gale": {"name": "Gale", "tab": "super", "kind": "super", "frames": 30, "where": "both", "aim": "none", "cost": 125,
+			"invuln": [0, 9], "cue": [{"at": 6, "type": "gust"}, {"at": 6, "type": "sweep_up"}],
+			"hits": [{"from": 6, "to": 9, "box": [-110, -150, 220, 160], "dmg": 30, "stun": 24, "kb": [10.0, -6.0],
+				"block": 10, "chip": 4, "group": 0, "away": true}],
+			"pose": [[0, "fan_low"], [6, "fan_up"], [18, "idle"]], "icon": "fan_up"},
+		"cyclone": {"name": "Cyclone", "tab": "super", "kind": "super", "frames": 36, "where": "ground", "aim": "facing",
+			"cost": 250, "cue": {"at": 10, "type": "sweep"},
+			"spawn": [{"at": 12, "kind": "cyclone", "speed": 3.5, "from": [50, -62], "dir": [1.0, 0.0], "box": [70, 124],
+				"dmg": 11, "stun": 14, "kb": [1.0, -5.0], "block": 4, "chip": 2, "life": 100, "pierce": true, "rehit": 10,
+				"heavy": true, "parry": false}],
+			"pose": [[0, "crouch"], [6, "spin1"], [10, "throw_out"], [22, "idle"]], "icon": "spin1"},
+		"finale": {"name": "Grand Finale", "tab": "super", "kind": "super", "frames": 48, "where": "ground", "aim": "facing",
+			"cost": 375, "invuln": [0, 12], "cue": {"at": 8, "type": "sweep_up"},
+			"spawn": [
+				{"at": 14, "kind": "fan", "speed": 15.0, "from": [70, -440], "dir": [0.12, 1.0], "box": [30, 28], "dmg": 15, "stun": 16, "kb": [2.0, -4.0], "block": 6, "chip": 2, "life": 70},
+				{"at": 16, "kind": "fan", "speed": 15.0, "from": [125, -440], "dir": [0.12, 1.0], "box": [30, 28], "dmg": 15, "stun": 16, "kb": [2.0, -4.0], "block": 6, "chip": 2, "life": 70},
+				{"at": 18, "kind": "fan", "speed": 15.0, "from": [180, -440], "dir": [0.12, 1.0], "box": [30, 28], "dmg": 15, "stun": 16, "kb": [2.0, -4.0], "block": 6, "chip": 2, "life": 70},
+				{"at": 20, "kind": "fan", "speed": 15.0, "from": [235, -440], "dir": [0.12, 1.0], "box": [30, 28], "dmg": 15, "stun": 16, "kb": [2.0, -4.0], "block": 6, "chip": 2, "life": 70},
+				{"at": 22, "kind": "fan", "speed": 15.0, "from": [290, -440], "dir": [0.12, 1.0], "box": [30, 28], "dmg": 15, "stun": 16, "kb": [2.0, -4.0], "block": 6, "chip": 2, "life": 70},
+				{"at": 24, "kind": "fan", "speed": 15.0, "from": [345, -440], "dir": [0.12, 1.0], "box": [30, 28], "dmg": 15, "stun": 16, "kb": [2.0, -4.0], "block": 6, "chip": 2, "life": 70},
+				{"at": 26, "kind": "fan", "speed": 15.0, "from": [400, -440], "dir": [0.12, 1.0], "box": [30, 28], "dmg": 15, "stun": 16, "kb": [2.0, -4.0], "block": 6, "chip": 2, "life": 70},
+				{"at": 28, "kind": "fan", "speed": 15.0, "from": [455, -440], "dir": [0.12, 1.0], "box": [30, 28], "dmg": 15, "stun": 16, "kb": [2.0, -4.0], "block": 6, "chip": 2, "life": 70},
 			],
-			"pose": [[0, "dash"], [10, "kick_hit"], [16, "spin1"], [22, "jab_hit"], [28, "spin2"], [34, "heavy_hit"],
-				[40, "crouch"], [44, "flash_kick"], [54, "fall"]], "icon": "flash_kick"},
-		"cyclone": {"name": "Cyclone", "tab": "super", "kind": "super", "frames": 50, "where": "ground",
-			"cue": [{"at": 8, "type": "sweep"}, {"at": 20, "type": "sweep"}, {"at": 32, "type": "sweep"}],
-			"aim": "facing", "cost": 250, "motion": [[6, 40, 6.0, 0.0]],
-			"hits": [
-				{"from": 8, "to": 9, "box": [-50, -96, 100, 50], "dmg": 18, "stun": 12, "kb": [2.0, -1.0], "block": 5, "chip": 2, "group": 0},
-				{"from": 14, "to": 15, "box": [-50, -96, 100, 50], "dmg": 18, "stun": 12, "kb": [2.0, -1.0], "block": 5, "chip": 2, "group": 1},
-				{"from": 20, "to": 21, "box": [-50, -96, 100, 50], "dmg": 18, "stun": 12, "kb": [2.0, -1.0], "block": 5, "chip": 2, "group": 2},
-				{"from": 26, "to": 27, "box": [-50, -96, 100, 50], "dmg": 18, "stun": 12, "kb": [2.0, -1.0], "block": 5, "chip": 2, "group": 3},
-				{"from": 32, "to": 33, "box": [-50, -96, 100, 50], "dmg": 18, "stun": 12, "kb": [2.0, -1.0], "block": 5, "chip": 2, "group": 4},
-				{"from": 40, "to": 42, "box": [-60, -110, 120, 60], "dmg": 40, "stun": 30, "kb": [8.0, -11.0], "block": 12, "chip": 6, "group": 5, "min_dmg": 12, "knockdown": true},
-			],
-			"pose": [[0, "crouch"], [8, "spin1"], [11, "spin2"], [14, "spin1"], [17, "spin2"], [20, "spin1"], [23, "spin2"],
-				[26, "spin1"], [29, "spin2"], [32, "spin1"], [35, "spin2"], [40, "flash_kick"], [46, "fall"]],
-			"icon": "spin1"},
+			"pose": [[0, "fan_low"], [8, "fan_up"], [36, "idle"]], "icon": "fan_up"},
 		# ---- fan-dancer moves (Timmy 21:59: "make the dancer cooler and feel like a dancer. With proper fans. Thinking
 		# ---- jade MK series" - MK is study only; our own): a gust off both fans that lifts them, a sliding kick that
 		# ---- passes under / through projectiles
@@ -414,6 +416,53 @@ static func move(character: String, id: String) -> Dictionary:
 
 
 ## The pose a move's icon shows.
+## A move's projectiles: "spawn" is one, or a list (a super's volley - 03:03).
+static func spawns(m: Dictionary) -> Array:
+	var sp: Variant = m.get("spawn", [])
+	return sp if sp is Array else [sp]
+
+
+## How soon a move does its thing (03:00 "in order of lowest frames to higest frames"): the frame its first hit is
+## out, or it throws, or it's on the move; else its length.
+static func startup(m: Dictionary) -> int:
+	var hits: Array = m.get("hits", [])
+	if not hits.is_empty():
+		return int(hits[0]["from"])
+	if m.has("spawn"):
+		return int((spawns(m)[0] as Dictionary).get("at", m.get("frames", 0)))
+	for k in ["blink_at", "recall_at"]:
+		if m.has(k):
+			return int(m[k])
+	var motion: Array = m.get("motion", [])
+	if not motion.is_empty():
+		return int(motion[0][0])
+	return int(m.get("frames", 0))
+
+
+## What's special about a move, as small badges (03:00 "icons/emojis for additional info like unblocakble and
+## initave"); BADGE_KEY says what each means.
+const BADGE_KEY := "✊ beats blocks   ⚡ initiative   👻 dodges   🔻 hits low   💥 guard break   🎯 projectile"
+
+
+static func badges(m: Dictionary) -> String:
+	var out := ""
+	var hits: Array = m.get("hits", [])
+	if str(m.get("kind", "")) == "grab":
+		out += "✊"
+	if m.has("init_invuln") or m.has("init_faster"):
+		out += "⚡"
+	if m.has("invuln"):
+		out += "👻"
+	if hits.any(func(e: Dictionary) -> bool: return str(e.get("height", "mid")) == "low") \
+			or spawns(m).any(func(sp: Dictionary) -> bool: return str(sp.get("height", "mid")) == "low"):
+		out += "🔻"
+	if hits.any(func(e: Dictionary) -> bool: return bool(e.get("guardbreak", false))):
+		out += "💥"
+	if m.has("spawn"):
+		out += "🎯"
+	return out
+
+
 static func icon_pose(m: Dictionary) -> String:
 	if m.has("icon"):
 		return str(m["icon"])

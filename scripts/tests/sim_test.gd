@@ -54,9 +54,9 @@ func _test_turns() -> void:
 	_check("...in the air: the dive kick, no jump", fresh.legal_moves(1).has("divekick")
 			and not fresh.legal_moves(1).has("jump"))
 	fresh.fighters[1].pos.y = 0.0
-	_check("a super needs meter", not fresh.legal_moves(1).has("flurry"))
+	_check("a super needs meter", not fresh.legal_moves(1).has("fanstorm"))
 	fresh.fighters[1].meter = Sim.BAR
-	_check("...and with a bar it's there", fresh.legal_moves(1).has("flurry") and not fresh.legal_moves(1).has("cyclone"))
+	_check("...and with a bar it's there", fresh.legal_moves(1).has("fanstorm") and not fresh.legal_moves(1).has("cyclone"))
 	var busy := _duel()
 	busy.fighters[0].burst = 0
 	busy.apply({0: {"move": "sidekick"}, 1: {"move": "wait"}})
@@ -778,6 +778,55 @@ func _test_thinking_bot() -> void:
 			hits += 1
 	_check("it lands a punish %d times in 4 (it's not reading their pick - only the state anyone can see)" % hits,
 			hits >= 3)
+
+
+func _test_zoner_supers() -> void:
+	_section("Her supers, a zoner's (03:03): Fan Storm's volley, Gale's wind, the Cyclone holding the space, fans from the sky")
+	var s := _duel("dancer", "dancer", 380.0)
+	s.fighters[0].meter = Sim.METER_MAX
+	s.fighters[1].burst = 0
+	s.apply({0: {"move": "fanstorm", "x": 1.0}, 1: {"move": "wait"}})
+	var most := 0
+	var hit := false
+	for _i in 60:
+		s.step()
+		most = maxi(most, s.shots.size())
+		hit = hit or s.events.any(func(e: Dictionary) -> bool: return str(e["type"]) == "hit" and int(e["a"]) == 0)
+	_check("Fan Storm: five fans in a spread from range (most out %d), it lands, her own two still in hand (%d)" % [most,
+			s.fighters[0].fans], most == 5 and hit and s.fighters[0].fans == Sim.FANS_MAX)
+	var g := _duel("dancer", "dancer", 60.0)
+	g.fighters[0].meter = Sim.METER_MAX
+	g.apply({0: {"move": "gale"}, 1: {"move": "straight", "x": -1.0}})
+	for _i in 20:
+		g.step()
+	_check("Gale: wind all round her blows a rusher off (gap %.0f, she's untouched %d)" % [absf(g.fighters[1].pos.x
+			- g.fighters[0].pos.x), g.fighters[0].hp], absf(g.fighters[1].pos.x - g.fighters[0].pos.x) > 140.0
+			and g.fighters[0].hp == g.fighters[0].max_hp)
+	var c := _duel("dancer", "dancer", 260.0)
+	c.fighters[0].meter = Sim.METER_MAX
+	c.fighters[1].burst = 0
+	c.apply({0: {"move": "cyclone", "x": 1.0}, 1: {"move": "wait"}})
+	var hits := 0
+	for _i in 120:
+		c.step()
+		hits += c.events.filter(func(e: Dictionary) -> bool: return str(e["type"]) == "hit" and int(e["a"]) == 0).size()
+		if not c.deciders().is_empty():
+			var hold := {}
+			for id in c.deciders():
+				hold[id] = {"move": "hold"} if not c.fighters[id].actionable() else {"move": "wait"}
+			c.apply(hold)
+	_check("Cyclone: a whirlwind that keeps hitting whoever's in it (%d hits)" % hits, hits >= 3)
+	var r := _duel("dancer", "dancer", 300.0)
+	r.fighters[0].meter = Sim.METER_MAX
+	r.fighters[1].burst = 0
+	r.apply({0: {"move": "finale", "x": 1.0}, 1: {"move": "wait"}})
+	var from_sky := false
+	var rain_hit := false
+	for _i in 90:
+		r.step()
+		from_sky = from_sky or r.shots.any(func(sh: Dictionary) -> bool: return (sh["pos"] as Vector2).y < -400.0)
+		rain_hit = rain_hit or r.events.any(func(e: Dictionary) -> bool: return str(e["type"]) == "hit" and int(e["a"]) == 0)
+	_check("Grand Finale: fans from the sky across the stage, and they land", from_sky and rain_hit)
 
 
 ## Two Dancers with these x-factors on (Sim RULES "xf"), gap apart, facing each other.

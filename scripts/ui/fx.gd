@@ -262,7 +262,7 @@ func burst_out(id: int, at: Vector2, col: Color, seed_n: int) -> void:
 ## Someone starts a super: the stage dims round them, rays and rings burst out, it all holds a moment and splits.
 func super_start(id: int, at: Vector2, col: Color, seed_n: int, title := "", pose := "idle", face := 1.0) -> void:
 	_rng.seed = seed_n
-	cutin = {"id": id, "col": col, "title": title.to_upper(), "pose": pose, "face": face, "age": 0.0, "life": 0.75}
+	pass   # (no banner or name - 03:03 "I dont like the big on screen super banner ... they definitely do not have those")
 	dim = 0.62
 	dim_id = id
 	_add("rays", at, Vector2.ZERO, 0.4, col.lightened(0.45), 190.0)

@@ -114,9 +114,14 @@ func _ready() -> void:
 	drawer = PanelContainer.new()
 	drawer.add_theme_stylebox_override("panel", Ui.box(Color("#17181ff2"), 12))
 	add_child(drawer)
+	var dv := VBoxContainer.new()
+	dv.add_theme_constant_override("separation", 4)
+	drawer.add_child(dv)
 	var scroll := ScrollContainer.new()
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	drawer.add_child(scroll)
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.scroll_deadzone = 14   # (03:00 "hard to scroll ... from anywhere inside": a drag on the icons scrolls)
+	dv.add_child(scroll)
 	drawer_grid = GridContainer.new()
 	drawer_grid.columns = COLS
 	drawer_grid.add_theme_constant_override("h_separation", 4)
@@ -363,7 +368,14 @@ func _tab(tid: String) -> void:
 		drawer_grid.remove_child(c)
 		c.queue_free()
 	var f := sim.fighters[who]
-	for mid: String in _moves_in(tab):
+	var list := _moves_in(tab)
+	list.sort_custom(func(a: String, b: String) -> bool:   # (fastest first - 03:00)
+		var ma := Moves.move(f.character, a)
+		var mb := Moves.move(f.character, b)
+		var sa := Moves.startup(ma)
+		var sb := Moves.startup(mb)
+		return sa < sb or (sa == sb and int(ma.get("frames", 0)) < int(mb.get("frames", 0))))
+	for mid: String in list:
 		var pick := func() -> void:
 			select(mid)
 			_close_drawer()

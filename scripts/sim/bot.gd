@@ -15,7 +15,7 @@ const FORM_SWITCH := ["snapform", "floorform", "flowform"]
 const AIR := ["divekick", "airkick", "airknee", "airspin", "airdash", "fastfall", "block", "wait", "airfan",
 	"airthrow", "airjump"]
 const GRABS := ["grab", "hiptoss", "spinthrow"]
-const SUPERS := ["flurry", "cyclone", "finale"]
+const SUPERS := ["fanstorm", "gale", "cyclone", "finale"]
 const CLOSE_IN := ["walk", "dash", "roll", "kneedash", "floorslide", "snapstep", "fanstep"]
 const BACK_OFF := ["backstep", "walk", "dash"]
 

@@ -175,7 +175,7 @@ func _effects(game: Control, out: String) -> void:
 	await _until(func() -> bool: return game.phase == "pick", 400)
 	game.sim.fighters[0].meter = 100
 	game.sim.fighters[0].pos.x = game.sim.fighters[1].pos.x - 70.0
-	game._commit({"move": "flurry", "x": 1.0})
+	game._commit({"move": "fanstorm", "x": 1.0})
 	await _until(func() -> bool: return game.stage.fx.dim > 0.3, 120)
 	await _wait(8)
 	await _snap(out.path_join("11_super.png"))

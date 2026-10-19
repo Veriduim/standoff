@@ -20,6 +20,9 @@ var colour := Color.WHITE
 var selected := false
 var note := ""               ## a tag top left (IC: picking it again is an Instant Cancel - a bar)
 var face := 1.0              ## the way the figure faces (21:59: toward who it's up against - theirs face you)
+var _down := Vector2.INF     ## where a press started - a drag past DRAG isn't a pick (it scrolls the drawer, 03:00)
+var _dragged := false
+const DRAG := 14.0
 
 
 static func make(ch: String, mid: String, col: Color, on: Callable) -> MoveIcon:
@@ -30,13 +33,25 @@ static func make(ch: String, mid: String, col: Color, on: Callable) -> MoveIcon:
 	if mid != "":
 		b.name = mid
 	b.custom_minimum_size = Vector2(88, 96)
-	b.pressed.connect(on)
+	b.mouse_filter = Control.MOUSE_FILTER_PASS   # (a drag goes on to the drawer's scroll - 03:00)
+	b.pressed.connect(func() -> void:
+		if not b._dragged:
+			on.call())
 	var st := Ui.box(Color("#22242e"), 10)
 	b.add_theme_stylebox_override("normal", st)
 	b.add_theme_stylebox_override("hover", st)
 	b.add_theme_stylebox_override("pressed", Ui.box(Color("#2c2f3c"), 10))
 	b.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
 	return b
+
+
+func _gui_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and (event as InputEventMouseButton).pressed:
+		_down = (event as InputEventMouseButton).position
+		_dragged = false
+	elif event is InputEventMouseMotion and _down != Vector2.INF:
+		if ((event as InputEventMouseMotion).position - _down).length() > DRAG:
+			_dragged = true
 
 
 func _draw() -> void:
@@ -73,3 +88,9 @@ func _draw() -> void:
 				Color("#ffd166"))
 	if note != "":
 		draw_string(font, Vector2(5, 18), note, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("#c58bff"))
+	var marks := Moves.badges(m)   # (beats blocks, initiative, dodges, low, guard break, projectile - 03:00)
+	if marks != "":
+		draw_string(font, Vector2(4, size.y - 24), marks, HORIZONTAL_ALIGNMENT_LEFT, size.x - 8, 14, Color.WHITE)
+	var f0 := Moves.startup(m)   # (and how soon - the order they're in)
+	draw_string(font, Vector2(size.x - 34, size.y - 24), "f%d" % f0, HORIZONTAL_ALIGNMENT_RIGHT, 30, 12,
+			Color("#8a8a9c"))

@@ -677,3 +677,38 @@ func _test_style() -> void:
 			and int(cfg.get_value("style", "outline", -1)) == 2)
 	Style.set_mine(int(was[0]), int(was[1]))
 	g.queue_free()
+
+
+func _test_drawer_order() -> void:
+	_section("The move drawers (03:00): fastest first, badges for what's special, a drag on them scrolls")
+	var g := _screen()
+	g.start_local(1, "ffa")
+	var p: PickPanel = g.pick
+	p._tab("attack")
+	var starts: Array = []
+	for c in p.drawer_grid.get_children():
+		starts.append(Moves.startup(Moves.move("dancer", str((c as MoveIcon).move_id))))
+	var sorted := starts.duplicate()
+	sorted.sort()
+	_check("Attack's moves fastest first (%s)" % [starts], not starts.is_empty() and starts == sorted)
+	_check("badges: a grab beats blocks, the Uppercut has initiative, Fan Throw's a projectile (%s / %s / %s)" % [
+			Moves.badges(Moves.move("dancer", "grab")), Moves.badges(Moves.move("dancer", "uppercut")),
+			Moves.badges(Moves.move("dancer", "fan"))], Moves.badges(Moves.move("dancer", "grab")).contains("✊")
+			and Moves.badges(Moves.move("dancer", "uppercut")).contains("⚡")
+			and Moves.badges(Moves.move("dancer", "fan")).contains("🎯"))
+	var icon := p.drawer_grid.get_child(0) as MoveIcon
+	var picked := [false]
+	var b2 := MoveIcon.make("dancer", "jab", Color.WHITE, func() -> void: picked[0] = true)
+	var down := InputEventMouseButton.new()
+	down.pressed = true
+	down.position = Vector2(10, 10)
+	b2._gui_input(down)
+	var drag := InputEventMouseMotion.new()
+	drag.position = Vector2(10, 60)
+	b2._gui_input(drag)
+	b2.pressed.emit()
+	_check("a drag across an icon scrolls instead of picking it", icon.mouse_filter == Control.MOUSE_FILTER_PASS
+			and not picked[0])
+	b2.free()
+	p._close_drawer()
+	g.queue_free()

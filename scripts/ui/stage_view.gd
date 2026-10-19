@@ -460,7 +460,6 @@ func _draw() -> void:
 	fx.draw_parts(self)
 	fx.draw_combos(self, frame)
 	_advantage_labels()
-	fx.draw_cutin(self)   # (a super's cut-in, over everything)
 
 
 ## A projectile: [x, y, kind, owner, vx, vy, life]. A fan: three blades spinning, a fading trail; a ripple: a low wave
@@ -484,6 +483,20 @@ func _shot(s: Array, alpha: float) -> void:
 			var turn := Vector2.from_angle(spin)
 			Stick.fan(self, at - turn * r * 0.5, turn, r, 0.9, colour_of(int(s[3])) if alpha >= 1.0 else col,
 					alpha >= 1.0)   # (spun round its middle, the way a thrown fan turns)
+		"cyclone":   # (her Cyclone super: a whirlwind - rings stacked up its height, turning, wider at the top)
+			var turn := float(s[6]) * 0.5
+			for k in 7:
+				var rx := (12.0 + k * 6.5) * zoom
+				var ry := rx * 0.32
+				var y := (54.0 - k * 19.0) * zoom
+				var cx := sin(turn + k * 0.7) * 7.0 * zoom
+				var c := col
+				c.a = (0.85 - k * 0.07) * (alpha if alpha < 1.0 else 1.0)
+				var ring := PackedVector2Array()
+				for n in 17:
+					var a := TAU * n / 16.0 + turn * (1.0 + k * 0.1)
+					ring.append(at + Vector2(cx + cos(a) * rx, y + sin(a) * ry))
+				draw_polyline(ring, c, maxf(1.5, 3.0 * zoom), true)
 		"ripple":   # (22:53 "what is the ground wave?" - a shockwave running along the floor off her fans' slam)
 			var floor_y := w2s(Vector2(0, 0)).y
 			var base := Vector2(at.x, floor_y)

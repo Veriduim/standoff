@@ -22,6 +22,11 @@ are study only.
   - Fan Step blinks her to a thrown fan.
 - **Sadness:** as for anyone (00:06-00:09: YOMI's universal rules stay faithful; its zoners, Cowboy and Wizard, live
   with it too). Her fan's edge rewards spacing instead.
+- **Supers, a zoner's** (03:03 "Why are all the supers for Dancer melee supers when she is supposed to be a zoner
+  char?" - 0.26.0): Fan Storm (1 bar: five spectral fans in a spread), Gale (1 bar: wind all round her that blows
+  rushers off, untouchable as it starts), Cyclone (2 bars: a whirlwind sent slowly forward, hitting every 10 ticks,
+  not stopped by other projectiles), Grand Finale (3 bars: eight fans falling from the sky across the stage in front).
+  The spectral fans aren't her two.
 - **Getting out:** Silk Glide (low profile, passes under projectiles), Snap Step, Sway, Dodge.
 - **Tempo:** beats from landing, being blocked or dodging through a hit. Each beat adds damage and movement speed.
   At four she gets Encore.

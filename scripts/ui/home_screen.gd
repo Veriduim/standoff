@@ -154,6 +154,10 @@ func _ready() -> void:
 			if box is StyleBoxFlat:
 				(box as StyleBoxFlat).content_margin_left = 14
 				(box as StyleBoxFlat).content_margin_right = 14
+	var key := Ui.label("ON THE MOVE ICONS\n" + Moves.BADGE_KEY.replace("   ", "\n"), 16, Color("#a7a7b8"))   # (03:05:
+	key.name = "BadgeKey"                                     # the badge key here, off the drawer)
+	key.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(key)
 	var ver := Ui.label(VERSION + "  ·  the Dancer: her war fans and her Tempo", 15, Color("#6b6b78"))
 	ver.name = "Version"
 	add_child(ver)
@@ -232,6 +236,8 @@ func _layout() -> void:
 	title.size = Vector2(maxf(300.0, card.position.x - 60.0), vp.y)
 	var ver := get_node("Version") as Label
 	ver.position = Vector2(24, vp.y - 36)
+	var key := get_node("BadgeKey") as Label
+	key.position = Vector2(30, maxf(300.0, vp.y * 0.5))
 	var snd := get_node("Sound") as Button
 	var x := 24.0
 	for n: String in ["Sound", "HowToPlay", "Replays", "Training"]:   # (side by side, each as wide as its words)

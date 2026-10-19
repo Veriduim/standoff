@@ -222,6 +222,15 @@ one stage; each attack aims at a picked target.
   from the result to the invite) and **your look** (Style by YOUR COLOUR: outline Ink / White / Gold / Cyan / Pink /
   Violet, trail None / Glints / Embers / Petals / Wisps, with a live preview; saved; online it goes with your seat;
   replays keep it). This closes step 4.
+- 03:00 "hard to scroll down the action menus ... in order of lowest frames to higest frames with icons/emojis for
+  additional info like unblocakble and initave" + 03:03 "I dont like the big on screen super banner ... Why are all the
+  supers for Dancer melee supers when she is supposed to be a zoner char?" + 03:05 "Move all the emoji details to a
+  different place on home sceen" -> 0.26.0: drawers scroll from a drag anywhere (icons pass the drag; a drag isn't a
+  pick), each tab fastest first (Moves.startup; the frame on each icon), badges (✊ beats blocks, ⚡ initiative, 👻
+  dodges, 🔻 hits low, 💥 guard break, 🎯 projectile) with their key on the home screen; no super banner; **her supers
+  a zoner's** - Fan Storm (1 bar, five spectral fans in a spread), Gale (1 bar, wind all round her, blows rushers off),
+  Cyclone (2 bars, a whirlwind sent forward that keeps hitting), Grand Finale (3 bars, fans from the sky) - spawn lists,
+  piercing / rehit / heavy projectiles.
 
 ## To tune / later
 - **Match length with 6:** bot matches take 120-270 decision points with 6 fighters (50-90 with 2). At ~10 s a decision

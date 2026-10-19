@@ -1154,11 +1154,18 @@ func _spawn(f: Fighter) -> void:
 	for cue: Dictionary in (cues if cues is Array else [cues]):
 		if int(cue["at"]) == f.frame:
 			_event(str(cue["type"]), f, null)
-	var sp: Dictionary = m.get("spawn", {})
-	if sp.is_empty() or int(sp["at"]) != f.frame:
-		return
+	for sp: Dictionary in Moves.spawns(m):   # (one, or a super's volley - each on its own frame)
+		if not sp.is_empty() and int(sp["at"]) == f.frame:
+			_spawn_one(f, m, sp)
+
+
+## One projectile off a move: its own place and direction (or the one picked), and how it hits.
+func _spawn_one(f: Fighter, m: Dictionary, sp: Dictionary) -> void:
 	var dir := Vector2(float(f.facing), 0.0)
-	if str(m.get("aim", "")) in ["down", "dir8"] and f.param.length() > 0.1:
+	if sp.has("dir"):   # (a set direction - a volley's spread, fans falling from the sky)
+		var dd: Array = sp["dir"]
+		dir = Vector2(float(dd[0]) * f.facing, float(dd[1])).normalized()
+	elif str(m.get("aim", "")) in ["down", "dir8"] and f.param.length() > 0.1:
 		dir = f.param.normalized()
 	var off: Array = sp.get("from", [30, -70])
 	_shot_n += 1
@@ -1168,6 +1175,9 @@ func _spawn(f: Fighter) -> void:
 		"block": int(sp.get("block", 8)), "chip": int(sp.get("chip", 1)), "life": int(sp.get("life", 60)),
 		"parry": bool(sp.get("parry", true)), "height": str(sp.get("height", "mid")),
 		"grav": float(sp.get("grav", 0.0)), "src": f.move})
+	if bool(sp.get("pierce", false)):   # (on through whoever it hits - each of them once, or again every rehit ticks)
+		shots[-1].merge({"pierce": true, "hits": [], "rehit": int(sp.get("rehit", 0)),
+			"heavy": bool(sp.get("heavy", false))}, true)
 	if xf.has("fans") and int(m.get("fans", 0)) > 0:   # (Fans: one out of her hand - it comes back)
 		f.fans -= 1
 		shots[-1].merge({"ret": true, "leg": 0, "out": FAN_OUT, "hits": [], "life": FAN_LIFE}, true)
@@ -1229,10 +1239,10 @@ func _shots_step(touched: Dictionary) -> void:
 			var p: Dictionary = shots[i]
 			var q: Dictionary = shots[j]
 			if int(p["team"]) != int(q["team"]) and _shot_rect(p).intersects(_shot_rect(q)):
-				for sh: Dictionary in [p, q]:   # (a returning fan turns for home instead)
+				for sh: Dictionary in [p, q]:   # (a returning fan turns for home instead; a heavy one goes on)
 					if bool(sh.get("ret", false)):
 						sh["leg"] = 1
-					else:
+					elif not bool(sh.get("heavy", false)):
 						dead[int(sh["id"])] = true
 				_event("clash", get_f(int(p["owner"])), get_f(int(q["owner"])))
 	var keep: Array = []
@@ -1240,8 +1250,11 @@ func _shots_step(touched: Dictionary) -> void:
 		if dead.has(int(s["id"])):
 			continue
 		var ret := bool(s.get("ret", false))
+		var pierce := bool(s.get("pierce", false))
 		if ret and not _fan_fly(s):
 			continue
+		if pierce and int(s.get("rehit", 0)) > 0 and int(s["life"]) % int(s["rehit"]) == 0:
+			s["hits"] = []   # (a whirlwind: everyone in it can be hit again)
 		var v: Vector2 = s["vel"]
 		if not ret:
 			v.y += float(s["grav"])
@@ -1266,16 +1279,18 @@ func _shots_step(touched: Dictionary) -> void:
 				if d.down == 0:
 					_beat(d, "d%d" % d.instance)
 				continue
-			if ret and (s["hits"] as Array).has(d.id):   # (a fan hits each of them once a flight)
+			if (ret or pierce) and (s["hits"] as Array).has(d.id):   # (a fan hits each of them once a flight)
 				continue
 			_shot_hit(s, d)
 			touched[d.id] = true
 			landed = true
-			if ret:
+			if ret or pierce:
 				(s["hits"] as Array).append(d.id)
+			if ret:
 				s["leg"] = 1
-			break
-		if not landed or ret:
+			if not pierce:
+				break
+		if not landed or ret or pierce:
 			keep.append(s)
 	shots = keep
 
@@ -1477,6 +1492,8 @@ static func from_dict(d: Dictionary) -> Sim:
 				c[k] = int(sd[k])
 		if sd.has("hits"):
 			c["hits"] = (sd["hits"] as Array).map(func(x: Variant) -> int: return int(x))
+		if sd.has("rehit"):
+			c["rehit"] = int(sd["rehit"])
 		s.shots.append(c)
 	s._shot_n = int(d.get("shot_n", 0))
 	return s
