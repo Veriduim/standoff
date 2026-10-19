@@ -287,9 +287,19 @@ one stage; each attack aims at a picked target.
   - The APK no longer packs the lobby server's node_modules (relay/.gdignore; build/.gdignore too).
   - Not tested on a real iPhone yet (Chrome posing as one only) - a friend's iPhone is the next check.
 - 14:05 / 14:09 two reference videos of YOMI mod fights (Standoff Workshop/references/yomi_mods/video_19oct_1405,
-  _1409): "our attacks and effects dont use the full width and height of the field". Next: effects that fill the
-  screen - a floor-wide wall of spikes (Quake Stomp), a giant starburst with rings on big hits, solid afterimages on
-  the Bruiser's dashes, wide rings on grabs and clashes, a super that changes the stage's colours.
+  _1409): "our attacks and effects dont use the full width and height of the field". 14:35 "Wouldn't worry too much
+  about stage effects. Rest sounds good" -> 0.34.0, effects that fill the screen:
+  - The cause: every effect was sized in world px x the camera's zoom, so it shrank whenever the camera pulled back
+    for a wide stage or six fighters. The big moments are now sized by the SCREEN (Fx.band = the stage band's height,
+    `_add_scr`, "scr" parts).
+  - Quake Stomp: a wall of grey spikes bursting up across the whole screen, a wave racing out both ways from his
+    foot, every sixth taller than the screen (Fx._spike_wall).
+  - Big hits (Fx.BIG_HIT 45+ after scaling - about 1 hit in 8, 3 a match in bot matches; and every K.O.): a giant
+    white starburst behind the fighters (their silhouettes on it) and three rings opening out wide (Fx._big).
+  - Grabs and clashes: wide thin rings, wider than the two fighters at any zoom (Fx._wide_rings).
+  - The Bruiser rushing in on his own feet: solid grey copies of himself left behind (Fx.afterimage solid, SOLID).
+  - Flings and Bull Rush: their ring of air and wind streaks sized by the screen too.
+  - Not done (his word): a super that changes the stage's colours.
 
 ## To tune / later
 - **Match length with 6:** bot matches take 120-270 decision points with 6 fighters (50-90 with 2). At ~10 s a decision

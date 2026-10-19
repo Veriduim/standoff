@@ -64,9 +64,16 @@ one hit and grabs go straight through it; knocked down, he loses half his Grit. 
 ## The look
 - **Gloves** - his prop (as her fans are hers): big round boxing gloves in his colour with a white wrist band; a broader
   chest. He bounces on his toes in a high guard.
-- **A fling** - a tall thin ring of air opening out the way they fly, wind streaks, cracks in the floor where they land;
-  they slide a long way.
-- **Quake Stomp** - a flat ring along the floor, cracks, dust.
+- **A fling** - a tall thin ring of air opening out the way they fly, wind streaks across the screen, cracks in the
+  floor where they land; they slide a long way.
+- **Quake Stomp** - a wall of grey spikes bursting up out of the floor across the whole screen, racing out both ways
+  from his foot, some taller than the screen (0.34.0, from the red brawler in Timmy's 14:09 mod video); a flat ring
+  along the floor, cracks, dust.
+- **Rushing in** (Dash, Chase, Bull Rush...) - solid grey copies of him left behind, hanging a moment (0.34.0).
+- **Big hits** (45+ damage after scaling: the Haymaker, the Roundhouse, the K.O. Punch, supers - about 1 hit in 8, 3 a
+  match) - a giant white starburst behind the fighters and rings opening out wide; grabs and clashes get wide rings.
+  All of these are sized by the SCREEN, not the world (Fx.band), so they fill it however far the camera has pulled
+  back (14:09 "our attacks anf effects domt use the full width and height of the field").
 - **Grit full** - his gloves glow orange with sparks rising; "K.O. READY" once.
 - **Armour** - a hard metal glint and a clang under the hit. **Guard break** - the guard in pieces, "GUARD BREAK".
 

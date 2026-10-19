@@ -98,6 +98,7 @@ func show_tick(rec: Array, events: Array = [], flying: Array = []) -> void:
 	var prev := frame
 	_prev = prev
 	frame = rec
+	_fx_screen()
 	shots = flying
 	for sh: Array in flying:   # (a thrown fan trails a ribbon of her colour - the mods' beams)
 		if str(sh[2]) == "fan" and int(sh[3]) < frame.size():
@@ -138,8 +139,9 @@ func _motion_fx(prev: Array) -> void:
 		var speed := maxf(absf(float(r[0]) - float(p[0])), absf(float(r[1]) - float(p[1])) * 0.8)
 		var fast := int(r[5]) != 4 and (speed > 5.5 or kind in ["super", "burst"])
 		_after_n[i] = int(_after_n.get(i, 0)) + 1 if fast else 0
-		if fast and int(_after_n[i]) % 3 == 1:   # (a fading copy every third tick they're quick - fx keeps them longer)
-			fx.afterimage(i, r)
+		if fast and int(_after_n[i]) % 3 == 1:   # (a fading copy every third tick they're quick - fx keeps them longer;
+			# the Bruiser rushing in on his own feet leaves solid grey ones - 14:09 "The red guy could help with bruiser")
+			fx.afterimage(i, r, _char(i) == "bruiser" and int(r[5]) == 0 and speed > 5.5)
 		var tr := str(trails[i]) if i < trails.size() else "None"   # (their Style's trail, while they move)
 		if tr != "None" and int(r[5]) != 4 and (speed > 2.0 or float(r[1]) < -12.0) and (_tick_n + i) % 2 == 0:
 			fx.trail_bit(tr, Vector2(float(r[0]), float(r[1]) - 40.0), colour_of(i), _tick_n * 11 + i)
@@ -374,9 +376,19 @@ func _process(delta: float) -> void:
 	_dt = clampf(delta * time_scale, 0.0, 0.05)
 	if not ghost.is_empty() and ghost_play:
 		_ghost_i = (_ghost_i + 1) % (ghost.size() + 20)   # (a short hold on the last pose before it loops)
+	_fx_screen()
 	fx.update(delta * time_scale)
 	_follow(delta)
 	queue_redraw()
+
+
+## The screen, for the effects sized by it (14:09 "our attacks anf effects domt use the full width and height of the
+## field" - Fx.band).
+func _fx_screen() -> void:
+	fx.band = maxf(120.0, view_bottom - view_top)
+	fx.view_zoom = zoom
+	fx.span = (view_right - view_left) / maxf(zoom, 0.05)
+	fx.walls = half
 
 
 ## The camera eases to fit everyone standing (and the ghost).
@@ -472,10 +484,13 @@ func _draw() -> void:
 	if not ghost.is_empty():
 		_predict_labels()
 	fx.draw_back(self)   # (the dark starbursts of hits, behind everyone)
-	for a: Dictionary in fx.afters:   # (afterimages - fading copies behind fast movers)
+	for a: Dictionary in fx.afters:   # (afterimages - fading copies behind fast movers; solid grey ones for the Bruiser)
 		var id := int(a["id"])
-		if id < frame.size():
-			_figure(id, a["rec"], 0.5 * (1.0 - float(a["age"]) / float(a["life"])), true)
+		var t := float(a["age"]) / float(a["life"])
+		if id < frame.size() and bool(a.get("solid", false)):
+			_figure(id, a["rec"], 0.5, true, Fx.SOLID.lerp(BG, t * t))
+		elif id < frame.size():
+			_figure(id, a["rec"], 0.5 * (1.0 - t), true)
 	for i in frame.size():   # (the knocked out first - the standing stay on top)
 		if int(frame[i][5]) == 4:
 			_figure(i, frame[i], 1.0)
@@ -685,7 +700,8 @@ func _boxes(i: int, r: Array) -> void:
 			draw_rect(rect, Color(1.0, 0.3, 0.35, 0.9), false, 2.0)
 
 
-func _figure(i: int, r: Array, alpha: float, bare := false) -> void:
+## `tint`: drawn flat in that colour (a solid afterimage).
+func _figure(i: int, r: Array, alpha: float, bare := false, tint := Color(0, 0, 0, 0)) -> void:
 	var ch := _char(i)
 	var h := float(Moves.stats(ch)["height"]) / 100.0
 	var base := Vector2(float(r[0]), float(r[1]))
@@ -697,7 +713,9 @@ func _figure(i: int, r: Array, alpha: float, bare := false) -> void:
 		col = col.darkened(0.55)
 	elif r.size() > 11 and int(r[11]) == 2:   # (SADNESS!: washed out blue)
 		col = col.lerp(Color("#5d7bd6"), 0.55)
-	if alpha < 1.0:   # (a ghost: mixed into the stage, not see-through - overlapping limbs stay one flat shape)
+	if tint.a > 0.0:
+		col = tint
+	elif alpha < 1.0:   # (a ghost: mixed into the stage, not see-through - overlapping limbs stay one flat shape)
 		col = col.lerp(BG, 1.0 - alpha)
 	elif fx.flash.has(i):   # (the impact frame: drawn white)
 		col = Color.WHITE

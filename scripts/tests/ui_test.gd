@@ -768,6 +768,57 @@ func _test_web() -> void:
 	g.queue_free()
 
 
+func _test_big_effects() -> void:
+	_section("Effects that fill the screen (14:09 \"our attacks anf effects domt use the full width and height of the "
+			+ "field\"; 14:35 \"Rest sounds good\")")
+	var stars := []
+	var none_small := true
+	var wall_ok := true
+	var rings_ok := true
+	for z: float in [0.4, 1.6]:   # (pulled right back for six on a wide stage, and close in)
+		var fx := Fx.new()
+		fx.band = 420.0
+		fx.view_zoom = z
+		fx.span = 1000.0 / z
+		fx.walls = 1400.0
+		var kinds := func() -> Array: return fx.parts.map(func(p: Dictionary) -> String: return str(p["k"]))
+		fx.on_event("hit", Vector2.ZERO, 1.0, 18, Color.RED, 1, Color.BLUE, false, 3)
+		none_small = none_small and not kinds.call().has("bigstar")
+		fx.on_event("hit", Vector2.ZERO, 1.0, 66, Color.RED, 1, Color.BLUE, false, 4)
+		var star: Array = fx.parts.filter(func(p: Dictionary) -> bool: return str(p["k"]) == "bigstar")
+		stars.append(float(star[0]["s"]) * fx.band if not star.is_empty() else 0.0)
+		fx.on_event("quake", Vector2(-1300.0, -6.0), 1.0, 0, Color.RED, 0, Color.RED, false, 5)   # (stamping by a wall)
+		var wall: Array = fx.parts.filter(func(p: Dictionary) -> bool: return str(p["k"]) == "spikes")
+		var xs: Array = (wall[0]["sp"] as Array).map(func(q: Array) -> float: return float(q[0])) if not wall.is_empty() else [0.0]
+		var tallest: float = (wall[0]["sp"] as Array).map(func(q: Array) -> float: return float(q[1])).max() if not wall.is_empty() else 0.0
+		wall_ok = wall_ok and float(xs.max()) - float(xs.min()) >= 0.8 * minf(fx.span, 2.0 * fx.walls) and tallest >= 1.0
+		fx.parts.clear()
+		fx.on_event("throw", Vector2.ZERO, 1.0, 20, Color.RED, 1, Color.BLUE, false, 6)
+		var ring: Array = fx.parts.filter(func(p: Dictionary) -> bool: return str(p["k"]) == "wring")
+		rings_ok = rings_ok and not ring.is_empty() and float(ring[0]["s"]) * fx.band >= 2.0 * 60.0 * z * 1.4
+	_check("a big hit's starburst is as big pulled back as close in (%.0f / %.0f px - over a third of the band), and an "
+			% stars + "ordinary hit gets none", none_small and absf(float(stars[0]) - float(stars[1])) < 1.0
+			and float(stars[0]) >= 0.35 * 420.0)
+	_check("Quake Stomp's wall of spikes covers the screen in view, even stamped by a wall, some taller than it; a grab's "
+			+ "rings are wider than the two fighters at any zoom", wall_ok and rings_ok)
+	var g := _screen()
+	HomeScreen.fighter = "bruiser"
+	g.start_local(1, "ffa")
+	var st: StageView = g.stage
+	var rec: Array = (st.frame as Array).duplicate(true)
+	for k in 8:   # (the Bruiser dashing in)
+		rec = rec.duplicate(true)
+		rec[0][0] = float(rec[0][0]) + 15.0
+		rec[0][3] = "dash"
+		rec[0][4] = k + 1
+		rec[0][5] = 0
+		st.show_tick(rec)
+	var solid := st.fx.afters.filter(func(a: Dictionary) -> bool: return int(a["id"]) == 0 and bool(a.get("solid", false)))
+	_check("the Bruiser rushing in leaves solid grey copies of himself behind (%d)" % solid.size(), solid.size() >= 2)
+	HomeScreen.fighter = "dancer"
+	g.queue_free()
+
+
 ## Every character past plain ASCII inside the game's strings (as tools/icon_fonts.py scans: comments aren't shown).
 func _text_chars(dir: String) -> Array:
 	var out := {}

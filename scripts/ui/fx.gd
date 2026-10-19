@@ -38,7 +38,7 @@ var flash := {}              ## fighter id -> seconds they're drawn white (the i
 var afters: Array = []       ## afterimages: {id, rec: Sim.record row, age, life}
 const BIG := 1.3              ## every effect this much bigger (22:40 "elevate this a lot")
 const AFTER_EACH := 2        ## afterimages a fighter at most, and in all (each is a whole figure to draw)
-const AFTER_ALL := 6
+const AFTER_ALL := 8
 const INK := Color("#3b3f52")    ## the dark starburst behind a hit (23:05)
 var dim := 0.0               ## how dark the stage goes round a super (0-1); `dim_id` is drawn over it
 var dim_id := -1
@@ -49,6 +49,19 @@ var style := ""              ## the next hit's look (StageView sets it): "slash"
 var cutin := {}              ## a super's cut-in: {id, col, title, pose, face, age, life} (screen space - draw_cutin)
 var _rng := RandomNumberGenerator.new()
 static var _bold: FontVariation
+## The screen (StageView sets these each frame). The big moments are sized by the SCREEN, not the world (19 Oct 14:09
+## "our attacks anf effects domt use the full width and height of the field", with two YOMI mod fights - small fighters,
+## effects filling the screen): a world-sized effect shrinks whenever the camera pulls back for a wide stage or six
+## fighters. A screen-sized part ("scr") has its size `s` as a share of the stage band's height.
+var band := 460.0            ## the stage band's height (screen px)
+var view_zoom := 1.0         ## the camera's zoom
+var span := 2000.0           ## how much of the stage is in view (world px across)
+var walls := 1400.0          ## the stage's half width (world px)
+const BIG_HIT := 45          ## a hit this hard (after scaling) gets the giant starburst - the big ones only, not every hit
+                             ## (06:17 "The only thing i didnt like the circle for was every hit")
+const SPIKES := 40           ## Quake Stomp's wall of spikes
+const SOLID := Color("#8f93a1")   ## the Bruiser's rush copies: solid grey (the red brawler in the 14:09 video)
+const AFTER_SOLID := 4       ## solid copies a fighter at most
 
 
 func frozen() -> bool:
@@ -123,29 +136,32 @@ func on_event(type: String, at: Vector2, face: float, dmg: int, by: Color, victi
 			parts[-1]["txt"] = "WHIFF CANCEL"
 		# the Bruiser (05:27 "his effects of slapping an enemy accross map" - the Nakmuay mod, studied; our own drawing)
 		"fling":   # (a big hit sending them off: a tall ring of air bursting out the way they fly, wind streaks, cracks)
-			_add("boom", at + Vector2(face * 10.0, 0.0), Vector2.ZERO, 0.42, by.lightened(0.7), 92.0, face)
-			_add("boom", at + Vector2(face * 34.0, 0.0), Vector2.ZERO, 0.34, by.lightened(0.45), 62.0, face)
-			for i in 12:
-				var off := Vector2(_rng.randf_range(-10.0, 10.0), _rng.randf_range(-46.0, 46.0))
-				_add("hwind", at + off, Vector2(face * _rng.randf_range(900.0, 1400.0), 0.0), _rng.randf_range(0.22, 0.34),
-						Color("#eef4ff"), _rng.randf_range(40.0, 90.0))
+			_add_scr("boom", at + Vector2(face * 10.0, 0.0), Vector2.ZERO, 0.48, by.lightened(0.7), 0.36, 0.0, face)
+			_add_scr("boom", at + Vector2(face * 34.0, 0.0), Vector2.ZERO, 0.4, by.lightened(0.45), 0.24, 0.0, face)
+			for i in 14:   # (streaks of wind across the screen the way they're sent - screen-sized, 14:09)
+				var off := Vector2(_rng.randf_range(-0.03, 0.03), _rng.randf_range(-0.16, 0.16)) * band / maxf(view_zoom, 0.05)
+				_add_scr("hwind", at + off, Vector2(face * _rng.randf_range(1800.0, 2800.0), 0.0), _rng.randf_range(0.26, 0.4),
+						Color("#eef4ff"), _rng.randf_range(0.2, 0.42))
 			if at.y > -140.0:
 				_add("crack", Vector2(at.x, 0.0), Vector2.ZERO, 1.4, Color("#c9ccd8"), 120.0, face)
 			splash(0.45, at)
 			freeze(0.12, victim)
 			kick(7.0)
-		"quake":   # (Quake Stomp: a flat shockwave racing out both ways along the floor, the floor cracking)
-			_add("floorring", Vector2(at.x, 0.0), Vector2.ZERO, 0.5, Color("#e6e9f2"), 120.0)
+		"quake":   # (Quake Stomp: a WALL OF SPIKES bursting up out of the floor across the whole screen, racing out both
+			# ways from his foot - 14:09, the red brawler's stomp in the mod video - and the floor cracking)
+			_add_scr("floorring", Vector2(at.x, 0.0), Vector2.ZERO, 0.55, Color("#e6e9f2"), 0.5)
 			_add("crack", Vector2(at.x, 0.0), Vector2.ZERO, 1.3, Color("#c9ccd8"), 110.0, 0.0)
+			_spike_wall(at.x)
 			for i in 14:
 				var side := 1.0 if i % 2 == 0 else -1.0
 				_add("chip", Vector2(at.x, -4.0), Vector2(side * _rng.randf_range(160.0, 420.0), -_rng.randf_range(120.0, 340.0)),
 						_rng.randf_range(0.3, 0.5), Color("#a9acb8"), _rng.randf_range(3.0, 6.0))
-			kick(5.0)
+			kick(9.0)
 		"rush":   # (Bull Rush / Chase setting off: dust kicked back, a streak behind)
-			for i in 6:
-				_add("hwind", at + Vector2(0.0, _rng.randf_range(-40.0, 30.0)), Vector2(-face * _rng.randf_range(500.0, 800.0), 0.0),
-						0.26, Color("#dfe6f5"), _rng.randf_range(30.0, 60.0))
+			for i in 8:
+				var off := Vector2(0.0, _rng.randf_range(-0.1, 0.07) * band / maxf(view_zoom, 0.05))
+				_add_scr("hwind", at + off, Vector2(-face * _rng.randf_range(1000.0, 1600.0), 0.0), 0.3, Color("#dfe6f5"),
+						_rng.randf_range(0.14, 0.3))
 			kick(2.0)
 		"kopunch":   # (the K.O. Punch coming up: a hard flash at his fist)
 			_add("glint", at + Vector2(face * 20.0, -30.0), Vector2.ZERO, 0.3, Color.WHITE, 70.0)
@@ -233,8 +249,9 @@ func on_event(type: String, at: Vector2, face: float, dmg: int, by: Color, victi
 			kick(3.0)
 		"hit", "throw", "armor":
 			var s := clampf(float(dmg) / 32.0, 0.5, 1.8)
-			if type == "throw":   # (a dark sphere closes round the two of them - the mods' grabs)
+			if type == "throw":   # (a dark sphere closes round the two of them - the mods' grabs - and wide rings open out)
 				_add("bubble", at, Vector2.ZERO, 0.5, Color("#05060a"), 72.0)
+				_wide_rings(at, Color("#c9ccd8"), 2)
 			# (23:05 "This is an example of the normal hit effect": a dark jagged starburst behind it, longest along
 			# the hit - the YOMI mods' look; low contrast, so the fighters and sparks read on top)
 			_add("ink", at, Vector2.ZERO, 0.42, INK, 60.0 + 26.0 * s, face)
@@ -264,6 +281,8 @@ func on_event(type: String, at: Vector2, face: float, dmg: int, by: Color, victi
 				flash[victim] = 0.06
 			if dmg >= 45:
 				splash(0.35, at)
+			if dmg >= BIG_HIT and type != "armor":   # (14:09: a giant starburst and rings, sized by the screen)
+				_big(at, by)
 			freeze(clampf(0.04 + float(dmg) * 0.0018, 0.05, 0.14), victim)
 			kick(clampf(float(dmg) * 0.1, 1.5, 5.0))
 			if type != "armor":
@@ -293,6 +312,8 @@ func on_event(type: String, at: Vector2, face: float, dmg: int, by: Color, victi
 				var side := 1.0 if i % 2 == 0 else -1.0
 				_add("box" if i % 3 else "ring", at, _fan(side, 1.0) * _rng.randf_range(220.0, 480.0),
 						_rng.randf_range(0.25, 0.4), ORANGE if i % 2 else YELLOW, _rng.randf_range(3.0, 6.0))
+			if big:   # (two strikes meeting: wide rings round them - 14:09)
+				_wide_rings(at, Color("#ffd8a8"), 2)
 			freeze(0.08 if big else 0.05, -1)
 			kick(2.5 if big else 1.5)
 		"ko":
@@ -302,10 +323,61 @@ func on_event(type: String, at: Vector2, face: float, dmg: int, by: Color, victi
 				_add("chip", at, Vector2.from_angle(_rng.randf() * TAU) * _rng.randf_range(200.0, 560.0),
 						_rng.randf_range(0.4, 0.7), victim_col if i % 3 else Color.WHITE, _rng.randf_range(3.0, 6.0))
 			_add("spokes", at, Vector2.ZERO, 0.2, Color.WHITE, 90.0)
+			_big(at, victim_col.lightened(0.5), 0.55)
 			flash[victim] = 0.12
 			splash(0.8, at)
 			freeze(0.22, victim)
 			kick(6.0)
+
+
+## A part sized by the screen (see `band`): `share` of the stage band's height, `vel` in screen px/s, starting after
+## `delay` seconds.
+func _add_scr(kind: String, at: Vector2, vel: Vector2, life: float, c: Color, share: float, delay := 0.0,
+		extra := 0.0) -> Dictionary:
+	var p := {"k": kind, "p": at, "v": vel / maxf(view_zoom, 0.05), "age": -delay, "life": life, "c": c, "s": share,
+		"r": _rng.randf() * TAU, "w": 0.0, "x": extra, "scr": true}
+	parts.append(p)
+	return p
+
+
+## A big hit (BIG_HIT and over, a K.O.): a giant white starburst behind everyone - the fighters dark against it - and
+## rings opening out wide (14:09, the mod video's big hits: half the screen across).
+func _big(at: Vector2, by: Color, share := 0.42) -> void:
+	var p := _add_scr("bigstar", at, Vector2.ZERO, 0.42, Color.WHITE, share)
+	var sp: Array = []
+	for i in 36:   # (spikes long and uneven, a few longer still; short valleys between)
+		sp.append(_rng.randf_range(0.16, 0.24) if i % 2 == 1 else _rng.randf_range(0.55, 1.0) * (1.3 if i % 10 == 0 else 1.0))
+	p["sp"] = sp
+	for k in 3:
+		_add_scr("wring", at, Vector2.ZERO, 0.5, Color("#eef0f6") if k != 1 else by.lightened(0.6), share * (0.8 + 0.5 * k),
+				0.04 * k, 0.6 - 0.14 * k)
+
+
+## Wide thin rings round a grab or a clash: wider than the two of them together at any zoom.
+func _wide_rings(at: Vector2, c: Color, n: int) -> void:
+	var share := maxf(0.36, 190.0 * view_zoom / band)
+	for k in n:
+		_add_scr("wring", at, Vector2.ZERO, 0.5, c, share * (1.0 + 0.4 * k), 0.07 * k, 0.45 - 0.1 * k)
+
+
+## Quake Stomp's wall of spikes: grey shards bursting up out of the floor across the screen in view, the nearest first
+## (a wave racing out both ways), some taller than the screen.
+func _spike_wall(x0: float) -> void:
+	var reach := minf(span * 0.95, walls * 2.0)   # (the whole screen, even stamping by a wall)
+	var sp: Array = []
+	for k in SPIKES:
+		var u := _rng.randf_range(-1.0, 1.0)
+		var x := x0 + u * reach
+		if absf(x) > walls - 10.0:   # (not through the walls)
+			continue
+		var tall := _rng.randf_range(0.3, 0.8) * (1.15 - 0.5 * absf(u))
+		if k % 6 == 0:   # (every sixth runs off the top of the screen)
+			tall = _rng.randf_range(1.05, 1.45)
+		sp.append([x, tall, _rng.randf_range(0.04, 0.1), _rng.randf_range(-0.12, 0.12) + 0.16 * signf(u), absf(u) * 0.26,
+			_rng.randf()])
+	sp.sort_custom(func(a: Array, b: Array) -> bool: return float(a[1]) > float(b[1]))   # (the tall ones behind)
+	var p := _add_scr("spikes", Vector2(x0, 0.0), Vector2.ZERO, 1.0, Color("#8e92a2"), 1.0)
+	p["sp"] = sp
 
 
 ## Someone bursts out of a combo: a white flash bursts out of them, shards and rings fly, everything nearby is blown
@@ -367,13 +439,14 @@ func splash(amount: float, at: Vector2) -> void:
 
 
 ## A fading copy of a fast mover (StageView calls it every couple of ticks they're quick).
-func afterimage(id: int, rec: Array) -> void:
+## `solid`: a solid grey copy that hangs a while (the Bruiser rushing in - 14:09 "The red guy could help with bruiser").
+func afterimage(id: int, rec: Array, solid := false) -> void:
 	var mine := afters.filter(func(a: Dictionary) -> bool: return int(a["id"]) == id)
-	if mine.size() >= AFTER_EACH:   # (capped - each copy is a whole figure to draw; 02:39 "choppy ... with 4")
-		afters.erase(mine[0])
+	if mine.size() >= (AFTER_SOLID if solid else AFTER_EACH):   # (capped - each copy is a whole figure to draw; 02:39
+		afters.erase(mine[0])                                    # "choppy ... with 4")
 	if afters.size() >= AFTER_ALL:
 		afters.pop_front()
-	afters.append({"id": id, "rec": rec.duplicate(), "age": 0.0, "life": 0.32})
+	afters.append({"id": id, "rec": rec.duplicate(), "age": 0.0, "life": 0.5 if solid else 0.32, "solid": solid})
 
 
 func freeze(seconds: float, who: int) -> void:
@@ -588,7 +661,9 @@ func draw_trails(st: StageView) -> void:
 func draw_back(st: StageView) -> void:
 	for p: Dictionary in parts:
 		var k := str(p["k"])
-		if k in ["bubble", "floorring", "ribbon", "crack"]:
+		if float(p["age"]) < 0.0:   # (not started yet - a delayed part)
+			continue
+		if k in ["bubble", "floorring", "ribbon", "crack", "spikes", "bigstar"]:
 			_draw_back_part(st, p)
 			continue
 		if k != "ink":
@@ -618,8 +693,64 @@ func _draw_back_part(st: StageView, p: Dictionary) -> void:
 	var t := float(p["age"]) / float(p["life"])
 	var c: Color = p["c"]
 	var at := st.w2s(p["p"])
-	var z := st.zoom
+	var z := band if p.has("scr") else st.zoom   # (a screen-sized part: its size is a share of the band)
 	match str(p["k"]):
+		"spikes":   # (Quake Stomp's wall: each shard shoots up fast when the wave reaches it, holds, sinks and fades - two
+			# shades split down the middle, like a facet, and a pale edge)
+			var floor_y := st.w2s(Vector2.ZERO).y
+			var tri := PackedVector2Array()
+			var cols := PackedColorArray()
+			var rims: Array = []
+			for q: Array in p["sp"]:
+				var lt := float(p["age"]) - float(q[4])
+				if lt <= 0.0:
+					continue
+				var rise := 1.0 - pow(1.0 - minf(1.0, lt / 0.07), 3.0)
+				var fall := clampf((lt - 0.24) / 0.42, 0.0, 1.0)
+				var h := float(q[1]) * band * rise * (1.0 - 0.45 * fall * fall)
+				var w := float(q[2]) * band * (1.0 - 0.3 * fall)
+				var a := 0.9 * (1.0 - fall)
+				if h < 2.0 or a < 0.02:
+					continue
+				var base := Vector2(st.w2s(Vector2(float(q[0]), 0.0)).x, floor_y)
+				var tip := base + Vector2(float(q[3]) * h, -h)
+				var l := base - Vector2(w / 2.0, 0.0)
+				var r := base + Vector2(w / 2.0, 0.0)
+				var m := base + Vector2(w * 0.1 * signf(float(q[3])), 0.0)
+				var shade := float(q[5])
+				var dark := Color("#585c6c").lerp(Color("#6f7385"), shade)
+				var light := Color("#aeb2c0").lerp(Color("#cdd0db"), shade)
+				dark.a = a
+				light.a = a
+				for v: Vector2 in [l, tip, m]:
+					tri.append(v)
+					cols.append(dark)
+				for v: Vector2 in [m, tip, r]:
+					tri.append(v)
+					cols.append(light)
+				rims.append([l, tip, Color(0.93, 0.94, 0.97, a)])
+			Stick.tris(st, tri, cols)
+			for rim: Array in rims:
+				st.draw_line(rim[0], rim[1], rim[2], 1.5, true)
+		"bigstar":   # (a giant white starburst: quick to full size, holding, fading - behind the fighters)
+			var grow := 1.0 - pow(1.0 - minf(1.0, t / 0.14), 3.0)
+			var fade := 1.0 - maxf(0.0, (t - 0.3) / 0.7)
+			var rad := float(p["s"]) * z * (0.5 + 0.5 * grow) * (1.0 + 0.06 * t)
+			var sp: Array = p["sp"]
+			var n := sp.size()
+			for layer in 2:   # (white, then a hot core)
+				var cc := Color(1, 1, 1, 0.82 * fade) if layer == 0 else Color(HOT, 0.95 * fade)
+				var rr := rad * (1.0 if layer == 0 else 0.5)
+				var tri := PackedVector2Array()
+				var cols := PackedColorArray()
+				for i in n:
+					var a0 := float(p["r"]) + i * TAU / n
+					var a1 := float(p["r"]) + (i + 1) * TAU / n
+					for v: Vector2 in [at, at + Vector2.from_angle(a0) * rr * float(sp[i]),
+							at + Vector2.from_angle(a1) * rr * float(sp[(i + 1) % n])]:
+						tri.append(v)
+						cols.append(cc)
+				Stick.tris(st, tri, cols)
 		"bubble":   # (closing in fast, holding, fading - a pale rim)
 			var r := float(p["s"]) * z * (1.3 - 0.3 * minf(1.0, t / 0.15))
 			var a := 0.8 * (1.0 - maxf(0.0, (t - 0.55) / 0.45))
@@ -635,7 +766,7 @@ func _draw_back_part(st: StageView, p: Dictionary) -> void:
 				for n in 49:
 					var a := TAU * n / 48.0
 					pts.append(at + Vector2(cos(a) * rx * (1.0 + layer * 0.12), sin(a) * rx * 0.16 * (1.0 + layer * 0.12)))
-				st.draw_polyline(pts, cc, maxf(1.5, (5.0 - layer) * z), true)
+				st.draw_polyline(pts, cc, maxf(1.5, (5.0 - layer) * st.zoom), true)
 		"crack":   # (the floor cracked: jagged lines out along it from where it landed - one way (x = facing) or both)
 			var sp: Array = p["sp"]
 			c.a = 0.8 * (1.0 - maxf(0.0, (t - 0.45) / 0.55))
@@ -657,13 +788,19 @@ func _draw_back_part(st: StageView, p: Dictionary) -> void:
 func draw_parts(st: StageView) -> void:
 	var z := st.zoom
 	for p: Dictionary in parts:
+		if float(p["age"]) < 0.0:   # (not started yet - a delayed part)
+			continue
 		var t := float(p["age"]) / float(p["life"])
 		var at := st.w2s(p["p"])
 		var c: Color = p["c"]
-		var s := float(p["s"]) * z
+		var s := float(p["s"]) * (band if p.has("scr") else z)   # (screen-sized parts: a share of the band)
 		match str(p["k"]):
-			"ink", "bubble", "floorring", "ribbon", "crack":   # (behind the fighters - draw_back)
+			"ink", "bubble", "floorring", "ribbon", "crack", "spikes", "bigstar":   # (behind the fighters - draw_back)
 				pass
+			"wring":   # (a wide thin ring opening out round a big moment; x = how strong)
+				var e := 1.0 - pow(1.0 - t, 2.0)
+				c.a = float(p["x"]) * (1.0 - t)
+				st.draw_arc(at, s * (0.6 + 0.4 * e), 0.0, TAU, 72, c, 1.0 + 2.5 * (1.0 - t), true)
 			"sweep":   # (a giant fan sweeping open: from up behind her round to the way she faces (x = facing; 0 = up))
 				var face := float(p["x"])
 				var e := 1.0 - pow(1.0 - minf(1.0, t / 0.45), 3.0)
