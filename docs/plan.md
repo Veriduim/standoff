@@ -197,6 +197,16 @@ one stage; each attack aims at a picked target.
   Normal / Hard on the home screen (the LOOK row's place; Look: Smooth / Pixel moved to the buttons bottom left), kept;
   Easy = the quick bot, Normal thinks a little and plays loose, Hard thinks the most (bot_duel: Normal beat Easy 9 of
   10, Hard beat Normal 8 of 10; ~10 / ~27 ms a pick on the PC). Online, the host's level runs the empty seats.
+- 02:15 "When can I save replays??"; 02:19 "Would love to save them to device ... drop the pixel look. I think smooth
+  works for us ... I will uppercut and send them flying up. Is the only way to follow super jump? ... when I uppercut
+  the camera start panning in and out constantly" -> 0.23.0:
+  - **saved replays**: every match (start + each turn's picks; the sim replays them exactly), the last 30, a Replays
+    list on the home screen, and "Save to phone" (a copy in Download/Standoff Replays);
+  - the pixel look's gone (smooth only);
+  - the uppercut launches a little lower (-12 -> -10.5); a Jump straight after it reaches them (it always could - the
+    uppercut cancels into Jump or Super Jump on hit; the card now says so);
+  - the camera frames the ghost's whole path - it was following the looping ghost frame, zooming out and in with the
+    uppercut's ghost on every loop.
 
 ## To tune / later
 - **Match length with 6:** bot matches take 120-270 decision points with 6 fighters (50-90 with 2). At ~10 s a decision

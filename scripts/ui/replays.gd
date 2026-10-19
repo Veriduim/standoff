@@ -8,6 +8,37 @@ const DIR := "user://replays"
 const KEEP := 30
 
 
+static var device_dir := ""   ## where "Save to phone" puts a copy ("" = the phone's Download/Standoff Replays)
+
+
+## The phone's own folder for replays: Download/Standoff Replays (02:19 "Would love to save them to device").
+static func device_folder() -> String:
+	if device_dir != "":
+		return device_dir
+	return OS.get_system_dir(OS.SYSTEM_DIR_DOWNLOADS).path_join("Standoff Replays")
+
+
+## A copy of a saved replay on the phone, named by when it was played; its path, or "" if it couldn't.
+static func export_to_device(path: String) -> String:
+	if OS.get_name() == "Android":
+		OS.request_permissions()   # (older Androids ask before anything goes in Download)
+	var rec := load_rec(path)
+	if rec.is_empty():
+		return ""
+	var dir := device_folder()
+	if DirAccess.make_dir_recursive_absolute(dir) != OK and not DirAccess.dir_exists_absolute(dir):
+		return ""
+	var dt := Time.get_datetime_dict_from_unix_time(int(rec.get("when", 0)))
+	var out := dir.path_join("standoff_%04d-%02d-%02d_%02d%02d%02d.json" % [int(dt["year"]), int(dt["month"]),
+		int(dt["day"]), int(dt["hour"]), int(dt["minute"]), int(dt["second"])])
+	var f := FileAccess.open(out, FileAccess.WRITE)
+	if f == null:
+		return ""
+	f.store_string(JSON.stringify(rec, "", false, true))
+	f.close()
+	return out
+
+
 ## Save a finished match's record: {v, when, names, colours, me, mode, result, start, turns}.
 static func save(rec: Dictionary) -> String:
 	DirAccess.make_dir_recursive_absolute(DIR)

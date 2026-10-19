@@ -16,7 +16,6 @@ const SETTINGS := "user://settings.cfg"
 var colour := 0
 var opponents := 3
 var mode := "ffa"
-var pixel := false   ## the pixel look (Timmy 18:35 - pick 2 from the YOMI study, as a switch); kept between plays
 
 var dim: ColorRect
 var card: PanelContainer
@@ -90,7 +89,6 @@ func _ready() -> void:
 	var level_group := ButtonGroup.new()
 	var cfg := ConfigFile.new()
 	if cfg.load(SETTINGS) == OK:
-		pixel = bool(cfg.get_value("look", "pixel", false))
 		Bot.chosen = clampi(int(cfg.get_value("home", "bots", 1)), 0, 2)
 	for k in Bot.LEVELS.size():
 		var lvl: int = k
@@ -128,18 +126,12 @@ func _ready() -> void:
 	for s in ["normal", "hover", "focus"]:
 		how.add_theme_stylebox_override(s, Ui.box(Color("#1e2029e8"), 12))
 	add_child(how)
-	var look := Ui.button(_look_label(), func() -> void: set_pixel(not pixel), 18)   # (the look switch, moved here)
-	look.name = "Look"
-	look.custom_minimum_size = Vector2(150, 46)
-	for s in ["normal", "hover", "focus"]:
-		look.add_theme_stylebox_override(s, Ui.box(Color("#1e2029e8"), 12))
-	add_child(look)
 	var rep := Ui.button("Replays", func() -> void: replays.emit(), 18)
 	rep.name = "Replays"
 	for s in ["normal", "hover", "focus"]:
 		rep.add_theme_stylebox_override(s, Ui.box(Color("#1e2029e8"), 12))
 	add_child(rep)
-	for b: Button in [snd, how, look, rep]:   # (four along the bottom - narrow enough to clear the card on 16:9)
+	for b: Button in [snd, how, rep]:   # (four along the bottom - narrow enough to clear the card on 16:9)
 		b.custom_minimum_size = Vector2(132, 46)
 	var ver := Ui.label(VERSION + "  ·  the Dancer: her war fans and her Tempo", 15, Color("#6b6b78"))
 	ver.name = "Version"
@@ -194,21 +186,6 @@ func set_level(lvl: int) -> void:
 	cfg.save(SETTINGS)
 
 
-func _look_label() -> String:
-	return "Look: Pixel" if pixel else "Look: Smooth"
-
-
-## Smooth or pixel - saved, so the game opens the way it was left.
-func set_pixel(on: bool) -> void:
-	pixel = on
-	if has_node("Look"):
-		(get_node("Look") as Button).text = _look_label()
-	var cfg := ConfigFile.new()
-	cfg.load(SETTINGS)
-	cfg.set_value("look", "pixel", on)
-	cfg.save(SETTINGS)
-
-
 func _toggle_sound() -> void:
 	Sfx.set_on(not Sfx.on)
 	sync_sound()
@@ -236,7 +213,7 @@ func _layout() -> void:
 	ver.position = Vector2(24, vp.y - 36)
 	var snd := get_node("Sound") as Button
 	var x := 24.0
-	for n: String in ["Sound", "HowToPlay", "Look", "Replays"]:
+	for n: String in ["Sound", "HowToPlay", "Replays"]:
 		(get_node(n) as Button).position = Vector2(x, vp.y - 92)
 		x += 140.0
 

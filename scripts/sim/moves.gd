@@ -131,7 +131,7 @@ const DANCER := {
 		"uppercut": {"name": "Uppercut", "tab": "special", "kind": "attack", "init_invuln": [1, 6],
 			"cancel_into": ["jump", "superjump"], "frames": 26, "where": "ground",
 			"aim": "facing", "motion": [[3, 8, 3.0, 0.0]],
-			"hits": [{"from": 6, "to": 9, "box": [4, -120, 46, 70], "dmg": 38, "stun": 26, "kb": [1.5, -12.0],
+			"hits": [{"from": 6, "to": 9, "box": [4, -120, 46, 70], "dmg": 38, "stun": 26, "kb": [1.5, -10.5],
 				"block": 12, "chip": 3, "group": 0}],
 			"pose": [[0, "crouch"], [6, "uppercut"], [16, "idle"]]},
 		"spin": {"name": "Spin Kick", "tab": "attack", "kind": "attack", "frames": 26, "where": "ground",

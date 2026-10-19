@@ -5,6 +5,7 @@ extends Control
 signal picked(path: String)
 
 var _box: VBoxContainer
+var _note: Label             ## where a "Save to phone" says how it went
 var _panel: PanelContainer
 
 
@@ -56,18 +57,35 @@ func open() -> void:
 		if rec.is_empty():
 			continue
 		var p := path
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 6)
+		_box.add_child(row)
 		var b := Ui.button(Replays.describe(rec), func() -> void:
 			visible = false
 			picked.emit(p), 19)
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		b.custom_minimum_size = Vector2(0, 54)
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		b.clip_text = true
-		_box.add_child(b)
-	if _box.get_child_count() == 0:
+		row.add_child(b)
+		var keep := Ui.button("Save to phone", func() -> void: _export(p), 16)   # (02:19 "save them to device")
+		keep.name = "Export"
+		keep.custom_minimum_size = Vector2(150, 54)
+		row.add_child(keep)
+	_note = Ui.label("", 16, Color("#a7e8b8"))
+	_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_box.add_child(_note)
+	if _box.get_child_count() == 1:
 		_box.add_child(Ui.label("No replays yet - every match you finish is kept here (the last %d)." % Replays.KEEP,
 				19, Color("#a7a7b8")))
 	visible = true
 	_layout()
+
+
+func _export(path: String) -> void:
+	var out := Replays.export_to_device(path)
+	_note.text = ("Saved to your phone: %s" % out) if out != "" else "Couldn't save it to the phone"
+	_note.add_theme_color_override("font_color", Color("#a7e8b8") if out != "" else Color("#ffb86b"))
 
 
 func _layout() -> void:

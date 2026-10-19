@@ -19,12 +19,9 @@ func _test_your_pick() -> void:
 			and g._demo != null and g._demo.fighters.size() == 4)
 	g._process(1.0)
 	_check("...and the match behind it moves", g._demo.tick > 0)
-	var was_pixel: bool = g.home.pixel
-	(g.home as HomeScreen).set_pixel(true)
 	g._process(0.016)
-	_check("the Pixel look switch puts the after-pass over the stage in blocks",
-			g.post.visible and g.pixel_size > 1.0)
-	(g.home as HomeScreen).set_pixel(was_pixel)
+	_check("smooth only (02:19 - the pixel look's gone): no after-pass with nothing splitting", not g.post.visible
+			and g.home.find_child("Look", true, false) == null)
 	(g.home as HomeScreen)._set_colour(2)
 	(g.home as HomeScreen)._set_count(9)
 	_check("the home screen keeps 1-5 opponents (9 -> %d)" % g.home.opponents, g.home.opponents == 5)
@@ -524,7 +521,7 @@ func _test_bot_levels() -> void:
 	cfg.load(HomeScreen.SETTINGS)
 	_check("Hard then Easy picked: the bots are %s then %s, and it's saved (%s)" % [Bot.LEVELS[hard], Bot.LEVELS[easy],
 			cfg.get_value("home", "bots", -1)], hard == 2 and easy == 0 and int(cfg.get_value("home", "bots", -1)) == 0
-			and g.home.find_child("BotsNormal", true, false) != null and g.home.find_child("Look", true, false) != null)
+			and g.home.find_child("BotsNormal", true, false) != null)
 	(g.home as HomeScreen).set_level(was)
 	g.queue_free()
 
@@ -561,3 +558,23 @@ func _test_saved_replays() -> void:
 			and not (g.over_panel.find_child("Rematch", true, false) as Button).visible)
 	DirAccess.remove_absolute(str(kept[0]))   # (the test's own replay)
 	g.queue_free()
+
+
+func _test_replay_to_device() -> void:
+	_section("Replays to the phone (02:19 \"save them to device\"): a copy in its Download/Standoff Replays")
+	var tmp := OS.get_user_data_dir().path_join("_device_test")
+	Replays.device_dir = tmp   # (not the PC's real Downloads)
+	var rec := {"v": Version.TAG, "when": 1760000000, "names": ["You", "Bot 1"], "result": "You win!", "start": {},
+		"turns": []}
+	DirAccess.make_dir_recursive_absolute(Replays.DIR)
+	var src := Replays.DIR.path_join("_device_test.json")
+	var f := FileAccess.open(src, FileAccess.WRITE)
+	f.store_string(JSON.stringify(rec))
+	f.close()
+	var out := Replays.export_to_device(src)
+	_check("Save to phone writes a copy there (%s)" % out, out != "" and FileAccess.file_exists(out)
+			and Replays.load_rec(out).get("result", "") == "You win!")
+	DirAccess.remove_absolute(out)
+	DirAccess.remove_absolute(tmp)
+	DirAccess.remove_absolute(src)
+	Replays.device_dir = ""

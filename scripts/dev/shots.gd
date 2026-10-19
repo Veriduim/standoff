@@ -27,6 +27,10 @@ func run(game: Control, out: String) -> void:
 		await _wait(4)
 		await _snap(out.path_join("1h%d_help.png" % (i + 1)))
 	game.how.visible = false
+	game.replay_list.open()   # (the saved replays - 02:15)
+	await _wait(4)
+	await _snap(out.path_join("1r_replays.png"))
+	game.replay_list.visible = false
 	# a few turns played by a bot for you, to get everyone moving
 	game.auto_me = true
 	game.start_local(5, "ffa", 0)
@@ -181,10 +185,3 @@ func _effects(game: Control, out: String) -> void:
 	await _until(func() -> bool: return game.stage.fx.dim > 0.3, 120)
 	await _wait(10)
 	await _snap(out.path_join("16_finale.png"))
-	# the pixel look, mid-match
-	await _until(func() -> bool: return game.phase == "pick", 600)
-	var was: bool = game.home.pixel
-	game.home.set_pixel(true)
-	await _wait(30)
-	await _snap(out.path_join("13_pixel.png"))
-	game.home.set_pixel(was)

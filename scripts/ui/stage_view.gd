@@ -342,8 +342,8 @@ func _follow(delta: float) -> void:
 	var hi := -INF
 	var top := 0.0
 	var pts: Array = frame.duplicate()
-	if not ghost.is_empty():
-		pts.append_array(ghost[mini(_ghost_i, ghost.size() - 1)])
+	for g: Array in ghost:   # (the ghost's whole path, not the frame it's looping on - 02:19 "when I uppercut the camera
+		pts.append_array(g)  # start panning in and out constantly")
 	for r: Array in pts:
 		lo = minf(lo, float(r[0]))
 		hi = maxf(hi, float(r[0]))

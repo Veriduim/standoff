@@ -411,6 +411,10 @@ static func frame_data(m: Dictionary) -> String:
 		parts.append("armour f%d-%d" % [int(m["armor"][0]), int(m["armor"][1])])
 	if m.has("invuln"):
 		parts.append("dodges f%d-%d" % [int(m["invuln"][0]), int(m["invuln"][1])])
+	var into: Array = m.get("cancel_into", [])
+	if not into.is_empty():   # (02:19 "Is the only way to follow super jump?" - what it can go into on hit)
+		parts.append("%s on hit" % " / ".join(PackedStringArray(into.map(func(x: String) -> String:
+			return str(Moves.move("dancer", x).get("name", x))))))
 	if m.has("init_faster"):   # (initiative: the enemy was choosing too, not already committed)
 		parts.append("%df sooner with initiative" % int(m["init_faster"]))
 	if m.has("init_invuln"):

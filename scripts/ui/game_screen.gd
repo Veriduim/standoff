@@ -9,7 +9,6 @@ const SMALL := 17
 const LAG_HOLD := 0.45     ## seconds the HP lost stays showing (white) before it drains (pick 10)
 const LAG_SPEED := 0.6     ## how fast it drains, in whole bars a second
 const TURN_SECONDS := 30.0 ## the turn clock (the YOMI wiki's default ruleset: 30 s) - then your pick as it stands goes in
-const PIXEL := 3.0         ## the pixel look's block size, in game pixels
 
 var sim: Sim
 var bots := {}             ## fighter id -> Bot
@@ -35,7 +34,6 @@ var _net_queue: Array = []   ## turns that came in while one was still playing -
 var leave_btn: Button
 var clock: Label
 var post: ColorRect
-var pixel_size := 1.0        ## the after-pass's block size now (screen px; 1 = smooth)
 var over_panel: PanelContainer
 var fast_btn: Button
 
@@ -79,7 +77,7 @@ func _ready() -> void:
 	sfx.name = "Sfx"
 	add_child(sfx)
 	stage.sfx = sfx
-	post = ColorRect.new()   # (over the stage, under everything else: the colour split, the pixel look)
+	post = ColorRect.new()   # (over the stage, under everything else: the colour split)
 	post.name = "Post"
 	var mat := ShaderMaterial.new()
 	mat.shader = load("res://shaders/post.gdshader")
@@ -1052,18 +1050,17 @@ func _process(delta: float) -> void:
 		_next()
 
 
-## The after-pass: on only while the picture splits (supers, KOs, Bursts) or with the pixel look switched on.
+## The after-pass: on only while the picture splits (supers, KOs, Bursts). (The pixel look went 02:19 "I think smooth
+## works for us".)
 func _post() -> void:
 	var split := stage.fx.split
-	post.visible = split > 0.01 or home.pixel
+	post.visible = split > 0.01
 	if not post.visible:
 		return
 	var mat := post.material as ShaderMaterial
 	mat.set_shader_parameter("split", split)
 	mat.set_shader_parameter("centre", stage.w2s(stage.fx.split_at) / get_viewport_rect().size)
-	var k := maxf(1.0, get_viewport().get_final_transform().get_scale().y)   # (the phone's pixels per game pixel)
-	pixel_size = PIXEL * k if home.pixel else 1.0
-	mat.set_shader_parameter("pixel", pixel_size)
+	mat.set_shader_parameter("pixel", 1.0)
 
 
 ## The white chunk on each HP bar drains down to the HP once its moment's up.
