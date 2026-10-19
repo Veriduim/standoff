@@ -19,6 +19,7 @@ var setup_count := 3       ## opponents
 var setup_mode := "ffa"
 var setup_colour := 0      ## your colour (StageView.COLOURS) - the bots take the others
 var training := false        ## training mode: you and a Dummy (02:28)
+static var bots_as := ""     ## the bots' character, when it mustn't be random (the tests)
 var train_bar: HBoxContainer ## (training) the dummy's setting and Reset, top right
 var auto_me := false       ## a bot plays you too (the tests; a demo)
 
@@ -257,8 +258,8 @@ func _show_start() -> void:
 ## The match behind the home screen: four bots, round and round.
 func _demo_start() -> void:
 	var players := []
-	for i in 4:
-		players.append({"name": "", "character": "dancer"})
+	for i in 4:   # (both of them, mixed - 05:03 the Bruiser)
+		players.append({"name": "", "character": Moves.ORDER[i % Moves.ORDER.size()]})
 	_demo = Sim.create(players, "ffa")
 	_demo_bots.clear()
 	for i in 4:
@@ -316,9 +317,12 @@ func start_local(opponents: int, mode: String, colour := 0, train := false) -> v
 	setup_colour = colour
 	training = train
 	_demo = null
-	var players := [{"name": "You", "character": "dancer", "team": 0}]
-	for i in opponents:
-		players.append({"name": "Dummy" if train else "Bot %d" % (i + 1), "character": "dancer", "team": (i + 1) % 2})
+	var players := [{"name": "You", "character": HomeScreen.fighter, "team": 0}]
+	for i in opponents:   # (the bots: either of them, at random; the dummy - whoever the bar says)
+		var ch: String = Moves.ORDER[randi() % Moves.ORDER.size()] if bots_as == "" else bots_as
+		if train:
+			ch = str(train_bar.get_meta("who", HomeScreen.fighter)) if train_bar != null else HomeScreen.fighter
+		players.append({"name": "Dummy" if train else "Bot %d" % (i + 1), "character": ch, "team": (i + 1) % 2})
 	if mode == "teams" and opponents < 2:
 		mode = "ffa"
 	sim = Sim.create(players, mode)   # (the Dancer as she is: Fans + Tempo - 23:31)
@@ -570,19 +574,27 @@ func _predicted() -> Dictionary:
 	return out
 
 
-## The x-factors on trial on a card: the form (Flow / Snap / Floor), the beats (pink), the fans in hand (gold).
+## A fighter's own systems on their card: the form (Flow / Snap / Floor), the beats (pink), the fans in hand (gold) -
+## the Dancer's; the Bruiser's Grit (orange, ten pips; K.O. when it's full).
 func _trial_marks(f: Fighter, row: Array) -> String:
 	var out := ""
 	var has := row.size() > 16
-	if sim.xf.has("forms"):
+	if sim.has_xf(f, "forms"):
 		var fm := int(row[14]) if has else maxi(0, Sim.FORMS.find(f.form))
 		out += "[color=#9fd8ff]%s[/color] " % ["Flow", "Snap", "Floor"][fm]
-	if sim.xf.has("tempo"):
+	if sim.has_xf(f, "tempo"):
 		var tp := int(row[15]) if has else f.tempo
 		out += "[color=#ff7ab6]%s[/color][color=#3a3d4d]%s[/color] " % ["▮".repeat(tp), "▮".repeat(Sim.TEMPO_MAX - tp)]
-	if sim.xf.has("fans"):
+	if sim.has_xf(f, "fans"):
 		var fn := int(row[16]) if has else f.fans
 		out += "[color=#ffd23f]%s[/color][color=#3a3d4d]%s[/color] " % ["◆".repeat(fn), "◆".repeat(Sim.FANS_MAX - fn)]
+	if sim.has_xf(f, "grit"):
+		var g := int(row[17]) if row.size() > 17 else f.grit
+		var pips := clampi(int(floor(float(g) * 10.0 / float(Sim.GRIT_MAX))), 0, 10)
+		if g >= Sim.GRIT_MAX:
+			out += "[color=#ffb766]K.O.[/color] "
+		else:
+			out += "[color=#ff9a3c]%s[/color][color=#3a3d4d]%s[/color] " % ["▮".repeat(pips), "▮".repeat(10 - pips)]
 	return out
 
 
@@ -947,10 +959,23 @@ func _build_train_bar() -> void:
 	mode_btn.name = "DummyMode"
 	mode_btn.custom_minimum_size = Vector2(190, 44)
 	train_bar.add_child(mode_btn)
+	var who := Ui.button("vs Dancer", func() -> void: _cycle_who(), 18)   # (who the dummy is - 05:03 two to pick from)
+	who.name = "DummyWho"
+	who.custom_minimum_size = Vector2(150, 44)
+	train_bar.add_child(who)
 	var reset := Ui.button("Reset", func() -> void: reset_training(), 18)
 	reset.name = "Reset"
 	reset.custom_minimum_size = Vector2(100, 44)
 	train_bar.add_child(reset)
+
+
+## The dummy's character: the next one, and a fresh start against it.
+func _cycle_who() -> void:
+	var i := (Moves.ORDER.find(str(train_bar.get_meta("who", HomeScreen.fighter))) + 1) % Moves.ORDER.size()
+	train_bar.set_meta("who", Moves.ORDER[i])
+	(train_bar.get_node("DummyWho") as Button).text = "vs " + str(Moves.stats(Moves.ORDER[i])["name"])
+	if training and phase in ["pick", "wait"]:
+		start_local(1, "ffa", setup_colour, true)
 
 
 func _cycle_dummy() -> void:

@@ -121,6 +121,50 @@ func on_event(type: String, at: Vector2, face: float, dmg: int, by: Color, victi
 			_add("shock", at, Vector2.ZERO, 0.18, Color.WHITE, 46.0)
 			_add("text", at + Vector2(0, -60), Vector2(0, -50), 0.5, Color.WHITE, 18.0)
 			parts[-1]["txt"] = "WHIFF CANCEL"
+		# the Bruiser (05:27 "his effects of slapping an enemy accross map" - the Nakmuay mod, studied; our own drawing)
+		"fling":   # (a big hit sending them off: a tall ring of air bursting out the way they fly, wind streaks, cracks)
+			_add("boom", at + Vector2(face * 10.0, 0.0), Vector2.ZERO, 0.42, by.lightened(0.7), 92.0, face)
+			_add("boom", at + Vector2(face * 34.0, 0.0), Vector2.ZERO, 0.34, by.lightened(0.45), 62.0, face)
+			for i in 12:
+				var off := Vector2(_rng.randf_range(-10.0, 10.0), _rng.randf_range(-46.0, 46.0))
+				_add("hwind", at + off, Vector2(face * _rng.randf_range(900.0, 1400.0), 0.0), _rng.randf_range(0.22, 0.34),
+						Color("#eef4ff"), _rng.randf_range(40.0, 90.0))
+			if at.y > -140.0:
+				_add("crack", Vector2(at.x, 0.0), Vector2.ZERO, 1.4, Color("#c9ccd8"), 120.0, face)
+			splash(0.45, at)
+			freeze(0.12, victim)
+			kick(7.0)
+		"quake":   # (Quake Stomp: a flat shockwave racing out both ways along the floor, the floor cracking)
+			_add("floorring", Vector2(at.x, 0.0), Vector2.ZERO, 0.5, Color("#e6e9f2"), 120.0)
+			_add("crack", Vector2(at.x, 0.0), Vector2.ZERO, 1.3, Color("#c9ccd8"), 110.0, 0.0)
+			for i in 14:
+				var side := 1.0 if i % 2 == 0 else -1.0
+				_add("chip", Vector2(at.x, -4.0), Vector2(side * _rng.randf_range(160.0, 420.0), -_rng.randf_range(120.0, 340.0)),
+						_rng.randf_range(0.3, 0.5), Color("#a9acb8"), _rng.randf_range(3.0, 6.0))
+			kick(5.0)
+		"rush":   # (Bull Rush / Chase setting off: dust kicked back, a streak behind)
+			for i in 6:
+				_add("hwind", at + Vector2(0.0, _rng.randf_range(-40.0, 30.0)), Vector2(-face * _rng.randf_range(500.0, 800.0), 0.0),
+						0.26, Color("#dfe6f5"), _rng.randf_range(30.0, 60.0))
+			kick(2.0)
+		"kopunch":   # (the K.O. Punch coming up: a hard flash at his fist)
+			_add("glint", at + Vector2(face * 20.0, -30.0), Vector2.ZERO, 0.3, Color.WHITE, 70.0)
+			_add("rays", at, Vector2.ZERO, 0.3, by.lightened(0.5), 120.0)
+			kick(3.0)
+		"grit":   # (his Grit full - the K.O. Punch is there: a hot flare round him)
+			_add("glow", at, Vector2.ZERO, 0.45, Color("#ff9a3c"), 80.0)
+			_add("shock", at, Vector2.ZERO, 0.3, Color("#ffb766"), 70.0)
+			_add("text", at + Vector2(0, -80), Vector2(0, -36), 0.7, Color("#ffb766"), 18.0)
+			parts[-1]["txt"] = "K.O. READY"
+		"guardbreak":   # (straight through a guard: the guard arc in pieces)
+			for i in 8:
+				_add("chip", at, _fan(face, 1.6) * _rng.randf_range(200.0, 420.0), _rng.randf_range(0.25, 0.4), BLOCK,
+						_rng.randf_range(4.0, 7.0))
+			_add("text", at + Vector2(0, -56), Vector2(0, -40), 0.55, Color("#ff7a7a"), 18.0)
+			parts[-1]["txt"] = "GUARD BREAK"
+		"armored":   # (Super Armor taking it: a hard metal glint on him, no hitstun)
+			_add("glint", at, Vector2.ZERO, 0.24, Color("#ffe7b0"), 46.0)
+			flash[victim] = 0.06
 		"edge":   # (a spacer's hit at the fan's edge: a gold glint)
 			_add("glint", at, Vector2.ZERO, 0.32, Color("#ffd23f"), 34.0)
 		"blink":   # (Fan Step: a flash where she lands, a ring of her colour)
@@ -368,6 +412,20 @@ func _add(kind: String, at: Vector2, vel: Vector2, life: float, c: Color, size: 
 		for i in 12:
 			sp.append(_rng.randf_range(0.65, 1.0) if i % 2 == 0 else 0.34)
 		p["sp"] = sp
+	if kind == "crack":   # (a few jagged lines along the floor, a little above and below it, out one way or both)
+		var lines: Array = []
+		for i in 5:
+			var dir := signf(extra) if absf(extra) > 0.1 else (1.0 if i % 2 == 0 else -1.0)
+			var line: Array = [Vector2.ZERO]
+			var x := 0.0
+			var y := 0.0
+			var reach := size * _rng.randf_range(0.5, 1.0)
+			while x < reach:
+				x += _rng.randf_range(8.0, 22.0)
+				y = clampf(y + _rng.randf_range(-5.0, 5.0), -6.0, 7.0)
+				line.append(Vector2(dir * x, y))
+			lines.append(line)
+		p["sp"] = lines
 	if kind == "ink":   # (spikes: long and uneven, the longest along the hit's way (extra = facing) and up / down)
 		var sp: Array = []
 		var n := 18
@@ -530,7 +588,7 @@ func draw_trails(st: StageView) -> void:
 func draw_back(st: StageView) -> void:
 	for p: Dictionary in parts:
 		var k := str(p["k"])
-		if k in ["bubble", "floorring", "ribbon"]:
+		if k in ["bubble", "floorring", "ribbon", "crack"]:
 			_draw_back_part(st, p)
 			continue
 		if k != "ink":
@@ -578,6 +636,14 @@ func _draw_back_part(st: StageView, p: Dictionary) -> void:
 					var a := TAU * n / 48.0
 					pts.append(at + Vector2(cos(a) * rx * (1.0 + layer * 0.12), sin(a) * rx * 0.16 * (1.0 + layer * 0.12)))
 				st.draw_polyline(pts, cc, maxf(1.5, (5.0 - layer) * z), true)
+		"crack":   # (the floor cracked: jagged lines out along it from where it landed - one way (x = facing) or both)
+			var sp: Array = p["sp"]
+			c.a = 0.8 * (1.0 - maxf(0.0, (t - 0.45) / 0.55))
+			for line: Array in sp:
+				var pts := PackedVector2Array()
+				for q: Vector2 in line:
+					pts.append(at + q * z * minf(1.0, t / 0.08))
+				st.draw_polyline(pts, c, maxf(1.0, 2.2 * z), true)
 		"ribbon":   # (a flat band of her colour along the floor, thinning as it fades)
 			var b := st.w2s(p["b"])
 			c.a = 0.75 * (1.0 - t)
@@ -596,7 +662,7 @@ func draw_parts(st: StageView) -> void:
 		var c: Color = p["c"]
 		var s := float(p["s"]) * z
 		match str(p["k"]):
-			"ink", "bubble", "floorring", "ribbon":   # (behind the fighters - draw_back)
+			"ink", "bubble", "floorring", "ribbon", "crack":   # (behind the fighters - draw_back)
 				pass
 			"sweep":   # (a giant fan sweeping open: from up behind her round to the way she faces (x = facing; 0 = up))
 				var face := float(p["x"])
@@ -678,6 +744,17 @@ func draw_parts(st: StageView) -> void:
 			"chip":
 				c.a = 1.0 - t * t
 				st.draw_rect(Rect2(at - Vector2(s, s) / 2.0, Vector2(s, s)), c)
+			"boom":   # (a fling's ring of air: a tall ellipse seen side on, opening out the way they're sent - thin, quick)
+				var e := 1.0 - pow(1.0 - t, 3.0)
+				c.a = 0.85 * (1.0 - t)
+				var ry := s * (0.55 + 0.45 * e)
+				var rx := ry * 0.26
+				var mid := at + Vector2(float(p["x"]) * s * 0.5 * e, 0.0)
+				var pts := PackedVector2Array()
+				for n in 41:
+					var a := TAU * n / 40.0
+					pts.append(mid + Vector2(cos(a) * rx, sin(a) * ry))
+				st.draw_polyline(pts, c, maxf(1.5, 6.0 * z * (1.0 - t)), true)
 			"hwind":   # (Fan Gust's wind: a streak rushing out the way she faces, thinning)
 				c.a = 0.85 * (1.0 - t)
 				var back := Vector2(-signf((p["v"] as Vector2).x), 0.0)

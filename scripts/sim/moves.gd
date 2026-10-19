@@ -25,6 +25,14 @@ extends RefCounted
 ##   gust      [from, to, box] wind in front on those frames: enemies shoved away, their shots blown back, her fans
 ##             carried on (Fan Gust - no damage)
 ##   reflect   true = a counter stance that also turns shots round in its window (Mirror)
+##   slip      [from, to] shots that aren't low pass by on these frames (Bob & Weave)
+##   grit      true = needs a full Grit gauge and spends it (the Bruiser's K.O. Punch)
+##   repeat    N = can follow itself N times in a row without an Instant Cancel (the clinch knee)
+##   stop_near N = a run that ends the moment an enemy's within N px in front (Chase)
+##   (on a hit) fling true = sent sliding / flying a long way (Sim.FLING_*) - a ring of air and cracks on screen
+##   (on a hit) hold true = keeps them right in front, no knockback (the Clinch); behind true = puts them behind first
+##             (a dump - its knockback carries them on); strike true = in a grab move, a
+##             strike on the one it grabbed (Clinch Fury's knees)
 ##   note      a few words for the move's card (what the frame data can't say)
 ##   enter     a stance move: puts them in that stance (its moves - "stance": that name - are open while it runs)
 ##   after     [move ids] - a follow-up: there only right after landing one of those
@@ -42,7 +50,8 @@ extends RefCounted
 ##             downward part (at least a little) times k
 ##   hits      [{from, to, box: [x, y, w, h], dmg, stun, kb: [x, y], block, chip, group}] - one hit per group per
 ##             target; a grab's entry is the throw (a negative kb x throws them behind you)
-##   armor     [from, to] strikes in this window hurt but don't stop the move (grabs still do)
+##   armor     [from, to] Super Armor: a strike or a shot in this window hurts but doesn't stop the move - one hit
+##             (armor_hits: more); grabs still take them
 ##   invuln    [from, to] nothing touches them (strikes and grabs pass through)
 ##   window    [from, to] a parry's frames: a strike landing then is stopped and its striker stunned
 ##   land_ends true = ends on touching the ground (`landing` frames of lag follow)
@@ -93,13 +102,15 @@ const COMMON := {
 ## as a trap (Fan Ward), wind that moves fighters and shots (Fan Gust), Fan Slash's follow-up (Fan Flick) and a Mirror
 ## that turns shots round.
 const DANCER := {
-	"stats": {"name": "Dancer", "hp": 450, "weight": 0.85, "width": 34, "height": 104, "trait": "spacer"},
+	"stats": {"name": "Dancer", "hp": 450, "weight": 0.85, "width": 34, "height": 104, "trait": "spacer",
+		"xf": ["fans", "tempo", "forms"]},
 	"moves": {
 		# ---- moving
 		"walk": {"name": "Walk", "tab": "move", "kind": "move", "interrupt": true, "frames": 16, "where": "ground", "aim": "facing",
 			"motion": [[0, 13, 6.5, 0.0]], "pose": [[0, "walk1"], [5, "walk2"], [10, "walk1"], [14, "idle"]]},
 		"dash": {"name": "Dash", "tab": "move", "kind": "move", "interrupt": true, "frames": 12, "where": "ground", "aim": "facing",
-			"motion": [[1, 30, 17.0, 0.0]], "dist": [10, 20, 0.3], "pose": [[0, "dash"], [12, "idle"]]},
+			"motion": [[1, 30, 15.0, 0.0]], "dist": [10, 20, 0.3], "pose": [[0, "dash"], [12, "idle"]]},   # (17 -> 15 (05:03):
+		# a zoner is slower going in - her Back Step stays as quick)
 		"backstep": {"name": "Back Step", "tab": "move", "kind": "move", "interrupt": true, "frames": 14, "where": "ground",
 			"aim": "facing", "motion": [[1, 10, -11.0, 0.0]], "invuln": [1, 6],
 			"pose": [[0, "crouch"], [4, "fall"], [11, "idle"]], "icon": "fall"},
@@ -312,20 +323,19 @@ const DANCER := {
 			"spawn": {"at": 4, "kind": "fan", "speed": 13.0, "from": [34, -78], "box": [26, 20], "dmg": 16, "stun": 16,
 				"kb": [8.0, -2.0], "block": 8, "chip": 2, "life": 60},
 			"pose": [[0, "throw_out"], [2, "throw_back"], [4, "throw_out"], [13, "idle"]], "icon": "throw_back"},
-		# Tempo: a beat for landing or having a move blocked, or dodging through a hit; four = Encore (spends them)
-		"encore": {"name": "Encore", "tab": "special", "kind": "attack", "xf": "tempo", "tempo": 4, "no_cancel": true,
-			"frames": 46, "where": "ground", "aim": "facing", "motion": [[2, 30, 4.5, 0.0]],
-			"cue": {"at": 28, "type": "sweep_up"},
-			"hits": [{"from": 6, "to": 8, "box": [4, -96, 64, 70], "dmg": 16, "stun": 18, "kb": [2.0, -1.0], "block": 6,
-				"chip": 1, "group": 0},
-				{"from": 13, "to": 15, "box": [4, -60, 70, 50], "dmg": 16, "stun": 18, "kb": [2.0, -1.0], "block": 6,
-				"chip": 1, "group": 1},
-				{"from": 20, "to": 22, "box": [-40, -100, 110, 80], "dmg": 18, "stun": 20, "kb": [2.0, -2.0], "block": 6,
-				"chip": 1, "group": 2},
-				{"from": 29, "to": 32, "box": [0, -140, 60, 130], "dmg": 34, "stun": 34, "kb": [5.0, -13.0], "block": 12,
-				"chip": 3, "group": 3, "knockdown": true}],
-			"pose": [[0, "crouch"], [5, "kick_hit"], [12, "low_kick"], [18, "spin1"], [21, "spin2"], [27, "crouch"],
-				[29, "flash_kick"], [40, "fall"]], "icon": "spin2"},
+		# Tempo: a beat for landing or having a move blocked, or dodging through a hit; four = Encore (spends them). Since
+		# 05:03 a zoner's finisher - from range, not a rush in: a pirouette, then three spectral fans in a burst, the last
+		# one floors them (it was a four-kick melee string)
+		"encore": {"name": "Encore", "tab": "special", "kind": "special", "xf": "tempo", "tempo": 4, "frames": 36,
+			"where": "ground", "aim": "facing", "invuln": [0, 4], "note": "three fans in a burst - the last floors them",
+			"cue": {"at": 6, "type": "sweep"},
+			"spawn": [
+				{"at": 10, "kind": "sfan", "speed": 14.0, "from": [30, -88], "dir": [1.0, -0.12], "box": [30, 24], "dmg": 18, "stun": 18, "kb": [2.0, -1.0], "block": 8, "chip": 2, "life": 50},
+				{"at": 13, "kind": "sfan", "speed": 14.0, "from": [30, -72], "dir": [1.0, 0.0], "box": [30, 24], "dmg": 18, "stun": 18, "kb": [2.0, -1.0], "block": 8, "chip": 2, "life": 50},
+				{"at": 16, "kind": "sfan", "speed": 15.0, "from": [30, -80], "dir": [1.0, -0.05], "box": [34, 28], "dmg": 30, "stun": 30, "kb": [6.0, -9.0], "block": 12, "chip": 3, "life": 50, "knockdown": true},
+			],
+			"pose": [[0, "gather"], [4, "twirl_a"], [7, "twirl_b"], [10, "throw_out"], [13, "throw_back"], [16, "fan_spread"],
+				[28, "idle"]], "icon": "fan_spread"},
 		# Forms: Flow (as she is), Snap (sharp: her strikes do more and stun longer; Pop, Snap Kick), Floor (low: high
 		# hits pass over her; only her floor moves - Windmill, Kip-Up back to Flow, Floor Slide - and defence)
 		"snapform": {"name": "Snap Form", "tab": "special", "kind": "move", "xf": "forms", "to_form": "snap",
@@ -339,9 +349,7 @@ const DANCER := {
 			"hits": [{"from": 2, "to": 3, "box": [8, -88, 50, 26], "dmg": 13, "stun": 12, "kb": [2.0, 0.0], "block": 5,
 				"chip": 1, "group": 0}],
 			"pose": [[0, "snap"], [2, "jab_hit"], [6, "snap"]], "icon": "jab_hit"},
-		"snapstep": {"name": "Snap Step", "tab": "move", "kind": "move", "interrupt": true,
-			"frames": 10, "where": "ground", "aim": "facing", "invuln": [1, 4], "motion": [[1, 6, 18.0, 0.0]],
-			"dist": [10, 10, 0.3], "pose": [[0, "snap"], [1, "dash"], [7, "snap"]], "icon": "dash"},
+		# (Snap Step - a quick invulnerable step in - went at 05:03: a rushdown's tool; the Bruiser has Bob & Weave)
 		"snapkick": {"name": "Snap Kick", "tab": "attack", "kind": "attack", "xf": "forms", "form": "snap",
 			"frames": 17, "where": "ground", "aim": "facing", "motion": [[2, 7, 5.0, 0.0]],
 			"hits": [{"from": 4, "to": 6, "box": [8, -112, 74, 44], "dmg": 30, "stun": 18, "kb": [5.0, -4.0], "block": 8,
@@ -368,8 +376,215 @@ const DANCER := {
 	},
 }
 
-## One character for now (Timmy 18 Oct 17:52: "Just work on getting one char working and remove the other one").
-const ROSTER := {"dancer": DANCER}
+## The Bruiser - the rushdown (19 Oct 01:32 "I actually reallt liked him and wanted to work on him as our rush down char";
+## 01:46 "a mix of the Nakmuay and Super Smash bros little mac"; 05:03 "we will work on our next char"). Study only
+## (docs/bruiser.md): Muay Thai's knees, elbows, teeps, the clinch and the kick catch; Little Mac's fast ground game, armour
+## on his big hits, a gauge that builds to one huge punch, and a poor air game. Our own moves and numbers.
+## Strong: point blank and on the ground - fast jabs, a jab-cross-hook string, three ways in (Bob & Weave under shots,
+## Flying Knee through a guard, Superman Punch over the floor), armour that walks through a fan, the clinch.
+## Weak: far away (no projectile), in the air (low jumps, no air dash or air throw), and his big swings are slow and
+## punishable; armour takes one hit and grabs go straight through it; floored, he loses half his Grit.
+const BRUISER := {
+	"stats": {"name": "Bruiser", "hp": 470, "weight": 1.1, "width": 40, "height": 108, "trait": "rushdown",
+		"xf": ["grit"], "idle": "b_idle"},
+	"moves": {
+		# ---- moving: quick along the ground, short in the air
+		"walk": {"name": "Walk", "tab": "move", "kind": "move", "interrupt": true, "frames": 16, "where": "ground", "aim": "facing",
+			"motion": [[0, 13, 7.5, 0.0]], "pose": [[0, "b_walk1"], [5, "b_walk2"], [10, "b_walk1"], [14, "b_idle"]],
+			"icon": "b_walk1"},
+		"dash": {"name": "Dash", "tab": "move", "kind": "move", "interrupt": true, "frames": 12, "where": "ground", "aim": "facing",
+			"motion": [[1, 30, 19.0, 0.0]], "dist": [10, 20, 0.3], "pose": [[0, "b_dash"], [12, "b_idle"]], "icon": "b_dash"},
+		"backstep": {"name": "Back Step", "tab": "move", "kind": "move", "interrupt": true, "frames": 14, "where": "ground",
+			"aim": "facing", "motion": [[1, 9, -9.0, 0.0]], "invuln": [1, 5],
+			"pose": [[0, "b_idle"], [3, "b_lean"], [11, "b_idle"]], "icon": "b_lean"},
+		"bob": {"name": "Bob & Weave", "tab": "move", "kind": "move", "frames": 18, "where": "ground", "aim": "facing",
+			"motion": [[1, 13, 11.0, 0.0]], "dist": [14, 18, 0.35], "low_profile": [2, 13], "slip": [2, 13],
+			"note": "ducks high hits, slips shots that aren't low",
+			"pose": [[0, "b_idle"], [2, "b_bob"], [8, "b_weave"], [14, "b_idle"]], "icon": "b_bob"},
+		# Chase (05:27 "slapping an enemy accross map and being able to rush them down"): right after one of his big
+		# hits sends them flying, he's after them - a run that stops the moment he's on them
+		"chase": {"name": "Chase", "tab": "move", "kind": "move", "frames": 24, "where": "ground", "aim": "facing",
+			"after": ["haymaker", "teep", "roundhouse", "clinchelbow"], "stop_near": 70, "invuln": [1, 3],
+			"motion": [[1, 24, 30.0, 0.0]], "note": "after a big hit: across the stage after them",
+			"pose": [[0, "b_dash"], [2, "b_rush"], [22, "b_idle"]], "icon": "b_rush"},
+		"roll": {"name": "Dodge", "tab": "defend", "kind": "move", "frames": 20, "where": "ground", "aim": "facing",
+			"motion": [[2, 15, 12.0, 0.0]], "invuln": [2, 13], "pose": [[0, "crouch"], [2, "roll"], [15, "crouch"]],
+			"icon": "roll"},
+		"jump": {"name": "Jump", "tab": "move", "kind": "move", "interrupt": true, "frames": 6, "where": "ground", "aim": "up",
+			"dist": [6, 6, 0.72], "motion": [[1, 1, ["px", 7.5], -14.0]], "pose": [[0, "crouch"], [1, "jump"]], "icon": "jump"},
+		"superjump": {"name": "Super Jump", "tab": "move", "kind": "move", "interrupt": true, "frames": 12, "where": "ground",
+			"aim": "up", "motion": [[5, 5, ["px", 8.5], -18.5]], "pose": [[0, "crouch"], [5, "jump"]], "icon": "jump"},
+		"airjump": {"name": "Air Jump", "tab": "move", "kind": "move", "interrupt": true, "frames": 6, "where": "air",
+			"aim": "up", "air_option": true, "dist": [6, 6, 0.65], "motion": [[1, 1, ["px", 6.0], -11.0]],
+			"pose": [[0, "crouch"], [1, "jump"]], "icon": "jump"},
+		"fastfall": {"name": "Fast Fall", "tab": "move", "kind": "move", "interrupt": true, "frames": 6, "where": "air", "aim": "none",
+			"motion": [[0, 0, 0.0, 18.0]], "pose": [[0, "fall"]]},
+		# ---- on the ground: the boxer's hands, the Thai fighter's shins and elbows
+		"jab": {"name": "Jab", "tab": "attack", "kind": "attack", "proration": 2, "frames": 11, "where": "ground", "aim": "facing",
+			"motion": [[1, 3, 3.0, 0.0]],
+			"hits": [{"from": 2, "to": 3, "box": [8, -88, 48, 18], "dmg": 16, "stun": 12, "kb": [2.0, 0.0],
+				"block": 6, "chip": 1, "group": 0}],
+			"pose": [[0, "b_idle"], [2, "b_jab"], [7, "b_idle"]]},
+		"cross": {"name": "Cross", "tab": "attack", "kind": "attack", "proration": 1, "after": ["jab"], "frames": 16,
+			"where": "ground", "aim": "facing", "motion": [[1, 5, 4.5, 0.0]], "note": "after a Jab",
+			"hits": [{"from": 3, "to": 5, "box": [10, -86, 62, 20], "dmg": 24, "stun": 15, "kb": [3.5, 0.0],
+				"block": 7, "chip": 2, "group": 0}],
+			"pose": [[0, "b_jab"], [3, "straight"], [10, "b_idle"]], "icon": "straight"},
+		"hook": {"name": "Hook", "tab": "attack", "kind": "attack", "after": ["cross"], "frames": 22, "where": "ground",
+			"aim": "facing", "motion": [[2, 6, 4.0, 0.0]], "note": "after a Cross - into the wall",
+			"hits": [{"from": 5, "to": 7, "box": [2, -100, 58, 36], "dmg": 34, "stun": 20, "kb": [6.0, -3.0],
+				"block": 10, "chip": 3, "group": 0, "splat": true}],
+			"pose": [[0, "b_hook_wind"], [5, "b_hook"], [14, "b_idle"]], "icon": "b_hook"},
+		"body": {"name": "Body Blow", "tab": "attack", "kind": "attack", "proration": 1, "frames": 18, "where": "ground",
+			"aim": "facing", "motion": [[2, 6, 5.0, 0.0]], "note": "to the liver: long hitstun",
+			"hits": [{"from": 5, "to": 7, "box": [10, -66, 52, 24], "dmg": 24, "stun": 22, "kb": [2.0, 0.0],
+				"block": 8, "chip": 2, "group": 0}],
+			"pose": [[0, "crouch"], [5, "b_body"], [12, "b_idle"]], "icon": "b_body"},
+		"legkick": {"name": "Leg Kick", "tab": "attack", "kind": "attack", "proration": 1, "frames": 18, "where": "ground",
+			"aim": "facing", "motion": [[2, 6, 4.0, 0.0]],
+			"hits": [{"from": 5, "to": 7, "box": [8, -36, 64, 24], "dmg": 26, "stun": 14, "kb": [2.0, 0.0],
+				"block": 8, "chip": 2, "group": 0, "height": "low"}],
+			"pose": [[0, "kick_wind"], [5, "low_kick"], [12, "b_idle"]], "icon": "low_kick"},
+		"teep": {"name": "Teep", "tab": "attack", "kind": "attack", "frames": 22, "where": "ground", "aim": "facing",
+			"init_faster": 2, "motion": [[2, 6, 4.0, 0.0]], "note": "the push kick: shoves them off - into the wall",
+			"hits": [{"from": 6, "to": 8, "box": [12, -74, 72, 24], "dmg": 22, "stun": 26, "kb": [14.0, -1.0],
+				"block": 10, "chip": 2, "group": 0, "splat": true, "fling": true}],
+			"pose": [[0, "kick_wind"], [6, "b_teep"], [14, "b_idle"]], "icon": "b_teep"},
+		"elbow": {"name": "Elbow", "tab": "attack", "kind": "attack", "frames": 17, "where": "ground", "aim": "facing",
+			"motion": [[1, 4, 4.0, 0.0]], "note": "point blank and sharp",
+			"hits": [{"from": 4, "to": 6, "box": [4, -102, 42, 34], "dmg": 30, "stun": 18, "kb": [3.0, -1.0],
+				"block": 9, "chip": 3, "group": 0}],
+			"pose": [[0, "b_elbow_wind"], [4, "b_elbow"], [11, "b_idle"]], "icon": "b_elbow"},
+		"roundhouse": {"name": "Roundhouse", "tab": "attack", "kind": "attack", "frames": 32, "where": "ground",
+			"aim": "facing", "armor": [3, 11], "motion": [[2, 10, 4.0, 0.0]],
+			"note": "Super Armor f3-11: takes a hit and kicks on",
+			"hits": [{"from": 11, "to": 13, "box": [-6, -106, 92, 52], "dmg": 50, "stun": 30, "kb": [13.0, -4.0],
+				"block": 14, "chip": 5, "group": 0, "fling": true}],
+			"pose": [[0, "kick_wind"], [6, "b_round_wind"], [11, "b_round"], [22, "b_idle"]], "icon": "b_round"},
+		"quake": {"name": "Quake Stomp", "tab": "attack", "kind": "attack", "frames": 24, "where": "ground", "aim": "facing",
+			"cue": {"at": 8, "type": "quake"}, "note": "a shockwave both ways along the floor - picks them up off it",
+			"hits": [{"from": 8, "to": 10, "box": [-90, -24, 180, 26], "dmg": 12, "stun": 22, "kb": [0.5, -7.0],
+				"block": 8, "chip": 2, "group": 0, "height": "low", "otg": true}],
+			"pose": [[0, "b_stomp_up"], [8, "b_stomp"], [16, "b_idle"]], "icon": "b_stomp_up"},
+		# ---- the clinch (Muay Thai's): his grab holds them instead of throwing - then knees (up to three), an elbow
+		# out, or a dump down behind him. They can Burst out.
+		"clinch": {"name": "Clinch", "tab": "attack", "kind": "grab", "frames": 24, "where": "ground", "aim": "facing",
+			"motion": [[2, 6, 4.5, 0.0]], "note": "holds them: knees, an elbow or a dump next",
+			"hits": [{"from": 4, "to": 6, "box": [6, -100, 36, 72], "dmg": 8, "stun": 30, "kb": [0.0, 0.0], "group": 0,
+				"hold": true}],
+			"pose": [[0, "grab_reach"], [6, "b_clinch"], [18, "b_idle"]], "icon": "b_clinch"},
+		"clinchknee": {"name": "Clinch Knee", "tab": "attack", "kind": "attack", "after": ["clinch", "clinchknee"],
+			"repeat": 2, "frames": 16, "where": "ground", "aim": "facing", "note": "in the clinch: up to three",
+			"hits": [{"from": 3, "to": 5, "box": [0, -86, 50, 46], "dmg": 20, "stun": 22, "kb": [0.5, -1.0],
+				"block": 8, "chip": 2, "group": 0, "hold": true}],
+			"pose": [[0, "b_clinch"], [3, "b_clinch_knee"], [10, "b_clinch"]], "icon": "b_clinch_knee"},
+		"clinchelbow": {"name": "Clinch Elbow", "tab": "attack", "kind": "attack", "after": ["clinch", "clinchknee"],
+			"frames": 20, "where": "ground", "aim": "facing", "note": "out of the clinch: knocks them back",
+			"hits": [{"from": 4, "to": 6, "box": [2, -106, 50, 44], "dmg": 30, "stun": 28, "kb": [13.0, -3.0],
+				"block": 9, "chip": 3, "group": 0, "splat": true, "fling": true}],
+			"pose": [[0, "b_clinch"], [4, "b_elbow"], [12, "b_idle"]], "icon": "b_elbow"},
+		"dump": {"name": "Dump", "tab": "attack", "kind": "attack", "after": ["clinch", "clinchknee"], "frames": 24,
+			"where": "ground", "aim": "facing", "note": "out of the clinch: down behind him",
+			"hits": [{"from": 5, "to": 7, "box": [-20, -104, 74, 104], "dmg": 28, "stun": 34, "kb": [-7.0, -5.0],
+				"group": 0, "knockdown": true, "behind": true}],
+			"pose": [[0, "b_clinch"], [5, "throw"], [14, "b_idle"]], "icon": "throw"},
+		# ---- in the air (his weak spot): a knee, a hook, an elbow dropped on them
+		"airknee": {"name": "Air Knee", "tab": "attack", "kind": "attack", "proration": 1, "frames": 18, "where": "air",
+			"aim": "facing", "land_ends": true, "landing": 6,
+			"hits": [{"from": 4, "to": 6, "box": [6, -82, 36, 32], "dmg": 24, "stun": 14, "kb": [5.0, -4.0],
+				"block": 7, "chip": 1, "group": 0}],
+			"pose": [[0, "knee"], [12, "fall"]], "icon": "knee"},
+		"airhook": {"name": "Air Hook", "tab": "attack", "kind": "attack", "proration": 1, "frames": 18, "where": "air",
+			"aim": "facing", "land_ends": true, "landing": 4,
+			"hits": [{"from": 5, "to": 7, "box": [4, -98, 42, 28], "dmg": 18, "stun": 13, "kb": [4.0, -1.0],
+				"block": 7, "chip": 1, "group": 0}],
+			"pose": [[0, "b_hook_wind"], [4, "b_hook"], [12, "fall"]], "icon": "b_hook"},
+		"elbowdrop": {"name": "Elbow Drop", "tab": "attack", "kind": "attack", "frames": 40, "where": "air", "aim": "none",
+			"motion": [[3, 40, 1.0, 13.0]], "land_ends": true, "landing": 16, "note": "an overhead, straight down",
+			"hits": [{"from": 6, "to": 40, "box": [-6, -44, 52, 46], "dmg": 20, "stun": 15, "kb": [4.0, 3.0],
+				"block": 12, "chip": 3, "group": 0, "height": "high", "bounce": true}],
+			"pose": [[0, "b_elbow_drop"]], "icon": "b_elbow_drop"},
+		# ---- specials: three ways in, an anti-air, the big one, the catch
+		"uppercut": {"name": "Rising Uppercut", "tab": "special", "kind": "attack", "init_invuln": [1, 5],
+			"cancel_into": ["jump", "superjump"], "frames": 28, "where": "ground", "aim": "facing", "motion": [[3, 8, 3.0, 0.0]],
+			"hits": [{"from": 5, "to": 8, "box": [4, -128, 46, 78], "dmg": 36, "stun": 26, "kb": [1.5, -11.0],
+				"block": 12, "chip": 3, "group": 0}],
+			"pose": [[0, "crouch"], [5, "uppercut"], [16, "b_idle"]], "icon": "uppercut"},
+		"haymaker": {"name": "Haymaker", "tab": "special", "kind": "attack", "frames": 40, "where": "ground", "aim": "facing",
+			"armor": [2, 13], "motion": [[6, 13, 10.0, 0.0]], "dist": [40, 40, 0.3],
+			"note": "Super Armor f2-13; lunges as far as the Distance says",
+			"hits": [{"from": 13, "to": 15, "box": [10, -100, 76, 32], "dmg": 66, "stun": 34, "kb": [15.0, -3.0],
+				"block": 16, "chip": 8, "group": 0, "splat": true, "fling": true}],
+			"pose": [[0, "heavy_wind"], [13, "heavy_hit"], [26, "b_idle"]], "icon": "heavy_hit"},
+		"flyknee": {"name": "Flying Knee", "tab": "special", "kind": "attack", "frames": 30, "where": "ground",
+			"aim": "facing", "motion": [[3, 11, 12.0, -4.5]], "dist": [30, 30, 0.35], "land_ends": true, "landing": 8,
+			"note": "leaps in - breaks a guard",
+			"hits": [{"from": 8, "to": 12, "box": [8, -92, 48, 54], "dmg": 40, "stun": 22, "kb": [6.0, -6.0],
+				"block": 12, "chip": 4, "group": 0, "guardbreak": true}],
+			"pose": [[0, "crouch"], [3, "knee"], [8, "b_flyknee"], [16, "fall"]], "icon": "b_flyknee"},
+		"superman": {"name": "Superman Punch", "tab": "special", "kind": "attack", "frames": 30, "where": "ground",
+			"aim": "facing", "motion": [[2, 9, 11.0, -5.0], [10, 14, 9.0, 0.0]], "dist": [30, 30, 0.35],
+			"land_ends": true, "landing": 6, "note": "a leaping cross - an overhead",
+			"hits": [{"from": 11, "to": 14, "box": [10, -76, 60, 34], "dmg": 38, "stun": 20, "kb": [7.0, -4.0],
+				"block": 12, "chip": 4, "group": 0, "height": "high"}],
+			"pose": [[0, "crouch"], [2, "b_hop"], [10, "b_superman"], [18, "fall"]], "icon": "b_superman"},
+		"catch": {"name": "Catch", "tab": "special", "kind": "counter", "frames": 30, "where": "ground", "aim": "none",
+			"window": [2, 12], "counter_move": "catchdump", "note": "catches a strike and dumps them (not shots)",
+			"counter_hit": {"dmg": 44, "stun": 34, "kb": [-6.0, -5.0], "group": 0, "knockdown": true, "behind": true},
+			"pose": [[0, "b_catch"]], "icon": "b_catch"},
+		"catchdump": {"name": "Catch Dump", "tab": "special", "kind": "attack", "hidden": true, "frames": 22,
+			"where": "both", "aim": "none", "invuln": [0, 14], "pose": [[0, "throw"], [14, "b_idle"]]},
+		# Grit (his own gauge - Little Mac's Power Meter, studied): full, the K.O. Punch - quick, through a guard, huge;
+		# missed, he's wide open
+		"kopunch": {"name": "K.O. Punch", "tab": "special", "kind": "attack", "xf": "grit", "grit": true, "no_cancel": true,
+			"frames": 44, "where": "ground", "aim": "facing", "motion": [[2, 6, 6.0, 0.0]],
+			"cue": {"at": 4, "type": "kopunch"}, "note": "full Grit: fast, through a guard - wide open if it misses",
+			"hits": [{"from": 5, "to": 8, "box": [4, -132, 54, 98], "dmg": 100, "min_dmg": 60, "stun": 60,
+				"kb": [4.0, -12.0], "block": 20, "chip": 10, "group": 0, "guardbreak": true, "knockdown": true}],
+			"pose": [[0, "b_ko_wind"], [5, "b_ko"], [20, "fall"], [34, "b_idle"]], "icon": "b_ko"},
+		# ---- show-off: the Wai Khru's bow
+		"taunt": {"name": "Taunt", "tab": "defend", "kind": "wait", "interrupt": true, "frames": 50, "where": "ground", "aim": "facing",
+			"meter_gain": 125, "pose": [[0, "b_taunt"]], "icon": "b_taunt"},
+		# ---- supers: armour through it all, a flurry, the clinch at its worst
+		"bullrush": {"name": "Bull Rush", "tab": "super", "kind": "super", "frames": 40, "where": "ground", "aim": "facing",
+			"cost": 125, "armor": [0, 30], "armor_hits": 3, "motion": [[4, 26, 12.0, 0.0]], "cue": {"at": 4, "type": "rush"},
+			"note": "Super Armor for three hits - through shots and all",
+			"hits": [{"from": 8, "to": 26, "box": [10, -106, 52, 98], "dmg": 40, "stun": 40, "kb": [16.0, -4.0],
+				"block": 16, "chip": 6, "group": 0, "splat": true, "fling": true}],
+			"pose": [[0, "b_idle"], [4, "b_rush"], [27, "heavy_hit"], [34, "b_idle"]], "icon": "b_rush"},
+		"barrage": {"name": "Barrage", "tab": "super", "kind": "super", "frames": 46, "where": "ground", "aim": "facing",
+			"cost": 250, "invuln": [0, 8], "motion": [[2, 28, 2.5, 0.0]],
+			"hits": [
+				{"from": 8, "to": 9, "box": [8, -90, 56, 24], "dmg": 12, "stun": 16, "kb": [1.5, 0.0], "block": 6, "chip": 2, "group": 0},
+				{"from": 12, "to": 13, "box": [8, -90, 56, 24], "dmg": 12, "stun": 16, "kb": [1.5, 0.0], "block": 6, "chip": 2, "group": 1},
+				{"from": 16, "to": 17, "box": [8, -90, 56, 24], "dmg": 12, "stun": 16, "kb": [1.5, 0.0], "block": 6, "chip": 2, "group": 2},
+				{"from": 20, "to": 21, "box": [8, -90, 56, 24], "dmg": 12, "stun": 16, "kb": [1.5, 0.0], "block": 6, "chip": 2, "group": 3},
+				{"from": 24, "to": 25, "box": [8, -90, 56, 24], "dmg": 12, "stun": 16, "kb": [1.5, 0.0], "block": 6, "chip": 2, "group": 4},
+				{"from": 30, "to": 33, "box": [4, -130, 50, 90], "dmg": 40, "stun": 30, "kb": [2.0, -14.0], "block": 14, "chip": 4, "group": 5},
+			],
+			"pose": [[0, "b_idle"], [8, "b_jab"], [10, "straight"], [12, "b_jab"], [14, "straight"], [16, "b_jab"],
+				[18, "straight"], [20, "b_jab"], [22, "straight"], [24, "b_jab"], [27, "crouch"], [30, "uppercut"],
+				[40, "b_idle"]], "icon": "straight"},
+		"clinchfury": {"name": "Clinch Fury", "tab": "super", "kind": "grab", "frames": 64, "where": "ground", "aim": "facing",
+			"cost": 375, "no_cancel": true, "motion": [[2, 6, 5.0, 0.0]],
+			"note": "a clinch that won't let go: three knees and an elbow",
+			"hits": [
+				{"from": 4, "to": 6, "box": [6, -100, 40, 72], "dmg": 20, "stun": 80, "kb": [0.0, 0.0], "group": 0, "hold": true},
+				{"from": 16, "to": 17, "box": [0, -86, 50, 46], "dmg": 26, "stun": 70, "kb": [0.0, -1.0], "group": 1, "hold": true, "strike": true, "min_dmg": 18},
+				{"from": 26, "to": 27, "box": [0, -86, 50, 46], "dmg": 26, "stun": 70, "kb": [0.0, -1.0], "group": 2, "hold": true, "strike": true, "min_dmg": 18},
+				{"from": 36, "to": 37, "box": [0, -86, 50, 46], "dmg": 30, "stun": 70, "kb": [0.0, -1.0], "group": 3, "hold": true, "strike": true, "min_dmg": 20},
+				{"from": 48, "to": 49, "box": [2, -106, 54, 48], "dmg": 50, "stun": 50, "kb": [9.0, -7.0], "group": 4, "strike": true, "min_dmg": 32, "knockdown": true},
+			],
+			"pose": [[0, "grab_reach"], [6, "b_clinch"], [13, "b_clinch"], [16, "b_clinch_knee"], [21, "b_clinch"],
+				[26, "b_clinch_knee"], [31, "b_clinch"], [36, "b_clinch_knee"], [42, "b_elbow_wind"], [48, "b_elbow"],
+				[58, "b_idle"]], "icon": "b_clinch_knee"},
+	},
+}
+
+## The roster: the Dancer (18 Oct 17:52 "Just work on getting one char working and remove the other one" - her alone,
+## until she was right) and, since 19 Oct 05:03, the Bruiser.
+const ROSTER := {"dancer": DANCER, "bruiser": BRUISER}
+const ORDER := ["dancer", "bruiser"]   ## (the picker's order)
 ## The menu's tabs, in order: [id, name] - YOMI's five (Timmy 21:03 "Get more references as i think your getting
 ## confused about the way moves are categorised"; its own menu, references/yomi/moves_menu): fixed columns whose moves
 ## change with the state - air attacks show in Attack in the air, Burst in Defense while reeling, Get Up there when
@@ -425,7 +640,7 @@ static func startup(m: Dictionary) -> int:
 
 ## What's special about a move, as small badges (03:00 "icons/emojis for additional info like unblocakble and
 ## initave"); BADGE_KEY says what each means.
-const BADGE_KEY := "✊ beats blocks   ⚡ initiative   👻 dodges   🔻 hits low   💥 guard break   🎯 projectile"
+const BADGE_KEY := "✊ beats blocks   ⚡ initiative   👻 dodges   🔻 hits low   💥 guard break   🎯 projectile   🛡 armour"
 
 
 static func badges(m: Dictionary) -> String:
@@ -444,6 +659,8 @@ static func badges(m: Dictionary) -> String:
 		out += "💥"
 	if m.has("spawn"):
 		out += "🎯"
+	if m.has("armor"):
+		out += "🛡"
 	return out
 
 

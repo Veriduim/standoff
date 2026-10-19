@@ -110,10 +110,18 @@ func _test_rules() -> void:
 	var bm := Moves.move("dancer", "block")
 	var plain := {"dmg": 30, "stun": 10, "kb": [1.0, 0.0], "block": 8, "chip": 1}
 	var held := s._block(s.fighters[0], s.fighters[1], plain, bm, 4, false)
+	var in_stun := s.fighters[1].blockstun > 0
 	plain["guardbreak"] = true
-	_check("a Guard Break goes straight through a Block (blocked plain: %s, with guard break: %s)" % [held,
-			s._block(s.fighters[0], s.fighters[1], plain, bm, 4, false)], held
-			and not s._block(s.fighters[0], s.fighters[1], plain, bm, 4, false))
+	var still := s._block(s.fighters[0], s.fighters[1], plain, bm, 4, false)   # (already in blockstun from the first)
+	s.fighters[1].blockstun = 0
+	var broke := not s._block(s.fighters[0], s.fighters[1], plain, bm, 4, false)
+	s.fighters[1].blockstun = 0
+	s.fighters[1].parry_at = 4
+	s.events.clear()
+	var parried := s._block(s.fighters[0], s.fighters[1], plain, bm, 4, false) and _types(s.events).has("parry")
+	_check("a Guard Break goes straight through a Block - but not someone already in blockstun, and it can be parried "
+			+ "on its frame (the wiki's Basics) (plain %s, in blockstun %s, through %s, parried %s)" % [held, still, broke,
+			parried], held and in_stun and still and broke and parried)
 	s = _duel("dancer", "dancer", 80.0)
 	evs = _play(s, {0: {"move": "roll", "x": 1.0}, 1: {"move": "jab"}})
 	_check("a roll's invulnerable frames let the jab pass through (%s, hp %d)" % [_types(evs), s.fighters[0].hp],
@@ -232,17 +240,16 @@ func _test_escaping_combos() -> void:
 		s.run_segment()
 	_check("a combo goes on, but the same move used again in it stuns for less (jab %d, then again %d)"
 			% [first_stun, s.fighters[1].stun], s.fighters[1].combo == 3 and s.fighters[1].stun < first_stun - 2)
-	s = _duel("dancer", "dancer", 60.0)
-	s.fighters[0].tempo = Sim.TEMPO_MAX
-	s.apply({0: {"move": "encore", "x": 1.0}, 1: {"move": "wait"}})
+	s = _duel("dancer", "dancer", 50.0)
+	s.apply({0: {"move": "windmill", "x": 1.0}, 1: {"move": "wait"}})
 	var landed := false
 	for _i in 30:   # (to the tick it lands)
 		s.step()
 		if _types(s.events).has("hit"):
 			landed = true
 			break
-	_check("...not every move frees you on a hit: Encore doesn't (still in it as its first hit lands)",
-			landed and s.fighters[0].move == "encore")
+	_check("...not every move frees you on a hit: Windmill doesn't (still in it as its first hit lands)",
+			landed and s.fighters[0].move == "windmill")
 	s = _duel()
 	s.apply({0: {"move": "jab"}, 1: {"move": "sidekick"}})
 	evs = _play(s, {})
@@ -257,8 +264,8 @@ func _test_escaping_combos() -> void:
 	_check("a dash gives way when the other can act: pick again or Hold (%s)" % [s.deciders()],
 			s.deciders().has(0) and s.legal_moves(0).has("hold"))
 	s = _duel()
-	s.fighters[1].pos.x = Sim.STAGE_HALF - 60.0
-	s.fighters[0].pos.x = Sim.STAGE_HALF - 120.0
+	s.fighters[1].pos.x = s.half - 60.0
+	s.fighters[0].pos.x = s.half - 120.0
 	s.fighters[1].pos.y = -60.0
 	s.fighters[1].stun = 30
 	s.fighters[1].vel = Vector2(14.0, -2.0)
@@ -398,8 +405,8 @@ func _test_combo_depth() -> void:
 	_check("the axe kick bounces them off the ground (once a combo) (%s)" % [_types(evs)],
 			_types(evs).has("bounce") and s.fighters[1].bounced and s.fighters[1].vel.y < 0.0)
 	s = _duel("dancer", "dancer", 70.0)
-	s.fighters[0].pos.x = Sim.STAGE_HALF - 110.0
-	s.fighters[1].pos.x = Sim.STAGE_HALF - 40.0
+	s.fighters[0].pos.x = s.half - 110.0
+	s.fighters[1].pos.x = s.half - 40.0
 	s.fighters[1].burst = 0
 	s.apply({0: {"move": "sidekick"}, 1: {"move": "wait"}})
 	evs = []
@@ -571,13 +578,8 @@ func _test_movement() -> void:
 			% [from, s.fighters[0].pos.x, fan_x, s.fighters[0].fans], can and absf(s.fighters[0].pos.x - fan_x) < 30.0
 			and s.fighters[0].pos.x - from > 100.0 and s.fighters[0].fans == 2 and s.shots.is_empty())
 	s = _xf("fans,tempo", 600.0)
-	var x0 := s.fighters[0].pos.x
-	var has_step := s.legal_moves(0).has("snapstep")
-	s.apply({0: {"move": "snapstep", "x": 1.0}})
-	for _i in 10:
-		s.step()
-	_check("Snap Step - a quick sharp step, now in her normal kit (%.0f px)" % (s.fighters[0].pos.x - x0),
-			has_step and s.fighters[0].pos.x - x0 > 50.0)
+	_check("Snap Step's gone from her kit (05:03 - a rushdown's step; the Bruiser has Bob & Weave)",
+			not s.legal_moves(0).has("snapstep") and Moves.move("dancer", "snapstep").is_empty())
 	var slow := _xf("tempo", 900.0)
 	var fast := _xf("tempo", 900.0)
 	fast.fighters[0].tempo = 4
@@ -1124,6 +1126,227 @@ func _test_xfactors() -> void:
 	_check("bot matches with each one and each pair always end (%s)" % " ".join(turns_all), ended == 6)
 
 
+func _test_bruiser() -> void:
+	_section("The Bruiser (05:03 - Muay Thai + Little Mac, the rushdown): his strings, Super Armor, the clinch, Grit and the K.O. Punch, three ways in")
+	var s := _duel("bruiser", "dancer", 60.0)
+	var b := s.fighters[0]
+	_check("he's on the roster: %d HP, weight %.2f, a rushdown with Grit - no fans, no beats (and she has no Grit)"
+			% [b.max_hp, float(Moves.stats("bruiser")["weight"])], Moves.ORDER.has("bruiser") and b.max_hp == 470
+			and s.has_xf(b, "grit") and not s.has_xf(b, "fans") and not s.has_xf(b, "tempo")
+			and not s.has_xf(s.fighters[1], "grit") and not s.legal_moves(0).has("fan") and s.legal_moves(0).has("clinch"))
+	var kit := Moves.of("bruiser")
+	var bot_moves: Array = Bot.B_IN + Bot.B_HITS + Bot.B_AIR + Bot.B_GRABS + Bot.B_SUPERS + Bot.B_FOLLOW
+	_check("...his bots only reach for his own moves", bot_moves.all(func(m: String) -> bool: return kit.has(m)))
+	# Jab -> Cross -> Hook
+	s.apply({0: {"move": "jab"}, 1: {"move": "wait"}})
+	s.run_segment()
+	var after_jab := s.legal_moves(0)
+	s.apply({0: {"move": "cross"}, 1: {"move": "hold"}})
+	s.run_segment()
+	var after_cross := s.legal_moves(0)
+	s.apply({0: {"move": "hook"}, 1: {"move": "hold"}})
+	s.run_segment()
+	_check("Jab (f%d - hers is f%d) -> Cross -> Hook: each there only right after the one before (combo %d)"
+			% [Moves.startup(kit["jab"]), Moves.startup(Moves.move("dancer", "jab")), s.fighters[1].combo],
+			Moves.startup(kit["jab"]) < Moves.startup(Moves.move("dancer", "jab")) and after_jab.has("cross")
+			and not after_jab.has("hook") and after_cross.has("hook") and s.fighters[1].combo == 3)
+	var near := _duel("bruiser", "dancer", 50.0)
+	var e := {"dmg": 20, "stun": 14, "kb": [2.0, 0.0], "block": 6, "chip": 1, "box": [8, -88, 48, 18]}
+	var close: Dictionary = near._spaced(near.fighters[0], near.fighters[1], e)
+	near.fighters[1].pos.x = 200.0
+	var far: Dictionary = near._spaced(near.fighters[0], near.fighters[1], e)
+	_check("a rushdown on top of them hits harder (point blank %d dmg / %d stun; further off %d / %d)" % [int(close["dmg"]),
+			int(close["stun"]), int(far["dmg"]), int(far["stun"])], int(close["dmg"]) > 20 and int(close["stun"]) > 14
+			and int(far["dmg"]) == 20 and bool(close.get("press", false)))
+	# Super Armor
+	var a := _duel("bruiser", "dancer", 60.0)
+	var evs := _play(a, {0: {"move": "roundhouse"}, 1: {"move": "jab"}})
+	var armored := evs.filter(func(x: Dictionary) -> bool: return x["type"] == "armor")
+	var kicked := evs.filter(func(x: Dictionary) -> bool: return x["type"] == "hit" and int(x["a"]) == 0)
+	_check("Super Armor: her jab lands in the Roundhouse's armour - he takes it and kicks on (%s; he %d, she %d)"
+			% [_types(evs), a.fighters[0].hp, a.fighters[1].hp], not armored.is_empty() and not kicked.is_empty()
+			and a.fighters[0].hp < 470 and a.fighters[1].hp < 450)
+	a = _duel("bruiser", "dancer", 300.0)
+	a.apply({0: {"move": "roundhouse"}, 1: {"move": "wait"}})
+	for _i in 5:
+		a.step()
+	var plain := {"dmg": 20, "stun": 14, "kb": [2.0, 0.0], "block": 6, "chip": 1}
+	a._strike(a.fighters[1], a.fighters[0], plain, "attack", a.fighters[0].frame)
+	var tanked := a.fighters[0].stun == 0 and a.fighters[0].move == "roundhouse" and a.fighters[0].hp == 450
+	a._strike(a.fighters[1], a.fighters[0], plain, "attack", a.fighters[0].frame)
+	_check("...one hit only (the wiki): a second in the window gets him (first tanked %s, then reeling %s)" % [tanked,
+			a.fighters[0].stun > 0], tanked and a.fighters[0].stun > 0)
+	a = _duel("bruiser", "dancer", 300.0)
+	a.fighters[0].meter = Sim.BAR
+	a.apply({0: {"move": "bullrush"}, 1: {"move": "wait"}})
+	for _i in 6:
+		a.step()
+	for _i in 3:
+		a._strike(a.fighters[1], a.fighters[0], plain, "attack", a.fighters[0].frame)
+	var three := a.fighters[0].stun == 0 and a.fighters[0].move == "bullrush"
+	a._strike(a.fighters[1], a.fighters[0], plain, "attack", a.fighters[0].frame)
+	_check("...Bull Rush (a bar) takes three, the fourth gets him (%s, %s)" % [three, a.fighters[0].stun > 0],
+			three and a.fighters[0].stun > 0)
+	a = _duel("bruiser", "dancer", 60.0)
+	evs = _play(a, {0: {"move": "roundhouse"}, 1: {"move": "grab"}})
+	_check("...a grab goes straight through armour (%s)" % [_types(evs)], _types(evs).has("throw")
+			and not _types(evs).has("armor") and a.fighters[0].hp < 470)
+	a = _duel("bruiser", "dancer", 300.0)
+	a.apply({0: {"move": "wait"}, 1: {"move": "fan"}})
+	var swung := false
+	for _i in 60:
+		a.step()
+		if not swung and not a.shots.is_empty() and absf((a.shots[0]["pos"] as Vector2).x - a.fighters[0].pos.x) < 100.0:
+			a.apply({0: {"move": "haymaker", "dist": 0.0}})
+			swung = true
+	_check("...and takes a thrown fan as it takes a strike: the Haymaker walks through it (%s, his move %s)"
+			% [_types(a.events).filter(func(t: String) -> bool: return t in ["armor", "hit"]), a.fighters[0].move],
+			swung and _types(a.events).has("armor") and a.fighters[0].hp < 470)
+	# the clinch
+	var c := _duel("bruiser", "dancer", 50.0)
+	c.apply({0: {"move": "clinch"}, 1: {"move": "wait"}})
+	var ce: Array = c.run_segment()["events"]
+	var lm := c.legal_moves(0)
+	var gap := absf(c.fighters[1].pos.x - c.fighters[0].pos.x)
+	_check("the Clinch holds her right in front of him (%.0f px), and he's free into a knee, an elbow or a dump"
+			% gap, _types(ce).has("throw") and c.fighters[1].stun > 0 and gap < 50.0 and lm.has("clinchknee")
+			and lm.has("clinchelbow") and lm.has("dump") and not lm.has("cross"))
+	var knees := 0
+	for _k in 3:
+		if not c.legal_moves(0).has("clinchknee"):
+			break
+		c.apply({0: {"move": "clinchknee"}, 1: {"move": "hold"}})
+		c.run_segment()
+		knees += 1
+	gap = absf(c.fighters[1].pos.x - c.fighters[0].pos.x)
+	c.fighters[0].meter = 0
+	_check("...knees, up to three in a row with no bar for it, and she's still held (%d knees, %.0f px, combo %d; a fourth: %s)"
+			% [knees, gap, c.fighters[1].combo, c.legal_moves(0).has("clinchknee")], knees == 3 and gap < 50.0
+			and c.fighters[1].combo == 4 and not c.legal_moves(0).has("clinchknee") and c.legal_moves(0).has("dump"))
+	var x0 := c.fighters[0].pos.x
+	var side0 := signf(c.fighters[1].pos.x - x0)
+	c.apply({0: {"move": "dump"}, 1: {"move": "hold"}})
+	evs = c.run_segment()["events"]
+	for _i in 80:
+		if c.fighters[1].down > 0:
+			break
+		c.step()
+	_check("...the Dump throws her down behind him (side %+.0f -> %+.0f, down %s)" % [side0,
+			signf(c.fighters[1].pos.x - c.fighters[0].pos.x), c.fighters[1].down > 0], c.fighters[1].down > 0
+			and signf(c.fighters[1].pos.x - c.fighters[0].pos.x) != side0)
+	var fury := _duel("bruiser", "dancer", 50.0)
+	fury.fighters[0].meter = 3 * Sim.BAR
+	fury.apply({0: {"move": "clinchfury"}, 1: {"move": "wait"}})
+	var spent := fury.fighters[0].meter == 0
+	evs = _play(fury, {})
+	var fury_hits := evs.filter(func(x: Dictionary) -> bool: return x["type"] in ["hit", "throw"] and int(x["a"]) == 0)
+	_check("Clinch Fury (3 bars): a clinch that won't let go - %d hits, %d damage, and she's floored" % [fury_hits.size(),
+			450 - fury.fighters[1].hp], fury_hits.size() == 5 and 450 - fury.fighters[1].hp >= 100
+			and spent and _types(evs).has("down"))
+	var miss := _duel("bruiser", "dancer", 300.0)
+	miss.fighters[0].meter = 3 * Sim.BAR
+	evs = _play(miss, {0: {"move": "clinchfury"}, 1: {"move": "wait"}})
+	_check("...missed, its knees hit nothing (%s)" % [_types(evs)], not _types(evs).has("hit") and miss.fighters[1].hp == 450)
+	# Grit and the K.O. Punch
+	var g := _duel("bruiser", "dancer", 60.0)
+	g._hurt(g.fighters[0], g.fighters[1], {"dmg": 50, "stun": 10, "kb": [1.0, 0.0]}, "hit", "jab")
+	var dealt := g.fighters[0].grit
+	g.fighters[0].grit = 0
+	g._hurt(g.fighters[1], g.fighters[0], {"dmg": 50, "stun": 10, "kb": [1.0, 0.0]}, "hit", "jab")
+	var taken := g.fighters[0].grit
+	_check("Grit builds both ways - faster for what he takes (50 dealt: %d, 50 taken: %d)" % [dealt, taken],
+			dealt > 0 and taken > dealt * 2)
+	g = _duel("bruiser", "dancer", 60.0)
+	g.fighters[0].grit = Sim.GRIT_MAX - 1
+	var shut := not g.legal_moves(0).has("kopunch")
+	g.fighters[0].grit = Sim.GRIT_MAX
+	var open := g.legal_moves(0).has("kopunch")
+	evs = _play(g, {0: {"move": "kopunch"}, 1: {"move": "block"}})
+	var ko_hit := evs.filter(func(x: Dictionary) -> bool: return x["type"] == "hit" and int(x["a"]) == 0)
+	_check("the K.O. Punch: only at full Grit (%s / %s), spends it, goes through her block and floors her (%d dmg, %s)"
+			% [shut, open, int(ko_hit[0]["dmg"]) if not ko_hit.is_empty() else 0, _types(evs)], shut and open
+			and g.fighters[0].grit < 20 and _types(evs).has("guardbreak") and not ko_hit.is_empty()
+			and int(ko_hit[0]["dmg"]) >= 90 and _types(evs).has("down"))
+	g.fighters[0].grit = 80
+	g._floor(g.fighters[0])
+	_check("...floored, he loses half his Grit (80 -> %d)" % g.fighters[0].grit, g.fighters[0].grit == 40)
+	# three ways in
+	var w := _duel("bruiser", "dancer", 300.0)
+	w.apply({0: {"move": "bob", "x": 1.0}, 1: {"move": "wait"}})
+	for _i in 5:
+		w.step()
+	_check("Bob & Weave: ducks high hits and slips a shot that isn't low - but not the Ripple (high %s, mid shot %s, low %s)"
+			% [w.hurtbox(w.fighters[0]).size.y < 80.0, w._shot_proof(w.fighters[0], {"height": "mid"}),
+			w._shot_proof(w.fighters[0], {"height": "low"})], w.hurtbox(w.fighters[0]).size.y < 80.0
+			and w._shot_proof(w.fighters[0], {"height": "mid"}) and not w._shot_proof(w.fighters[0], {"height": "low"}))
+	w = _duel("bruiser", "dancer", 120.0)
+	evs = _play(w, {0: {"move": "flyknee", "x": 1.0}, 1: {"move": "block"}})
+	_check("the Flying Knee leaps in and breaks her guard (%s)" % [_types(evs)], _types(evs).has("guardbreak")
+			and _types(evs).has("hit"))
+	w = _duel("bruiser", "dancer", 120.0)
+	evs = _play(w, {0: {"move": "superman", "x": 1.0}, 1: {"move": "block", "y": 1.0}})
+	var worse := evs.filter(func(x: Dictionary) -> bool: return x["type"] == "block" and bool(x.get("worse", false)))
+	_check("the Superman Punch is an overhead: blocked low, it's blocked worse (%s)" % [_types(evs)], not worse.is_empty())
+	w = _duel("bruiser", "dancer", 300.0)
+	w.fighters[1].pos.x = w.fighters[0].pos.x + 150.0
+	w.shots.clear()
+	w.apply({0: {"move": "flyknee", "x": 1.0}, 1: {"move": "wait"}})
+	var peak := 0.0
+	for _i in 12:
+		w.step()
+		peak = minf(peak, w.fighters[0].pos.y)
+	_check("...and it's off the floor - over the Ripple (%.0f px up)" % -peak, peak < -26.0)
+	# the catch
+	var k := _duel("bruiser", "dancer", 70.0)
+	evs = _play(k, {0: {"move": "catch"}, 1: {"move": "straight"}})
+	_check("Catch: her Straight caught and she's dumped (%s)" % [_types(evs)], _types(evs).has("countered")
+			and _types(evs).has("down") and k.fighters[1].hp < 450 and k.fighters[0].hp == 470)
+	# 05:27 "slapping an enemy accross map and being able to rush them down"
+	var fl := _duel("bruiser", "dancer", 70.0)
+	var x_hit := fl.fighters[1].pos.x
+	fl.apply({0: {"move": "haymaker", "dist": 0.0}, 1: {"move": "wait"}})
+	var fe: Array = []
+	for _i in 6:   # (until he's free again - she stands waiting)
+		fe.append_array(fl.run_segment()["events"])
+		if fl.fighters[0].actionable():
+			break
+		var hw := {}
+		for id in fl.deciders():
+			hw[id] = {"move": "hold"}
+		fl.apply(hw)
+	var flung := fe.filter(func(x: Dictionary) -> bool: return x["type"] == "hit" and bool(x.get("fling", false)))
+	var chase_ok := fl.legal_moves(0).has("chase")
+	fl.apply({0: {"move": "chase", "x": 1.0}, 1: {"move": "hold"}})
+	fl.run_segment()
+	var away := fl.fighters[1].pos.x - x_hit
+	var gap2 := fl.fighters[1].pos.x - fl.fighters[0].pos.x
+	fl.apply({0: {"move": "jab"}, 1: {"move": "hold"}})
+	fl.run_segment()
+	_check("a fling: the Haymaker sends her sliding across the stage (%.0f px), Chase runs her down (%.0f px apart) "
+			% [away, gap2] + "and the combo goes on (combo %d)" % fl.fighters[1].combo, not flung.is_empty() and chase_ok
+			and away > 400.0 and gap2 < 90.0 and fl.fighters[1].combo == 2)
+	var q := _duel("bruiser", "dancer", 60.0)
+	q.fighters[1].down = 10
+	evs = _play(q, {0: {"move": "quake"}})
+	_check("Quake Stomp: a shockwave along the floor that picks her up off it (%s)" % [_types(evs)],
+			_types(evs).has("hit") and q.fighters[1].hp < 450)
+	var wide := Sim.create([{"character": "bruiser"}, {"character": "dancer"}])
+	_check("the stage is wider (05:27 \"I feel our map is small\"): %.0f px, one on one still starting %.0f apart"
+			% [wide.half * 2.0, wide.fighters[1].pos.x - wide.fighters[0].pos.x], wide.half * 2.0 == 2800.0
+			and is_equal_approx(wide.fighters[1].pos.x - wide.fighters[0].pos.x, 600.0))
+	# the universal blocking rule he leans on
+	var bl := _duel("bruiser", "dancer", 60.0)
+	bl.apply({0: {"move": "jab"}, 1: {"move": "block"}})
+	for _i in 4:
+		bl.step()
+	var stunned := bl.fighters[1].blockstun > 0
+	bl.fighters[1].blockstun = 6
+	var gb := {"dmg": 30, "stun": 10, "kb": [1.0, 0.0], "block": 8, "chip": 1, "guardbreak": true}
+	_check("in blockstun from his jab, a guard break after it is just blocked (the wiki) (%s, %s)" % [stunned,
+			bl._block(bl.fighters[0], bl.fighters[1], gb, Moves.move("dancer", "block"), 9, false)], stunned
+			and bl._block(bl.fighters[0], bl.fighters[1], gb, Moves.move("dancer", "block"), 9, false))
+
+
 func _test_snapshots() -> void:
 	_section("Snapshots and previews")
 	var s := Sim.create([{"character": "dancer"}, {"character": "dancer"}])
@@ -1162,8 +1385,8 @@ func _test_bot_matches() -> void:
 				continue
 			for sd in 3:
 				var players := []
-				for i in n:
-					players.append({"character": "dancer", "team": i % 2})
+				for i in n:   # (both characters, mixed - 05:03 the Bruiser)
+					players.append({"character": Moves.ORDER[(i + sd) % Moves.ORDER.size()], "team": i % 2})
 				var s := Sim.create(players, mode)
 				var bots := []
 				for i in n:

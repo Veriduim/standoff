@@ -134,8 +134,23 @@ func event(e: Dictionary, style := "") -> void:
 				play("hit_light", 0.0, vary)
 			if int(e.get("spot", 0)) == 1:   # (the fan's edge)
 				play("edge", -3.0)
+			if bool(e.get("fling", false)):   # (a fling: a boom under the hit)
+				play("wall", 0.0, 0.8)
+			if str(e["type"]) == "armor":   # (armour: metal under it)
+				play("clash", -3.0, 1.2)
 		"throw":
 			play("grab")
+		"guardbreak":
+			play("clash", 0.0, 0.8)
+		"quake":
+			play("bounce", 2.0, 0.8)
+			play("down", -2.0, 0.9)
+		"rush":
+			play("swing", 0.0, 0.7)
+		"kopunch":
+			play("swing", 2.0, 0.6)
+		"grit":
+			play("onbeat", 0.0, 0.8)
 		"block":
 			play("push" if bool(e.get("push", false)) else "block", 0.0, vary)
 		"parry":

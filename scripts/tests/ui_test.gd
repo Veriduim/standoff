@@ -7,6 +7,8 @@ const SCREEN := preload("res://scripts/ui/game_screen.gd")
 
 func _screen() -> Control:
 	PickPanel.forget()   # (no remembered pick from earlier play; nothing written)
+	SCREEN.bots_as = "dancer"   # (the bots as one character - they're at random in play)
+	HomeScreen.fighter = "dancer"
 	var g: Control = SCREEN.new()
 	add_child(g)
 	return g
@@ -31,8 +33,9 @@ func _test_your_pick() -> void:
 	_check("a match with you and 3 bots: your turn first, the pick panel up (drawer tucked away), the start menu gone",
 			g.sim.fighters.size() == 4 and g.phase == "pick" and p.visible and not p.drawer.visible
 			and not g.home.visible and g._demo == null)
-	_check("you wear the colour you picked; everyone is the Dancer", g.stage.colour_of(0) == StageView.COLOURS[2]
-			and g.sim.fighters.all(func(f: Fighter) -> bool: return f.character == "dancer"))
+	_check("you wear the colour you picked and play the fighter you picked", g.stage.colour_of(0) == StageView.COLOURS[2]
+			and g.sim.fighters[0].character == HomeScreen.fighter and g.sim.fighters.all(func(f: Fighter) -> bool:
+				return Moves.ROSTER.has(f.character)))
 	var names := p.menu_moves()
 	_check("on the ground the tabs hold %d moves - ground attacks, grabs, moves, defence; no air moves, no supers yet"
 			% names.size(), names.size() >= 20 and names.has("sweep") and names.has("fangust") and names.has("roll")
@@ -713,4 +716,25 @@ func _test_drawer_order() -> void:
 			and not picked[0])
 	b2.free()
 	p._close_drawer()
+	g.queue_free()
+
+
+func _test_pick_fighter() -> void:
+	_section("Two fighters (05:03): pick the Bruiser on the home screen and you play him - his Grit on his card")
+	var g := _screen()
+	var home := g.home as HomeScreen
+	var card := home.find_child("Pick_bruiser", true, false) as Button
+	card.pressed.emit()
+	_check("tapping the Bruiser's card picks him", card != null and HomeScreen.fighter == "bruiser")
+	(home.find_child("Fight", true, false) as Button).pressed.emit()
+	var me: Fighter = g.sim.fighters[0]
+	g.sim.fighters[0].grit = 40
+	g._update_cards()
+	var shown := ""
+	for c in g.cards.get_children():
+		for l in c.find_children("*", "RichTextLabel", true, false):
+			shown += (l as RichTextLabel).text
+	_check("...the match has you as him, and his card shows his Grit (%s)" % ("grit pips" if shown.contains("#ff9a3c")
+			else "no grit"), me.character == "bruiser" and shown.contains("#ff9a3c") and not g.pick.menu_moves().has("fan"))
+	home.set_fighter("dancer")
 	g.queue_free()

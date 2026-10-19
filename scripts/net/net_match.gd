@@ -62,7 +62,7 @@ func host_start(lobby_net: LobbyNet, channel_name: String, the_seats: Array, the
 	var players: Array = []
 	for i in seats.size():
 		var s: Dictionary = seats[i]
-		players.append({"name": s["name"], "character": "dancer", "team": int(s.get("team", i))})
+		players.append({"name": s["name"], "character": str(s.get("character", "dancer")), "team": int(s.get("team", i))})
 		if int(s["peer"]) == 0:
 			bots[i] = Bot.new(i * 7 + 3, Bot.chosen)
 		if int(s["peer"]) == net.id:

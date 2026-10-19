@@ -18,7 +18,7 @@ const LINE := Color("#ececf2")     ## the floor
 const WALL := Color("#2a2c36")
 const GHOST_ALPHA := 0.55
 const PAD := 170.0          ## world px kept round everyone
-const ZOOM_MIN := 0.45
+const ZOOM_MIN := 0.4         ## (a wider stage since 05:27 - six spread across it still fit)
 const ZOOM_MAX := 1.8        ## (22:40 "really small": in close, the camera comes right in)
 const TIPS := ["hand_f", "hand_b", "foot_f", "foot_b"]
 const LAND_TICKS := 7        ## the landing squash
@@ -171,8 +171,11 @@ func _effect(e: Dictionary, prev: Array) -> void:
 		fx.burst_out(a, _chest(a), colour_of(a), n + a)
 		return
 	if type in ["down", "whiff", "sad", "sadness", "bounce", "splat", "ic", "beat", "onbeat", "catch", "recall",
-			"form_snap", "form_floor", "form_flow", "gust", "sweep", "sweep_up", "blink", "galering"]:   # (a = who it happened to)
-		var at := _chest(a) if not type in ["down", "bounce"] else Vector2(float(frame[a][0]), -6.0)
+			"form_snap", "form_floor", "form_flow", "gust", "sweep", "sweep_up", "blink", "galering", "quake", "rush",
+			"kopunch", "grit"]:   # (a = who it happened to)
+		var at := _chest(a) if not type in ["down", "bounce", "quake"] else Vector2(float(frame[a][0]), -6.0)
+		if type == "quake":   # (under the stamping foot)
+			at.x += face * 14.0
 		if type == "gust":   # (in front of her, low)
 			at = Vector2(float(frame[a][0]) + face * 50.0, -70.0)
 		if type == "splat":   # (at the wall they hit)
@@ -194,9 +197,11 @@ func _effect(e: Dictionary, prev: Array) -> void:
 	if type == "shot":   # (a throw: a flash at the hand)
 		fx.on_event(type, _chest(a) + Vector2(face * 34.0, -10.0), face, 0, colour_of(a), -1, colour_of(a), false, n + a)
 		return
-	if type == "countered":   # (Mirror: the strike caught and turned)
+	if type == "countered":   # (Mirror / Catch: the strike caught and turned)
 		fx.on_event(type, (_chest(a) + _chest(d)) / 2.0 if d >= 0 else _chest(a), face, 0, colour_of(a), d,
 				colour_of(d) if d >= 0 else Color.WHITE, false, n + a)
+		if str(e.get("name", "")) != "" and not fx.parts.is_empty() and str(fx.parts[-1]["k"]) == "text":
+			fx.parts[-1]["txt"] = str(e["name"]).to_upper() + "!"
 		return
 	if type == "time":
 		fx.on_event(type, cam, 1.0, 0, Color.WHITE, -1, Color.WHITE, false, n)
@@ -217,6 +222,10 @@ func _effect(e: Dictionary, prev: Array) -> void:
 			bool(e.get("counter", false)) or bool(e.get("worse", false)), bool(e.get("push", false)))
 	if type == "hit" and int(e.get("spot", 0)) == 1:   # (the fan's edge - a gold glint where it lands)
 		fx.on_event("edge", at, face, 0, colour_of(a), d, colour_of(d), false, n + d)
+	if type == "hit" and bool(e.get("fling", false)):   # (a fling - the Bruiser's big hits: a ring of air, cracks)
+		fx.on_event("fling", at, float(frame[a][2]), 0, colour_of(a), d, colour_of(d), false, n + d + 1)
+	if type == "armor":   # (Super Armor took it)
+		fx.on_event("armored", at, face, 0, colour_of(a), d, colour_of(d), false, n + d + 2)
 
 
 ## Step 4: what a hit looks like by what made it - "slash" her fans (her hand strikes, a thrown fan), "wave" the
@@ -228,6 +237,8 @@ func _hit_style(e: Dictionary, a: int) -> String:
 				"fanward", "fanflick"]
 				else "blunt")
 	var mv := str(frame[a][3])
+	if _char(a) == "bruiser":   # (his elbows cut; gloves, shins and knees thump)
+		return "slash" if mv in ["elbow", "clinchelbow"] else "blunt"
 	if mv == "" or _char(a) != "dancer":
 		return "blunt"
 	var tip := _striking(a, mv, int(frame[a][4]))
@@ -714,13 +725,18 @@ func _figure(i: int, r: Array, alpha: float, bare := false) -> void:
 		var pre := Stick._place(pose, w2s(base), sc, face)
 		if fans >= 2 and not bare:   # (an afterimage: just her - its fans would double what it costs to draw)
 			Stick.fan_at(self, pre, "b", face, sc, open, col, alpha >= 1.0, Stick.STEEL if alpha >= 1.0 else col, ink)
-	var pts := Stick.draw(self, pose, w2s(base), sc, face, col, Stick.limb(sc), head_r, alpha >= 1.0, ink)
+	if ch == "bruiser" and int(r[5]) == 0 and str(r[3]) in ["", "wait"] and float(r[1]) >= -1.0:   # (a boxer bouncing
+		var kb := 0.5 + 0.5 * sin(_time * 5.4 + i * 1.1)                                               # on his toes)
+		pose = Poses.blend(pose, Poses.get_pose("b_idle2"), kb * (1.0 if alpha >= 1.0 else 0.0))
+	var pts := Stick.draw(self, pose, w2s(base), sc, face, col, Stick.limb(sc), head_r, alpha >= 1.0, ink, ch)
 	if dancer and fans >= 1 and not bare:   # (ghosts: their fans in their own faded colour, not bright steel)
 		Stick.fan_at(self, pts, "f", face, sc, open, col, alpha >= 1.0, Stick.STEEL if alpha >= 1.0 else col, ink)
 	if alpha < 1.0:
 		return
 	if alpha >= 1.0 and r.size() > 15 and int(r[15]) > 0 and int(r[5]) != 4:   # (Tempo: shards of her colour orbit her,
 		_tempo_aura(i, pts, int(r[15]), col, h * zoom)                          # one a beat - Yharim's in the mod study)
+	if r.size() > 17 and int(r[17]) >= Sim.GRIT_MAX and int(r[5]) != 4:   # (the Bruiser's Grit full: his gloves glow hot)
+		_grit_aura(pts, h * zoom)
 	if deciding.has(i):
 		var pulse := 0.5 + 0.5 * sin(_time * 6.0)
 		draw_arc(pts["head"], head_r + (7.0 + 3.0 * pulse) * zoom, 0, TAU, 24, Color(1, 1, 1, 0.5 + 0.4 * pulse), 2.0)
@@ -734,6 +750,23 @@ func _figure(i: int, r: Array, alpha: float, bare := false) -> void:
 		var s := maxf(6.0, 9.0 * zoom)
 		draw_colored_polygon(PackedVector2Array([tip, tip + Vector2(-s, -s * 1.1), tip + Vector2(s, -s * 1.1)]),
 				Color.WHITE)
+
+
+## Grit full (the K.O. Punch is there): a hot orange glow round both gloves, pulsing, sparks rising off them.
+func _grit_aura(pts: Dictionary, sc: float) -> void:
+	var pulse := 0.5 + 0.5 * sin(_time * 7.0)
+	for side: String in ["hand_f", "hand_b"]:
+		var at: Vector2 = pts[side]
+		for k in 3:
+			var c := Color("#ff9a3c")
+			c.a = (0.28 - k * 0.08) * (0.7 + 0.3 * pulse)
+			draw_circle(at, (11.0 + k * 5.0 + pulse * 2.0) * sc / 100.0 * 1.6, c, true, -1.0, true)
+		for k in 3:   # (sparks rising)
+			var u := fmod(_time * 1.6 + k * 0.33 + (0.5 if side == "hand_b" else 0.0), 1.0)
+			var sp := at + Vector2(sin(_time * 3.0 + k * 2.0) * 6.0, -u * 40.0) * sc / 100.0 * 1.6
+			var c2 := Color("#ffd27a")
+			c2.a = 0.9 * (1.0 - u)
+			draw_circle(sp, maxf(1.0, 2.2 * sc / 100.0 * 1.6), c2, true, -1.0, true)
 
 
 func _tempo_aura(i: int, pts: Dictionary, beats: int, col: Color, sc: float) -> void:

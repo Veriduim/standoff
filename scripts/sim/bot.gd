@@ -15,12 +15,21 @@ const AIR := ["airkick", "airknee", "airdash", "fastfall", "block", "wait", "air
 	"fanward"]
 const GRABS := ["grab"]
 const SUPERS := ["fanstorm", "gale", "cyclone", "finale"]
-const CLOSE_IN := ["walk", "dash", "roll", "floorslide", "snapstep", "fanstep"]
+const CLOSE_IN := ["walk", "dash", "roll", "floorslide", "fanstep"]
 const BACK_OFF := ["backstep", "walk", "dash"]
 ## A spacer (the Dancer - 03:32 "the zoner/control space char") plays her range: point blank she makes room...
 const KEEP_OUT := ["fangust", "backstep", "updraft", "uppercut", "fanslash", "fangust"]
 ## ...and at her range she pokes, throws, sets a ward or blows them off.
 const MID := ["fanslash", "sidekick", "ripple", "fan", "fanward", "fangust", "straight", "sweep"]
+## The Bruiser - a rushdown (05:03): in at any cost - under shots, over them, through a guard...
+const B_IN := ["dash", "dash", "bob", "bob", "walk", "flyknee", "superman"]
+## ...and on top of them: his hands, shins and elbows, the clinch, the big armoured swings now and then
+const B_HITS := ["jab", "jab", "body", "legkick", "elbow", "teep", "roundhouse", "uppercut", "haymaker", "flyknee",
+	"superman", "quake"]
+const B_AIR := ["airknee", "airhook", "elbowdrop", "fastfall", "fastfall", "block"]   ## (the air's his weak spot - down fast)
+const B_GRABS := ["clinch"]
+const B_SUPERS := ["bullrush", "barrage", "clinchfury"]
+const B_FOLLOW := ["cross", "hook", "clinchknee", "clinchknee", "clinchelbow", "dump", "chase", "chase"]   ## (his strings, when they're there)
 
 const LOOK := 28        ## (thinking) frames each try is played forward
 ## By level (Timmy 02:10 "Lets do difficulty please"): 0 Easy - the quick bot; 1 Normal; 2 Hard.
@@ -162,6 +171,8 @@ func _play(base: Dictionary, mine: Dictionary, theirs: Dictionary) -> float:
 		v += 6.0
 	if f.down > 0:
 		v -= 6.0
+	if t.stun > 0 and f.cancelled in ["clinch", "clinchknee"]:   # (holding them in the clinch)
+		v += 6.0
 	if f.actionable() and not t.actionable():
 		v += 4.0
 	elif t.actionable() and not f.actionable():
@@ -172,6 +183,11 @@ func _play(base: Dictionary, mine: Dictionary, theirs: Dictionary) -> float:
 			v += 5.0                                                   # point blank costs her)
 		elif gap < 60.0:
 			v -= 4.0
+	elif str(Moves.stats(f.character).get("trait", "")) == "rushdown":   # (a rushdown: close is his, far off isn't)
+		if gap < 90.0:
+			v += 4.0
+		elif gap > 250.0:
+			v -= 3.0
 	return v
 
 
@@ -206,6 +222,8 @@ func _quick(sim: Sim, id: int) -> Dictionary:
 		var ok := ids.filter(func(m: String) -> bool: return legal.has(m))
 		return str(ok[rng.randi() % ok.size()]) if not ok.is_empty() else "wait"
 	var c := {"x": toward, "y": 0.0}
+	if str(Moves.stats(f.character).get("trait", "")) == "rushdown":
+		return _rush(f, t, legal, c, pick, dist)
 	if not f.grounded():
 		c["move"] = pick.call(AIR)
 		c["y"] = 0.8 if c["move"] == "airfan" else rng.randf_range(-0.6, 0.6)
@@ -273,4 +291,57 @@ func _quick(sim: Sim, id: int) -> Dictionary:
 			c["x"] = -toward
 	c["free"] = f.fc > 0 and rng.randf() < 0.5   # (Free Cancel on about half its attacks while it has charges)
 	c["dist"] = rng.randf_range(30.0, 100.0)
+	return c
+
+
+## The Bruiser's quick way (05:03 - a rushdown): far off, in - dashing, slipping under shots, leaping over the floor;
+## close, his strings when they're there (Jab -> Cross -> Hook, the clinch's knees), the K.O. Punch when it's full,
+## then hands, shins, the clinch, a block now and then.
+func _rush(f: Fighter, t: Fighter, legal: Array[String], c: Dictionary, pick: Callable, dist: float) -> Dictionary:
+	var toward := float(c["x"])
+	if not f.grounded():
+		c["move"] = pick.call(B_AIR)
+		return c
+	if dist > 170.0:
+		var r0 := rng.randf()
+		if r0 < 0.1:
+			c["move"] = pick.call(["jump", "superjump"])
+			c["x"] = toward * 0.7
+			c["y"] = -1.0
+		elif r0 < 0.15:
+			c["move"] = pick.call(["taunt", "wait"])
+		elif f.meter >= Sim.BAR and r0 < 0.2:   # (armour through it all)
+			c["move"] = pick.call(["bullrush"])
+		else:
+			c["move"] = pick.call(B_IN)
+		c["dist"] = rng.randf_range(60.0, 100.0)
+		return c
+	var follow: Array = B_FOLLOW.filter(func(m: String) -> bool: return legal.has(m))
+	if not follow.is_empty() and rng.randf() < 0.85:
+		c["move"] = str(follow[rng.randi() % follow.size()])
+		return c
+	if legal.has("kopunch") and dist < 110.0 and rng.randf() < 0.7:
+		c["move"] = "kopunch"
+		return c
+	if legal.has("burstcancel") and rng.randf() < 0.15:
+		return {"move": "burstcancel"}
+	var r := rng.randf()
+	if f.meter >= Sim.BAR and r < 0.05:
+		c["move"] = pick.call(B_SUPERS)
+	elif r < 0.6:
+		c["move"] = pick.call(B_HITS)
+	elif r < 0.74:
+		c["move"] = pick.call(B_GRABS)
+	elif r < 0.77:
+		c["move"] = pick.call(["catch", "block"])
+	elif r < 0.9:
+		c["move"] = "block" if r < 0.86 else "pushblock"
+		var read := _read(t)
+		c["y"] = 1.0 if str(read.get("height", "mid")) == "low" else -1.0
+		if rng.randf() < 0.5:
+			c["pf"] = int(read.get("frame", 0))
+	else:
+		c["move"] = pick.call(["bob", "dash", "backstep"])
+	c["free"] = f.fc > 0 and rng.randf() < 0.5
+	c["dist"] = rng.randf_range(40.0, 100.0)
 	return c

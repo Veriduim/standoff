@@ -15,7 +15,7 @@ const PAGES := [
 		"card at the bottom shows it. The arrows aim it; tap the lit arrow again for no direction.", "fan"],
 	["The move icons", "Each tab's moves go fastest first - the f number is the frame it hits. The badges: ✊ beats " +
 		"blocks, ⚡ better with initiative (the enemy was choosing too), 👻 dodges, 🔻 hits low, 💥 guard break, " +
-		"🎯 a projectile.", "grab"],
+		"🎯 a projectile, 🛡 armour.", "grab"],
 	["Watch the ghost", "The faded figures show what happens if you pick that. \"Ready in 12\" means you can act " +
 		"again 12 frames later - green if you're first. Guess an enemy's move with their tabs on the right, and their " +
 		"ghost plays against yours.", "dash"],
@@ -26,6 +26,9 @@ const PAGES := [
 	["The Dancer", "A zoner with two war fans. Thrown, they fly back to her hand; Fan Ward leaves one hanging as a " +
 		"trap, and Recall pulls them home through anyone in the way. Fan Gust blows rushers and shots off her. Hits " +
 		"at the fan's edge hurt most; point blank she's weaker - keep them out there.", "fanward"],
+	["The Bruiser", "A rushdown - Muay Thai and a boxer's hands. Jab, Cross, Hook; Bob & Weave slips shots; his big " +
+		"hits send them flying and Chase runs them down. Armour (🛡) takes one hit. Clinch holds them for knees. Grit " +
+		"builds as he trades - full, the K.O. Punch. Floored, he loses half.", "haymaker", "bruiser"],
 ]
 
 static var auto := true            ## open by itself on the first launch (off for the tests and the dev tools)
@@ -120,8 +123,9 @@ func show_page(i: int) -> void:
 	var p: Array = PAGES[page]
 	_title.text = str(p[0])
 	_text.text = str(p[1])
+	_icon.character = str(p[3]) if p.size() > 3 else "dancer"   # (a card about the Bruiser shows him)
 	_icon.move_id = str(p[2])
-	_icon.colour = MoveIcon.tab_colour("dancer", str(p[2]))
+	_icon.colour = MoveIcon.tab_colour(_icon.character, str(p[2]))
 	_icon.queue_redraw()
 	_count.text = "%d / %d" % [page + 1, PAGES.size()]
 	_back.disabled = page == 0

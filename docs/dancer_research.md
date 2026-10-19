@@ -139,8 +139,7 @@ Mac, later).
   - The bot's lookahead now values her range: +5 for 90-260 px, -4 point blank.
   - Fan Gust is still picked rarely. The bots prefer immediate damage, so it's a player's tool for reads.
 
-## Open questions for Timmy
-- **Encore** (Tempo at four beats) is still a melee rush. It could become a fan finisher at range.
-- **Approach speed:** her dash (17) and walk (6.5) are unchanged because he liked her movement. Zoners are usually
-  slower forward.
-- **Snap Step and Windmill** are still in her base kit (a fast forward step; a low spinning floor attack).
+## Open questions - settled (Timmy 05:03 "arrange how you think", 0.30.0)
+- **Encore** is a finisher from range now: three spectral fans in a burst, the last floors them.
+- **Approach speed:** her forward dash 17 -> 15; walk and Back Step as they were.
+- **Snap Step** went (a rushdown's step - the Bruiser has Bob & Weave); **Windmill** stays (her low floor spin).

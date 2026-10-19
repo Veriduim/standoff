@@ -29,6 +29,13 @@ func _ready() -> void:
 			return
 	var game: Control = load("res://scripts/ui/game_screen.gd").new()
 	add_child(game)
+	for arg in OS.get_cmdline_user_args():   # (dev: -- --as=bruiser plays him; -- --vs=dancer sets the bots)
+		if arg.begins_with("--as="):
+			HomeScreen.fighter = arg.trim_prefix("--as=")
+		elif arg.begins_with("--level="):   # (-- --level=2: Hard bots)
+			Bot.chosen = int(arg.trim_prefix("--level="))
+		elif arg.begins_with("--vs="):
+			game.get_script().set("bots_as", arg.trim_prefix("--vs="))
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--shots="):   # (dev: screenshots of a match - tools/shots.sh)
 			var shots: Node = load("res://scripts/dev/shots.gd").new()

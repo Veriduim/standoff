@@ -159,6 +159,38 @@ const P := {
 	"gust": {"head": [14, -80], "neck": [10, -68], "hip": [-2, -38], "elbow_f": [32, -66], "hand_f": [56, -60],
 		"elbow_b": [26, -76], "hand_b": [50, -84], "knee_f": [20, -20], "foot_f": [36, 0], "knee_b": [-14, -18],
 		"foot_b": [-30, 0]},
+	# the Bruiser (19 Oct 05:03 - Muay Thai + Little Mac): a boxer's guard (lead glove at his face, the rear at his
+	# chin), the bounce, slips and rolls, hands, elbows, knees, the teep and the round kick, the clinch, the Wai Khru
+	"b_idle": {"head": [4, -90], "neck": [2, -78], "hip": [-2, -45], "elbow_f": [14, -64], "hand_f": [18, -79], "elbow_b": [4, -60], "hand_b": [10, -74], "knee_f": [12, -23], "foot_f": [20, 0], "knee_b": [-12, -22], "foot_b": [-20, 0]},
+	"b_idle2": {"head": [5, -87], "neck": [3, -75], "hip": [-1, -42], "elbow_f": [15, -61], "hand_f": [19, -76], "elbow_b": [5, -57], "hand_b": [11, -71], "knee_f": [13, -21], "foot_f": [20, 0], "knee_b": [-11, -20], "foot_b": [-20, 0]},
+	"b_walk1": {"head": [6, -89], "neck": [4, -77], "hip": [0, -45], "elbow_f": [16, -63], "hand_f": [20, -78], "elbow_b": [6, -59], "hand_b": [12, -73], "knee_f": [16, -23], "foot_f": [26, 0], "knee_b": [-6, -22], "foot_b": [-20, -2]},
+	"b_walk2": {"head": [6, -89], "neck": [4, -77], "hip": [0, -45], "elbow_f": [16, -63], "hand_f": [20, -78], "elbow_b": [6, -59], "hand_b": [12, -73], "knee_f": [6, -22], "foot_f": [-6, -2], "knee_b": [6, -23], "foot_b": [14, 0]},
+	"b_dash": {"head": [20, -84], "neck": [14, -73], "hip": [0, -43], "elbow_f": [26, -62], "hand_f": [32, -77], "elbow_b": [16, -58], "hand_b": [24, -70], "knee_f": [20, -22], "foot_f": [30, 0], "knee_b": [-14, -20], "foot_b": [-30, -6]},
+	"b_lean": {"head": [-12, -86], "neck": [-8, -75], "hip": [-2, -44], "elbow_f": [4, -62], "hand_f": [12, -76], "elbow_b": [-2, -58], "hand_b": [4, -72], "knee_f": [12, -23], "foot_f": [20, 0], "knee_b": [-12, -22], "foot_b": [-22, 0]},
+	"b_bob": {"head": [16, -58], "neck": [10, -48], "hip": [-4, -30], "elbow_f": [22, -38], "hand_f": [26, -54], "elbow_b": [14, -36], "hand_b": [20, -50], "knee_f": [16, -16], "foot_f": [24, 0], "knee_b": [-14, -14], "foot_b": [-24, 0]},
+	"b_weave": {"head": [6, -56], "neck": [4, -46], "hip": [-6, -30], "elbow_f": [16, -38], "hand_f": [22, -52], "elbow_b": [8, -34], "hand_b": [14, -48], "knee_f": [14, -16], "foot_f": [22, 0], "knee_b": [-16, -14], "foot_b": [-24, 0]},
+	"b_jab": {"head": [8, -88], "neck": [5, -77], "hip": [-1, -45], "elbow_f": [24, -78], "hand_f": [44, -80], "elbow_b": [8, -60], "hand_b": [14, -75], "knee_f": [14, -23], "foot_f": [24, 0], "knee_b": [-12, -22], "foot_b": [-22, 0]},
+	"b_hook_wind": {"head": [-2, -88], "neck": [-2, -77], "hip": [-2, -45], "elbow_f": [-8, -64], "hand_f": [-2, -80], "elbow_b": [6, -60], "hand_b": [12, -76], "knee_f": [12, -23], "foot_f": [20, 0], "knee_b": [-12, -22], "foot_b": [-20, 0]},
+	"b_hook": {"head": [14, -86], "neck": [10, -75], "hip": [0, -44], "elbow_f": [28, -82], "hand_f": [44, -90], "elbow_b": [12, -58], "hand_b": [18, -72], "knee_f": [16, -23], "foot_f": [24, 0], "knee_b": [-12, -21], "foot_b": [-24, 0]},
+	"b_body": {"head": [16, -72], "neck": [12, -61], "hip": [-2, -34], "elbow_f": [26, -52], "hand_f": [42, -56], "elbow_b": [12, -46], "hand_b": [18, -60], "knee_f": [18, -18], "foot_f": [28, 0], "knee_b": [-14, -16], "foot_b": [-26, 0]},
+	"b_teep": {"head": [-12, -90], "neck": [-8, -79], "hip": [-2, -50], "elbow_f": [4, -66], "hand_f": [10, -82], "elbow_b": [-6, -64], "hand_b": [2, -78], "knee_f": [18, -62], "foot_f": [44, -58], "knee_b": [-6, -26], "foot_b": [-10, 0]},
+	"b_elbow_wind": {"head": [2, -89], "neck": [1, -78], "hip": [-2, -45], "elbow_f": [-6, -86], "hand_f": [6, -92], "elbow_b": [6, -60], "hand_b": [12, -76], "knee_f": [12, -23], "foot_f": [20, 0], "knee_b": [-12, -22], "foot_b": [-20, 0]},
+	"b_elbow": {"head": [12, -86], "neck": [8, -75], "hip": [0, -44], "elbow_f": [26, -80], "hand_f": [12, -86], "elbow_b": [10, -58], "hand_b": [16, -72], "knee_f": [16, -23], "foot_f": [26, 0], "knee_b": [-12, -21], "foot_b": [-24, 0]},
+	"b_round_wind": {"head": [-6, -88], "neck": [-4, -77], "hip": [0, -47], "elbow_f": [8, -64], "hand_f": [14, -80], "elbow_b": [-18, -66], "hand_b": [-28, -58], "knee_f": [16, -60], "foot_f": [-2, -48], "knee_b": [-4, -24], "foot_b": [-6, 0]},
+	"b_round": {"head": [-22, -84], "neck": [-16, -74], "hip": [0, -50], "elbow_f": [-2, -66], "hand_f": [6, -80], "elbow_b": [-32, -70], "hand_b": [-46, -64], "knee_f": [22, -66], "foot_f": [46, -78], "knee_b": [-4, -26], "foot_b": [-8, 0]},
+	"b_clinch": {"head": [10, -86], "neck": [7, -75], "hip": [-2, -44], "elbow_f": [24, -70], "hand_f": [36, -82], "elbow_b": [20, -66], "hand_b": [32, -78], "knee_f": [14, -23], "foot_f": [22, 0], "knee_b": [-12, -22], "foot_b": [-20, 0]},
+	"b_clinch_knee": {"head": [8, -84], "neck": [5, -73], "hip": [-4, -46], "elbow_f": [22, -66], "hand_f": [34, -72], "elbow_b": [18, -62], "hand_b": [30, -68], "knee_f": [20, -66], "foot_f": [8, -46], "knee_b": [-10, -24], "foot_b": [-16, 0]},
+	"b_elbow_drop": {"head": [10, -80], "neck": [6, -70], "hip": [-4, -44], "elbow_f": [20, -50], "hand_f": [10, -64], "elbow_b": [-4, -58], "hand_b": [6, -70], "knee_f": [10, -30], "foot_f": [0, -12], "knee_b": [-14, -28], "foot_b": [-20, -10]},
+	"b_flyknee": {"head": [10, -96], "neck": [6, -84], "hip": [-4, -52], "elbow_f": [20, -90], "hand_f": [30, -104], "elbow_b": [10, -90], "hand_b": [20, -104], "knee_f": [24, -70], "foot_f": [6, -56], "knee_b": [-10, -32], "foot_b": [-24, -18]},
+	"b_hop": {"head": [6, -94], "neck": [4, -82], "hip": [0, -50], "elbow_f": [16, -70], "hand_f": [22, -86], "elbow_b": [-10, -66], "hand_b": [-4, -80], "knee_f": [14, -30], "foot_f": [10, -8], "knee_b": [-14, -40], "foot_b": [-36, -36]},
+	"b_superman": {"head": [22, -86], "neck": [14, -78], "hip": [-6, -56], "elbow_f": [10, -64], "hand_f": [18, -78], "elbow_b": [34, -82], "hand_b": [56, -84], "knee_f": [6, -34], "foot_f": [0, -12], "knee_b": [-24, -48], "foot_b": [-44, -40]},
+	"b_catch": {"head": [2, -88], "neck": [1, -77], "hip": [-4, -45], "elbow_f": [18, -58], "hand_f": [30, -50], "elbow_b": [14, -56], "hand_b": [26, -46], "knee_f": [12, -23], "foot_f": [20, 0], "knee_b": [-14, -22], "foot_b": [-22, 0]},
+	"b_ko_wind": {"head": [4, -62], "neck": [2, -51], "hip": [-6, -28], "elbow_f": [10, -34], "hand_f": [-2, -22], "elbow_b": [12, -44], "hand_b": [20, -58], "knee_f": [16, -14], "foot_f": [26, 0], "knee_b": [-18, -12], "foot_b": [-28, 0]},
+	"b_ko": {"head": [12, -104], "neck": [8, -92], "hip": [2, -58], "elbow_f": [20, -112], "hand_f": [26, -134], "elbow_b": [-10, -80], "hand_b": [-20, -68], "knee_f": [14, -32], "foot_f": [18, -6], "knee_b": [-10, -30], "foot_b": [-22, -8]},
+	"b_taunt": {"head": [8, -62], "neck": [4, -51], "hip": [-6, -26], "elbow_f": [16, -48], "hand_f": [12, -64], "elbow_b": [12, -46], "hand_b": [10, -62], "knee_f": [14, -24], "foot_f": [16, 0], "knee_b": [-10, 0], "foot_b": [-30, 0]},
+	"b_rush": {"head": [26, -74], "neck": [18, -64], "hip": [0, -38], "elbow_f": [30, -56], "hand_f": [34, -72], "elbow_b": [22, -50], "hand_b": [28, -64], "knee_f": [20, -20], "foot_f": [32, 0], "knee_b": [-16, -18], "foot_b": [-34, -4]},
+	"b_stomp_up": {"head": [0, -90], "neck": [0, -78], "hip": [-2, -48], "elbow_f": [14, -80], "hand_f": [20, -96], "elbow_b": [-14, -80], "hand_b": [-20, -96], "knee_f": [16, -72], "foot_f": [12, -50], "knee_b": [-6, -24], "foot_b": [-10, 0]},
+	"b_stomp": {"head": [6, -74], "neck": [4, -63], "hip": [-2, -36], "elbow_f": [18, -50], "hand_f": [26, -38], "elbow_b": [-12, -50], "hand_b": [-20, -38], "knee_f": [16, -18], "foot_f": [22, 0], "knee_b": [-16, -16], "foot_b": [-24, 0]},
 	"hurt": {"head": [-24, -82], "neck": [-14, -74], "hip": [-2, -44], "elbow_f": [-2, -90], "hand_f": [6, -104], "elbow_b": [-30, -84], "hand_b": [-40, -96], "knee_f": [10, -22], "foot_f": [16, 0], "knee_b": [-12, -22], "foot_b": [-24, -4]},
 	"down": {"head": [-44, -8], "neck": [-32, -8], "hip": [0, -8], "elbow_f": [-20, -18], "hand_f": [-8, -24],
 		"elbow_b": [-28, -2], "hand_b": [-16, 0], "knee_f": [18, -14], "foot_f": [36, -6], "knee_b": [18, -4],
@@ -221,6 +253,11 @@ static func exaggerate(pose: Dictionary) -> Dictionary:
 	return out
 
 
+## A character's standing pose (the Dancer's fan stance; the Bruiser's guard).
+static func idle_of(character: String) -> String:
+	return str(Moves.stats(character).get("idle", "idle")) if Moves.ROSTER.has(character) else "idle"
+
+
 static func for_record(character: String, r: Array) -> Dictionary:
 	var pose := _for_record(character, r)
 	var state := int(r[5])
@@ -244,7 +281,7 @@ static func _for_record(character: String, r: Array) -> Dictionary:
 	if (mv == "" or mv == "wait") and not air and state == 0 and form > 0:
 		return get_pose("snap" if form == 1 else "floor")
 	if mv == "":
-		return get_pose("fall" if air else ("crouch" if state == 3 else "idle"))
+		return get_pose("fall" if air else ("crouch" if state == 3 else idle_of(character)))
 	var keys: Array = Moves.move(character, mv).get("pose", [[0, "idle"]])
 	var f := int(r[4])
 	var cur: Array = keys[0]

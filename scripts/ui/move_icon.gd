@@ -74,7 +74,8 @@ func _draw() -> void:
 	var open := Stick.fan_open(0, str(m.get("kind", "")))
 	if dancer:   # (her fans - the far one behind her)
 		Stick.fan_at(self, Stick._place(pose, origin, sc, face), "b", face, sc, open, col)
-	var pts := Stick.draw(self, pose, origin, sc, face, col, maxf(3.0, Stick.limb(sc)), head_r * sc)
+	var pts := Stick.draw(self, pose, origin, sc, face, col, maxf(3.0, Stick.limb(sc)), head_r * sc, true, Stick.INK,
+			character)
 	if dancer:
 		Stick.fan_at(self, pts, "f", face, sc, open, col)
 	var font := get_theme_default_font()

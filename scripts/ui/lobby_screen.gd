@@ -17,11 +17,11 @@ signal invited_away          ## an invite while the lobby's hidden (a rematch on
 const SETTINGS := "user://settings.cfg"
 ## The rules the owner can set: [key, label, min, max, step, shown as].
 const RULE_ROWS := [["turn", "Turn clock", 10, 120, 5, "%d s"], ["round", "Round", 20, 120, 10, "%d s"],
-	["start", "Start distance (1v1)", 0, 600, 50, "%d"], ["width", "Stage width", 1200, 3200, 200, "%d"],
+	["start", "Start distance (1v1)", 0, 600, 50, "%d"], ["width", "Stage width", 1200, 4800, 400, "%d"],
 	["damage", "Damage", 0.5, 2.0, 0.25, "x%.2f"], ["hitstun", "Hitstun", 0.5, 2.0, 0.25, "x%.2f"],
 	["meter", "Starting meter", 0.0, 3.0, 0.5, "%.1f bars"], ["ceiling", "Ceiling", 400, 2000, 100, "%d"]]
 const PRESETS := {"Default": {}, "Quick": {"round": 2400, "damage": 1.25}, "Thinking": {"turn": 90},
-	"Big stage": {"width": 2800}}
+	"Big stage": {"width": 4400}}
 const LIST_COLS := [440, 200, 120]   ## the list's columns: lobby name, version, players
 const MAIN := Color("#2b4f8a")       ## the main action's blue (as on the home screen)
 
@@ -365,9 +365,10 @@ func _on_status(state: String, detail: String) -> void:
 			_tries = 0
 			if in_match.is_empty():
 				net.set_member({"status": "idle", "colour": my_colour, "match": "", "outline": Style.outline,
-					"trail": Style.trail})
+					"trail": Style.trail, "character": HomeScreen.fighter})
 			else:   # (back after a drop, mid-match: still in it - the game asks the host for its seat)
-				net.set_member(in_match.merged({"colour": my_colour, "outline": Style.outline, "trail": Style.trail}))
+				net.set_member(in_match.merged({"colour": my_colour, "outline": Style.outline, "trail": Style.trail,
+					"character": HomeScreen.fighter}))
 				rejoined.emit()
 			_show("room")
 		"ended":   # (the nearby host closed it: off the list, and why)
@@ -808,17 +809,18 @@ func start_match() -> void:
 	if _out.is_empty():
 		return
 	var seats: Array = [{"peer": net.id, "name": my_name, "colour": my_colour, "team": 0, "outline": Style.outline,
-		"trail": Style.trail}]
+		"trail": Style.trail, "character": HomeScreen.fighter}]
 	for id in _out["invited"]:
 		if (_out["answers"] as Dictionary).get(int(id), false) and net.members.has(int(id)):
 			var data: Dictionary = net.members[int(id)].get("data", {})
 			seats.append({"peer": int(id), "name": str(net.members[int(id)]["name"]), "colour": int(data.get("colour", 0)),
 				"outline": int(data.get("outline", 0)), "trail": int(data.get("trail", 0)),
-				"team": seats.size() % 2})
+				"character": str(data.get("character", "dancer")), "team": seats.size() % 2})
 	for i in int(_out["bots"]):
-		seats.append({"peer": 0, "name": "Bot %d" % (i + 1), "colour": 0, "team": seats.size() % 2})
+		seats.append({"peer": 0, "name": "Bot %d" % (i + 1), "colour": 0, "team": seats.size() % 2,
+			"character": Moves.ORDER[randi() % Moves.ORDER.size()]})
 	if seats.size() < 2:   # (nobody said yes and no bots: one bot, so there's a match)
-		seats.append({"peer": 0, "name": "Bot 1", "colour": 0, "team": 1})
+		seats.append({"peer": 0, "name": "Bot 1", "colour": 0, "team": 1, "character": Moves.ORDER[randi() % Moves.ORDER.size()]})
 	var used := {}
 	for s: Dictionary in seats:   # (every colour different - a clash takes the next free one)
 		var c := int(s["colour"]) % StageView.COLOURS.size()

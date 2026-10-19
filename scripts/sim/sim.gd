@@ -98,9 +98,9 @@ const DEFAULT := {"move": "wait"}   ## a pick that never came (a turn timer ran 
 
 ## The match's rules (a lobby's owner sets them - YOMI's lobby rules panel; defaults = the game as it is). "xf": the
 ## Dancer's x-factors on trial, e.g. "fans,tempo" (Timmy 21:14 / 21:17 - one of them, or two together).
-const RULES := {"turn": 30, "round": 3600, "start": 0, "width": 1600, "damage": 1.0, "hitstun": 1.0, "meter": 0.0,
+const RULES := {"turn": 30, "round": 3600, "start": 0, "width": 2800, "damage": 1.0, "hitstun": 1.0, "meter": 0.0,
 	"xf": "fans,tempo", "ceiling": 900}   # (23:31: the Dancer is Fans + Tempo; the wiki's Ceiling Height)
-const XF := ["fans", "tempo", "forms"]
+const XF := ["fans", "tempo", "forms"]   ## (the Dancer's, on trial in a lobby's rules; a character's own - Grit - always on)
 const FANS_MAX := 2           ## Fans: in hand to start
 const FAN_OUT := 24           ## ...a thrown one flies out this long, then turns for home
 const FAN_BACK := 13.0        ## ...coming back this fast (Recall: FAN_RECALL)
@@ -136,6 +136,25 @@ const FORMS := ["flow", "snap", "floor"]
 const FLOOR_HEIGHT := 56.0    ## Forms: how tall she is in the Floor form (high hits pass over)
 const SNAP_DMG := 1.15        ## ...the Snap form's strikes: more damage...
 const SNAP_STUN := 2          ## ...and more hitstun
+## The Bruiser (19 Oct 05:03 "we will work on our next char" - 01:46 "a mix of the Nakmuay and Super Smash bros little
+## mac"; docs/bruiser.md). Grit: his own gauge, built by trading - damage dealt (GRIT_DEALT a point) and, faster, damage
+## taken (GRIT_TAKEN - tanked on armour too); full, the K.O. Punch is there (spends it). Floored, he loses half.
+const GRIT_MAX := 100
+const GRIT_DEALT := 0.12
+const GRIT_TAKEN := 0.4
+## A rushdown (him): point blank (PRESS_PX apart or closer) his strikes do PRESS_DMG more and stun PRESS_STUN longer, and
+## a blocked one barely pushes the blocker off (PRESS_PUSH of the usual shove) - he stays on top of them.
+const PRESS_PX := 70.0
+const PRESS_DMG := 1.1
+const PRESS_STUN := 2
+const PRESS_PUSH := 0.35
+const START_1V1 := 600.0      ## one on one: how far apart they start (the stage itself is wider since 05:27)
+## A fling (05:27 "his effects of slapping an enemy accross map and being able to rush them down" - the Nakmuay mod,
+## studied): the one hit slides along the floor on FLING_FRICTION instead of stopping short, for FLING_TICKS
+const FLING_FRICTION := 0.95
+const FLING_TICKS := 40
+const CHASE_MAX := 32.0       ## ...and Chase runs after them up to this fast
+const HOLD_PX := 38.0         ## the Clinch: the one held stands this far in front of him, his knees landing
 
 var fighters: Array[Fighter] = []
 var mode := "ffa"        ## "ffa" | "teams"
@@ -151,6 +170,14 @@ var shots: Array = []    ## projectiles in flight: {id, owner, team, kind, pos, 
 var _shot_n := 0
 var xf := {}             ## the x-factors on: "fans" / "tempo" / "forms" -> true
 var ceiling := 900.0     ## how high anyone can go (the wiki's Ceiling Height) - they bump their head on it
+
+
+## A fighter's own systems: the ones their character has (Moves stats "xf") - the Dancer's only with the match's rule
+## on (the lobby's trial switches), a character's own (the Bruiser's Grit) always.
+func has_xf(f: Fighter, k: String) -> bool:
+	if not (Moves.stats(f.character).get("xf", []) as Array).has(k):
+		return false
+	return xf.has(k) or not XF.has(k)
 
 
 ## "fans,tempo" -> {fans: true, tempo: true} (unknown names dropped).
@@ -169,7 +196,7 @@ static func create(players: Array, match_mode := "ffa", rules := {}) -> Sim:
 	s.mode = match_mode
 	var r := RULES.duplicate()
 	r.merge(rules, true)
-	s.half = clampf(float(r["width"]), 800.0, 3200.0) / 2.0
+	s.half = clampf(float(r["width"]), 800.0, 4800.0) / 2.0   # (05:27 "I feel our map is small" - 2800 by default)
 	s.round_len = clampi(int(r["round"]), 600, 36000)
 	s.dmg_mult = clampf(float(r["damage"]), 0.25, 4.0)
 	s.stun_mult = clampf(float(r["hitstun"]), 0.25, 4.0)
@@ -190,8 +217,8 @@ static func create(players: Array, match_mode := "ffa", rules := {}) -> Sim:
 		f.fc = FC_MAX
 		f.meter = clampi(int(float(r["meter"]) * BAR), 0, METER_MAX)
 		var x := lerpf(-s.half * 0.75, s.half * 0.75, (i + 0.5) / n) if n > 1 else 0.0
-		if n == 2 and float(r["start"]) > 0.0:   # (one on one: the rules' start distance)
-			x = (float(r["start"]) / 2.0) * (-1.0 if i == 0 else 1.0)
+		if n == 2:   # (one on one: the rules' start distance - 600 apart by default, however wide the stage)
+			x = (float(r["start"]) / 2.0 if float(r["start"]) > 0.0 else START_1V1 / 2.0) * (-1.0 if i == 0 else 1.0)
 		f.pos = Vector2(x, 0.0)
 		f.facing = 1 if x <= 0.0 else -1
 		s.fighters.append(f)
@@ -328,16 +355,18 @@ func can_burst(f: Fighter) -> bool:
 ## hand (Recall: one out), four beats, the right form; in the Floor form only her floor moves (and defence, supers).
 func _xf_ok(f: Fighter, mid: String, m: Dictionary) -> bool:
 	var tie := str(m.get("xf", ""))
-	if tie != "" and not xf.has(tie):
+	if tie != "" and not has_xf(f, tie):
 		return false
-	if xf.has("fans"):
+	if has_xf(f, "fans"):
 		if f.fans < int(m.get("fans", 0)):
 			return false
 		if (m.has("recall_at") or m.has("needs_out")) and not _fans_out(f):
 			return false
-	if xf.has("tempo") and f.tempo < int(m.get("tempo", 0)):
+	if has_xf(f, "tempo") and f.tempo < int(m.get("tempo", 0)):
 		return false
-	if xf.has("forms"):
+	if bool(m.get("grit", false)) and not (has_xf(f, "grit") and f.grit >= GRIT_MAX):   # (the K.O. Punch: full Grit)
+		return false
+	if has_xf(f, "forms"):
 		if m.has("form") and str(m["form"]) != f.form:
 			return false
 		if m.has("to_form") and not m.has("form") and str(m["to_form"]) == f.form:
@@ -392,8 +421,8 @@ func legal_moves(id: int) -> Array[String]:
 			continue
 		if f.whiffed and not kind in ["attack", "grab"]:   # (just Whiff Cancelled: attacks only)
 			continue
-		if mid == f.cancelled and f.meter < BAR:   # (just landed it - again only with an Instant Cancel: a bar)
-			continue
+		if mid == f.cancelled and f.meter < BAR and int(m.get("repeat", 0)) <= f.repeats:   # (just landed it - again
+			continue                                    # only with an Instant Cancel: a bar - or a knee in the clinch)
 		if str(m.get("stance", "")) != "" and str(m["stance"]) != f.stance:   # (a stance's moves, only in it)
 			continue
 		var after: Array = m.get("after", [])
@@ -457,7 +486,7 @@ func _get_up(f: Fighter, mid: String, c: Dictionary) -> void:
 	var m := Moves.move(f.character, mid)
 	f.down = 0
 	f.down_pick = false
-	if xf.has("forms"):   # (up off the floor: back in Flow)
+	if has_xf(f, "forms"):   # (up off the floor: back in Flow)
 		f.form = "flow"
 	f.param = aim(str(m.get("aim", "none")), Vector2(float(c.get("x", 0.0)), float(c.get("y", 0.0))), f.facing)
 	if absf(f.param.x) > 0.2:
@@ -535,16 +564,23 @@ func _start(f: Fighter, c: Dictionary) -> void:
 		var d: Array = m["dist"]
 		f.length = int(round(lerpf(float(d[0]), float(d[1]), f.dist)))
 	f.meter -= int(m.get("cost", 0))
-	if mid != "" and mid == f.cancelled:   # (an Instant Cancel: the move they just landed, again, for a bar)
+	if mid != "" and mid == f.cancelled and int(m.get("repeat", 0)) > f.repeats:   # (a knee in the clinch, again: free)
+		f.repeats += 1
+	elif mid != "" and mid == f.cancelled:   # (an Instant Cancel: the move they just landed, again, for a bar)
 		f.meter -= BAR
 		_event("ic", f, null)
+	else:
+		f.repeats = 0
 	if mid == "burstcancel":
 		f.burst = 0
-	if xf.has("forms") and m.has("to_form"):   # (into a form)
+	if has_xf(f, "forms") and m.has("to_form"):   # (into a form)
 		f.form = str(m["to_form"])
 		_event("form_" + f.form, f, null)
-	if xf.has("tempo") and int(m.get("tempo", 0)) > 0:   # (Encore spends the beats; standing about, they fade)
+	if has_xf(f, "tempo") and int(m.get("tempo", 0)) > 0:   # (Encore spends the beats; standing about, they fade)
 		f.tempo = 0
+	if bool(m.get("grit", false)):   # (the K.O. Punch spends the Grit)
+		f.grit = 0
+	f.armor_left = int(m.get("armor_hits", 1)) if m.has("armor") else 0
 	if bool(m.get("air_option", false)):
 		f.air_moves += 1
 	f.freed = false
@@ -654,7 +690,7 @@ func _upkeep(f: Fighter) -> void:
 	var v := f.vel.x * signf(n.pos.x - f.pos.x) if n != null and absf(n.pos.x - f.pos.x) > 1.0 else 0.0
 	if v > 0.5 and f.stun == 0 and tick % 2 == 0:   # (moving in on someone: the wiki's v/4 (at least 1) - every other
 		_gain(f, maxf(1.0, v / 4.0))                # tick: with up to six there's always someone to move in on)
-	if xf.has("tempo") and f.tempo > 0:   # (a beat fades without a new one)
+	if has_xf(f, "tempo") and f.tempo > 0:   # (a beat fades without a new one)
 		f.tempo_idle += 1
 		if f.tempo_idle >= TEMPO_FADE:
 			f.tempo -= 1
@@ -706,10 +742,23 @@ func _motion(f: Fighter) -> void:
 	var m := Moves.move(f.character, f.move)
 	var k := lerpf(float(m["dist"][2]), 1.0, f.dist) if m.has("dist") else 1.0   # (a short one goes slower)
 	var kind := str(m.get("kind", ""))
-	if xf.has("tempo") and kind == "move":   # (Tempo: each beat moves her faster)
+	if has_xf(f, "tempo") and kind == "move":   # (Tempo: each beat moves her faster)
 		k *= 1.0 + TEMPO_MOVE * float(f.tempo)
 	if m.has("blink_at") and int(m["blink_at"]) == f.frame:   # (Fan Step: to her thrown fan, in a blink)
 		_blink(f)
+	if m.has("stop_near") and f.frame >= 1:   # (Chase: a run that homes in on them - catching up, keeping up while
+		var g := _ahead(f)                    # they slide, stopping once he's on them and they've stopped flying off)
+		if g != null:
+			var near := float(m["stop_near"])
+			var dx := (g.pos.x - f.pos.x) * float(f.facing)
+			var gv := g.vel.x * float(f.facing)
+			if dx <= near and gv < 4.0:
+				f.move = ""
+				f.frame = 0
+				f.vel.x = g.vel.x
+				return
+			f.vel.x = float(f.facing) * clampf((dx - near) * 0.5 + maxf(gv, 0.0), 6.0, CHASE_MAX)
+			return
 	for seg: Array in m.get("motion", []):
 		if f.frame >= int(seg[0]) and f.frame <= int(seg[1]):
 			var vx := _val(seg[2], f) * k
@@ -719,6 +768,16 @@ func _motion(f: Fighter) -> void:
 				nx = f.vel.x
 			f.vel.x = nx
 			f.vel.y = _val(seg[3], f) * k
+
+
+## The nearest enemy in front of them (the way they face), standing or reeling - who a Chase runs at.
+func _ahead(f: Fighter) -> Fighter:
+	var best: Fighter = null
+	for g in alive():
+		var dx := (g.pos.x - f.pos.x) * float(f.facing)
+		if enemies(f, g) and dx > -10.0 and absf(g.pos.y - f.pos.y) < 200.0 				and (best == null or dx < (best.pos.x - f.pos.x) * float(f.facing)):
+			best = g
+	return best
 
 
 func _floating(f: Fighter) -> bool:
@@ -762,7 +821,8 @@ func _physics(f: Fighter) -> void:
 				f.move = ""
 		# sliding to a stop (knockback, the end of a step) unless a move is pushing them this frame
 		if not _pushing(f):
-			f.vel.x *= CARRY if _in_startup(f) else FRICTION   # (an attack's startup slides on with her momentum)
+			var fr := FLING_FRICTION if f.slide > 0 and f.stun > 0 else (CARRY if _in_startup(f) else FRICTION)
+			f.vel.x *= fr   # (an attack's startup slides on with its momentum; someone flung slides a long way)
 			if absf(f.vel.x) < 0.05:
 				f.vel.x = 0.0
 	if f.pos.y < -ceiling:   # (the ceiling: bump off it)
@@ -804,6 +864,8 @@ func _floor(f: Fighter) -> void:
 	f.down_pick = true
 	f.kd = false
 	f.vel.x *= 0.3
+	if has_xf(f, "grit") and f.grit > 0:   # (the Bruiser floored: half his Grit gone - put him down to take it away)
+		f.grit /= 2
 	_event("down", f, null)
 
 
@@ -867,6 +929,8 @@ func _count(f: Fighter) -> void:
 	if f.ko:
 		return
 	f.burst = mini(BURST_FULL, f.burst + (BURST_REELING if f.stun > 0 else 1))
+	if f.slide > 0:
+		f.slide -= 1
 	if f.restand > 0:   # (the restand window: not hit in it - the combo's over)
 		f.restand -= 1
 		if f.restand == 0 and f.stun == 0 and f.splat == 0:
@@ -899,7 +963,7 @@ func hurtbox(f: Fighter) -> Rect2:
 	var st := Moves.stats(f.character)
 	var w := float(st["width"])
 	var h := float(st["height"])
-	if xf.has("forms") and f.form == "floor" and f.stun == 0:   # (low on the floor - high hits pass over)
+	if has_xf(f, "forms") and f.form == "floor" and f.stun == 0:   # (low on the floor - high hits pass over)
 		h = FLOOR_HEIGHT
 	if f.move != "" and f.stun == 0:   # (a low-profile move: ducked under high hits - the wiki's Low Profile)
 		var lp: Array = Moves.move(f.character, f.move).get("low_profile", [])
@@ -944,11 +1008,15 @@ func invulnerable(f: Fighter) -> bool:
 
 
 ## In a move's projectile-proof frames (Silk Glide) - projectiles pass by.
-func _shot_proof(f: Fighter) -> bool:
+func _shot_proof(f: Fighter, s := {}) -> bool:
 	if f.move == "" or f.stun > 0:
 		return false
-	var r: Array = Moves.move(f.character, f.move).get("shot_invuln", [])
-	return not r.is_empty() and f.frame >= int(r[0]) and f.frame <= int(r[1])
+	var m := Moves.move(f.character, f.move)
+	var r: Array = m.get("shot_invuln", [])
+	if not r.is_empty() and f.frame >= int(r[0]) and f.frame <= int(r[1]):
+		return true
+	var sl: Array = m.get("slip", [])   # (Bob & Weave: slips under anything that isn't low)
+	return not sl.is_empty() and f.frame >= int(sl[0]) and f.frame <= int(sl[1]) and str(s.get("height", "mid")) != "low"
 
 
 func _kind(f: Fighter) -> String:
@@ -993,15 +1061,19 @@ func _resolve_hits() -> Dictionary:
 		touched[f.id] = true
 		if f.id < (clashed[id] as Fighter).id:
 			_event("clash", f, clashed[id])
-	# strikes, then grabs (a grabber struck this tick doesn't grab)
+	# strikes, then grabs (a grabber struck this tick doesn't grab); a grab move's "strike" entries are strikes on the
+	# one it holds (Clinch Fury's knees)
 	var struck := {}
 	for pass_grabs in [false, true]:
 		for a in alive():
-			if clashed.has(a.id) or (kind[a.id] == "grab") != pass_grabs:
+			if clashed.has(a.id):
 				continue
-			if pass_grabs and struck.has(a.id):
+			if pass_grabs and (kind[a.id] != "grab" or struck.has(a.id)):
 				continue
 			for e: Dictionary in live[a.id]:
+				var held: bool = kind[a.id] == "grab" and bool(e.get("strike", false))
+				if (kind[a.id] == "grab" and not held) != pass_grabs:
+					continue
 				var box := hitbox(a, e)
 				for d in fighters:
 					var otg := d.down > 0 and bool(e.get("otg", false))   # (an OTG hit reaches someone lying down)
@@ -1012,7 +1084,7 @@ func _resolve_hits() -> Dictionary:
 							_beat(d, "d%d" % d.instance)
 						continue
 					var key := "%d:%d" % [int(e.get("group", 0)), d.id]
-					if a.hit_done.has(key):
+					if a.hit_done.has(key) or (held and not a.hit_done.has("0:%d" % d.id)):
 						continue
 					if pass_grabs:
 						if _grab(a, d, e, kind, live):
@@ -1048,7 +1120,16 @@ func _resolve_hits() -> Dictionary:
 ## A spacer's hit, by where it lands: at the far end of its reach ("spot" 1 - harder), point blank (-1 - weaker), or
 ## between (as it is). Small hitboxes (under 40 px) don't care.
 func _spaced(a: Fighter, d: Fighter, e: Dictionary) -> Dictionary:
-	if str(Moves.stats(a.character).get("trait", "")) != "spacer":
+	var style := str(Moves.stats(a.character).get("trait", ""))
+	if style == "rushdown":   # (the Bruiser on top of them: harder; a blocked one keeps him there - _block)
+		if absf(d.pos.x - a.pos.x) > PRESS_PX:
+			return e
+		var hard := e.duplicate()
+		hard["press"] = true
+		hard["dmg"] = int(round(float(e["dmg"]) * PRESS_DMG))
+		hard["stun"] = int(e["stun"]) + PRESS_STUN
+		return hard
+	if style != "spacer":
 		return e
 	var box := hitbox(a, e)
 	if box.size.x < 40.0:
@@ -1085,27 +1166,42 @@ func _strike(a: Fighter, d: Fighter, e: Dictionary, d_kind: String, d_frame: int
 			return
 	if _block(a, d, e, dm, d_frame, false):
 		return
-	if d.move != "" and dm.has("armor") and not reeling:
-		var arm: Array = dm["armor"]
-		if d_frame >= int(arm[0]) and d_frame <= int(arm[1]):
-			d.hp -= dmg
-			_gain(a, dmg * METER_PER_DMG)
-			_event("armor", a, d, dmg)
-			return
+	if _armored(a, d, dmg, d_frame):
+		return
 	_hurt(a, d, e, "hit")
+
+
+## Super Armor (the wiki's Glossary): struck in a move's armour frames, they take the damage but not the hitstun - the
+## move goes on. It tanks one hit (a move's armor_hits: more); grabs still take them (they never come this way).
+func _armored(a: Fighter, d: Fighter, dmg: int, d_frame: int) -> bool:
+	if d.move == "" or d.stun > 0 or d.armor_left <= 0:
+		return false
+	var arm: Array = Moves.move(d.character, d.move).get("armor", [])
+	if arm.is_empty() or d_frame < int(arm[0]) or d_frame > int(arm[1]):
+		return false
+	d.armor_left -= 1
+	d.hp -= dmg
+	_gain(a, dmg * METER_PER_DMG)
+	_grit(d, float(dmg) * GRIT_TAKEN)   # (tanking it builds his Grit too)
+	_event("armor", a, d, dmg)
+	return true
 
 
 ## A hit meeting a block (or a Block's parry). shot = a projectile: parried by a Block started within SHOT_PARRY frames
 ## (any height) unless it can't be. True = it was blocked or parried.
+## The wiki's Basics: "parrying can be done on anything that isn't a grab, including guardbreaks", and "missing a block
+## disables the ability to parry, but also makes all guardbreaks no longer break guard" - so a Guard Break goes through a
+## Block (unless it's parried on its frame), but someone already in blockstun just blocks it, and can't parry.
 func _block(a: Fighter, d: Fighter, e: Dictionary, dm: Dictionary, d_frame: int, shot: bool) -> bool:
-	if not ((_kind(d) == "guard" or d.blockstun > 0) and d.stun == 0 and not e.get("guardbreak", false)):
+	if not ((_kind(d) == "guard" or d.blockstun > 0) and d.stun == 0):
 		return false
+	var breaks := bool(e.get("guardbreak", false)) and d.blockstun == 0
 	var push := bool(dm.get("push", false))
 	var height := str(e.get("height", "mid"))
 	var right := push or height == "mid" or (height == "low") == (d.param.y > 0.0)
-	var parried := d.move == "block" and d.parry_at > 0 and d_frame == d.parry_at and right
+	var parried := d.move == "block" and d.parry_at > 0 and d_frame == d.parry_at and right and d.blockstun == 0
 	if shot:
-		parried = d.move == "block" and d_frame <= SHOT_PARRY and bool(e.get("parry", true))
+		parried = d.move == "block" and d_frame <= SHOT_PARRY and bool(e.get("parry", true)) and d.blockstun == 0
 	if parried:   # (parried: free at once)
 		d.move = ""
 		d.frame = 0
@@ -1113,8 +1209,11 @@ func _block(a: Fighter, d: Fighter, e: Dictionary, dm: Dictionary, d_frame: int,
 		_gain(d, PARRY_METER)
 		_event("parry", d, a, 0, {"shot": shot})
 		return true
+	if breaks:   # (not parried: straight through the guard)
+		_event("guardbreak", a, d)
+		return false
 	var chip := 0 if push else int(e.get("chip", 0)) * (1 if right else 2)
-	var no_fan := xf.has("fans") and d.fans == 0 and str(Moves.stats(d.character).get("trait", "")) == "spacer"
+	var no_fan := has_xf(d, "fans") and d.fans == 0 and str(Moves.stats(d.character).get("trait", "")) == "spacer"
 	if no_fan:   # (the spacer's limit: no fan in hand to block with)
 		chip = int(ceil(float(chip) * NO_FAN_CHIP))
 	d.hp -= chip
@@ -1122,7 +1221,7 @@ func _block(a: Fighter, d: Fighter, e: Dictionary, dm: Dictionary, d_frame: int,
 			+ (NO_FAN_BLOCK if no_fan else 0) + (EDGE_BLOCK if int(e.get("spot", 0)) == 1 else 0) \
 			- (EDGE_BLOCK if int(e.get("spot", 0)) == -1 else 0)
 	var away := signf(d.pos.x - a.pos.x) if absf(d.pos.x - a.pos.x) > 1.0 else float(a.facing)
-	d.vel.x = away * 3.0
+	d.vel.x = away * 3.0 * (PRESS_PUSH if bool(e.get("press", false)) else 1.0)   # (a rushdown's: he stays on them)
 	if push and not shot:   # (Push Block: the striker's shoved back)
 		a.vel.x = -away * PUSH_BACK / float(Moves.stats(a.character)["weight"])
 		a.pushed = PUSH_TICKS
@@ -1147,7 +1246,7 @@ func _counter(d: Fighter, a: Fighter, dm: Dictionary) -> void:
 		d.length = int(cm["frames"])
 		d.instance += 1
 		d.hit_done.clear()
-	_event("countered", d, a)
+	_event("countered", d, a, 0, {"name": str(dm.get("name", ""))})
 	_hurt(d, a, dm["counter_hit"], "hit", into if into != "" else "counter", float(d.facing))
 
 
@@ -1156,7 +1255,7 @@ func _spawn(f: Fighter) -> void:
 	if f.ko or f.move == "" or f.stun > 0 or f.blockstun > 0 or f.lock > 0:
 		return
 	var m := Moves.move(f.character, f.move)
-	if xf.has("fans") and m.has("recall_at") and int(m["recall_at"]) == f.frame:
+	if has_xf(f, "fans") and m.has("recall_at") and int(m["recall_at"]) == f.frame:
 		_recall(f)
 	var cues: Variant = m.get("cue", [])   # (a move's own effects, each on its frame - Updraft's gust, a fan sweep)
 	for cue: Dictionary in (cues if cues is Array else [cues]):
@@ -1185,10 +1284,12 @@ func _spawn_one(f: Fighter, m: Dictionary, sp: Dictionary) -> void:
 		"block": int(sp.get("block", 8)), "chip": int(sp.get("chip", 1)), "life": int(sp.get("life", 60)),
 		"parry": bool(sp.get("parry", true)), "height": str(sp.get("height", "mid")),
 		"grav": float(sp.get("grav", 0.0)), "src": f.move})
+	if bool(sp.get("knockdown", false)):   # (Encore's last fan floors them)
+		shots[-1]["knockdown"] = true
 	if bool(sp.get("pierce", false)):   # (on through whoever it hits - each of them once, or again every rehit ticks)
 		shots[-1].merge({"pierce": true, "hits": [], "rehit": int(sp.get("rehit", 0)),
 			"heavy": bool(sp.get("heavy", false))}, true)
-	if xf.has("fans") and int(m.get("fans", 0)) > 0:   # (Fans: one out of her hand - it comes back)
+	if has_xf(f, "fans") and int(m.get("fans", 0)) > 0:   # (Fans: one out of her hand - it comes back)
 		f.fans -= 1
 		shots[-1].merge({"ret": true, "leg": 0, "out": FAN_OUT, "hits": [], "life": FAN_LIFE}, true)
 		if bool(sp.get("ward", false)):   # (Fan Ward: out as far as the Distance says, then it hangs there)
@@ -1316,9 +1417,18 @@ func _reflects(d: Fighter, s: Dictionary) -> bool:
 	return true
 
 
+## Grit: the Bruiser's gauge, up to GRIT_MAX - a "grit" event the moment it's full (the K.O. Punch is there).
+func _grit(f: Fighter, amount: float) -> void:
+	if f.ko or amount <= 0.0 or not has_xf(f, "grit") or f.grit >= GRIT_MAX:
+		return
+	f.grit = mini(GRIT_MAX, f.grit + maxi(1, int(round(amount))))
+	if f.grit >= GRIT_MAX:
+		_event("grit", f, null)
+
+
 ## Tempo: a beat (once for each thing that gives one - key), up to TEMPO_MAX.
 func _beat(f: Fighter, key: String) -> void:
-	if not xf.has("tempo") or f.ko or f.tempo_key == key:
+	if not has_xf(f, "tempo") or f.ko or f.tempo_key == key:
 		return
 	f.tempo_key = key
 	f.tempo_idle = 0
@@ -1378,7 +1488,7 @@ func _shots_step(touched: Dictionary) -> void:
 				continue
 			if _reflects(d, s):   # (Mirror: turned round - it's hers now)
 				break
-			if invulnerable(d) or _shot_proof(d):
+			if invulnerable(d) or _shot_proof(d, s):
 				if d.down == 0:
 					_beat(d, "d%d" % d.instance)
 				continue
@@ -1406,9 +1516,12 @@ func _shot_rect(s: Dictionary) -> Rect2:
 func _shot_hit(s: Dictionary, d: Fighter) -> void:
 	var a := get_f(int(s["owner"]))
 	var e := {"dmg": s["dmg"], "stun": s["stun"], "kb": s["kb"], "block": s["block"], "chip": s["chip"],
-		"height": s["height"], "parry": s["parry"], "key": "s%d" % int(s["id"])}
+		"height": s["height"], "parry": s["parry"], "key": "s%d" % int(s["id"]),
+		"knockdown": bool(s.get("knockdown", false))}
 	var dm := Moves.move(d.character, d.move) if d.move != "" else {}
 	if _block(a, d, e, dm, d.frame, true):
+		return
+	if _armored(a, d, int(s["dmg"]), d.frame):   # (armour takes a projectile as it takes a strike - Bull Rush through fans)
 		return
 	var v: Vector2 = s["vel"]
 	_hurt(a, d, e, "hit", str(s["src"]), signf(v.x) if absf(v.x) > 0.1 else float(a.facing))
@@ -1435,9 +1548,9 @@ func _hurt(a: Fighter, d: Fighter, e: Dictionary, type: String, src := "", side_
 	var counter := type == "hit" and int(e["dmg"]) > 0 and d.move != "" \
 			and _kind(d) in ["attack", "super", "grab", "special"]
 	var xk := 1.0   # (the x-factors on trial: Tempo's beats, the Snap form's strikes)
-	if xf.has("tempo"):
+	if has_xf(a, "tempo"):
 		xk *= 1.0 + TEMPO_DMG * float(a.tempo)
-	var snap := xf.has("forms") and a.form == "snap" and src == ""
+	var snap := has_xf(a, "forms") and a.form == "snap" and src == ""
 	if snap:
 		xk *= SNAP_DMG
 	var dmg := maxi(int(e.get("min_dmg", 0)),
@@ -1459,11 +1572,13 @@ func _hurt(a: Fighter, d: Fighter, e: Dictionary, type: String, src := "", side_
 		d.stun += 1
 	if snap:
 		d.stun += SNAP_STUN
-	if xf.has("tempo"):   # (Tempo: hit, the beat's gone; the hitter's move gets one - once)
+	if has_xf(d, "tempo"):   # (Tempo: hit, the beat's gone; the hitter's move gets one - once)
 		d.tempo = 0
 		d.tempo_idle = 0
-		if not e.get("away", false):
-			_beat(a, str(e.get("key", "m%d" % a.instance)))
+	if has_xf(a, "tempo") and not e.get("away", false):
+		_beat(a, str(e.get("key", "m%d" % a.instance)))
+	_grit(a, float(dmg) * GRIT_DEALT)   # (Grit: both ways - faster for what he takes)
+	_grit(d, float(dmg) * GRIT_TAKEN)
 	a.burst = mini(BURST_FULL, a.burst + dmg / BURST_DEALT_DIV)
 	d.move = ""
 	d.blockstun = 0
@@ -1474,6 +1589,9 @@ func _hurt(a: Fighter, d: Fighter, e: Dictionary, type: String, src := "", side_
 	var side := side_dir if side_dir != 0.0 else float(a.facing)
 	if e.get("away", false):   # (a Burst blows everyone away from the one bursting, front or back)
 		side = signf(d.pos.x - a.pos.x) if absf(d.pos.x - a.pos.x) > 1.0 else float(a.facing)
+	d.slide = FLING_TICKS if e.get("fling", false) else 0   # (flung: they slide on and on)
+	if e.get("behind", false):   # (a dump: round behind them first - the knockback carries them on from there)
+		d.pos.x = clampf(a.pos.x - float(a.facing) * HOLD_PX, -half + 20.0, half - 20.0)
 	d.vel = Vector2(float(kb[0]) * side, float(kb[1])) * KB_SCALE / weight
 	if d.di != Vector2.ZERO:   # (their lean: added to the knockback - on the ground a flat hit only takes its sideways part)
 		var lean := d.di
@@ -1497,6 +1615,11 @@ func _hurt(a: Fighter, d: Fighter, e: Dictionary, type: String, src := "", side_
 			d.bounce_due = true
 	if e.get("splat", false) and d.splats < SPLATS_MAX:
 		d.splat_due = true
+	if e.get("hold", false) and d.combo < LAUNCH_HIT:   # (the Clinch: held right in front of him - no knockback, no lean)
+		d.vel = Vector2.ZERO
+		d.pos.x = clampf(a.pos.x + float(a.facing) * HOLD_PX, -half + 20.0, half - 20.0)
+		if d.pos.y < 0.0 and a.pos.y >= 0.0:
+			d.pos.y = 0.0
 	d.facing = -int(side)
 	_gain(a, dmg * METER_PER_DMG, d.combo)
 	_gain(d, dmg * METER_PER_DMG / 3.0, d.combo)
@@ -1512,11 +1635,16 @@ func _hurt(a: Fighter, d: Fighter, e: Dictionary, type: String, src := "", side_
 	if type == "hit" and src == "" and _kind(a) == "attack" \
 			and not bool(Moves.move(a.character, a.move).get("no_cancel", false)):
 		_cancels[a.id] = true
+	elif type == "throw" and bool(e.get("hold", false)) 			and not bool(Moves.move(a.character, a.move).get("no_cancel", false)):   # (a Clinch: free at once, into its
+		# follow-ups - Clinch Fury holds on and does them itself)
+		_cancels[a.id] = true
 	var extra := {"counter": true} if counter else {}
 	if src != "":   # (a projectile's hit: the move that threw it - the screen draws it as that)
 		extra["src"] = src
 	if int(e.get("spot", 0)) != 0:
 		extra["spot"] = int(e["spot"])
+	if e.get("fling", false):   # (the screen: a ring of air where it lands, cracks in the floor)
+		extra["fling"] = true
 	_event(type, a, d, dmg, extra)
 
 
@@ -1540,7 +1668,7 @@ func _grab(a: Fighter, d: Fighter, e: Dictionary, kind: Dictionary, live: Dictio
 
 ## One tick's picture of every fighter, for playback: [x, y, facing, move, frame, state, hp, meter, burst gauge, Free
 ## Cancels, air options left, sad (0, 1 SAD!, 2 SADNESS!), free to act (1 / 0), blocking low (1 / 0), form (0 Flow,
-## 1 Snap, 2 Floor), Tempo beats, fans in hand].
+## 1 Snap, 2 Floor), Tempo beats, fans in hand, Grit (0-GRIT_MAX)].
 ## state: 0 free / in a move, 1 hit, 2 blocking, 3 locked, 4 KO, 5 lying down. Someone free after a hit cancel is
 ## recorded in the move they landed, on its frame (they hold the strike until they pick - as YOMI draws it).
 func record() -> Array:
@@ -1556,7 +1684,8 @@ func record() -> Array:
 			fr = f.cancel_frame
 		var low := 1 if (f.move == "block" or f.blockstun > 0) and f.param.y > 0.0 else 0
 		out.append([f.pos.x, f.pos.y, f.facing, mv, fr, state, f.hp, f.meter, f.burst, f.fc,
-			AIR_OPTIONS - f.air_moves, sad, 1 if f.actionable() else 0, low, maxi(0, FORMS.find(f.form)), f.tempo, f.fans])
+			AIR_OPTIONS - f.air_moves, sad, 1 if f.actionable() else 0, low, maxi(0, FORMS.find(f.form)), f.tempo, f.fans,
+			f.grit])
 	return out
 
 

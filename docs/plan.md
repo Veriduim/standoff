@@ -249,6 +249,16 @@ one stage; each attack aims at a picked target.
   trap - Recall's pincer, Fan Step to it, a floor mine), **Fan Gust** (wind: shoves them, blows shots back, carries her
   fans), **Fan Flick** (Fan Slash's follow-up, back out to range), **Mirror reflects** shots; bots play her range.
 
+- 05:03 "Am arrange how you think and we will work on our next char then" + 05:27 "Nakmuay. Did you look into? I
+  want a lot of his effects of slapping an enemy accross map and being able to rush them down. Also. I feel our map is
+  small" -> 0.30.0 (docs/bruiser.md): **the Bruiser** - Muay Thai + a boxer (Little Mac, Nakmuay, Fahkumram, Sagat,
+  Steve Fox studied): Jab -> Cross -> Hook, Bob & Weave, Teep, Elbow, Roundhouse and Haymaker with Super Armor, the
+  Clinch (knees, elbow, dump), Flying Knee (guard break), Superman Punch (overhead), Catch, Quake Stomp; **flings** (his
+  big hits send them sliding across the stage - a ring of air, cracks) and **Chase** to run them down; **Grit** -> the
+  K.O. Punch; supers Bull Rush, Barrage, Clinch Fury; gloves; a fighter picker on the home screen (lobbies carry it,
+  bots at random, the training dummy either); the stage 2800 wide; YOMI's blockstun / guard-break rule. The Dancer's
+  open questions settled: Encore from range, dash 15, Snap Step gone.
+
 ## To tune / later
 - **Match length with 6:** bot matches take 120-270 decision points with 6 fighters (50-90 with 2). At ~10 s a decision
   that's far too long - lower HP or more damage with more players (a lobby setting), and a turn timer.

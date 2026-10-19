@@ -90,8 +90,12 @@ the rules of play. The names, art, characters and code are not ours to take, and
 - **Chess Timer**: built 0.17.0, dropped 0.17.1 (Timmy 01:24 "I think round and turn timers are better"). It's in git
   (commit 9c2fc68) if it's ever wanted.
 - **Burst Cancel's** slower Burst refill for the rest of the combo.
-- **Super Armor** and a **parry lock-out** are for the Bruiser (Timmy 01:32 / 01:46), not the Dancer. The lock-out
-  isn't universal anyway: it's Mutant's own rule (a failed parry costs his jukes).
+- ~~**Super Armor**~~ (0.30.0, the Bruiser: one hit tanked, the damage taken, grabs go through - the Glossary) and
+  ~~the **parry lock-out**~~ - it IS universal after all (the Basics page: "missing a block disables the ability to
+  parry, but also makes all guardbreaks no longer break guard"; a guard break can be parried on its frame). 0.30.0:
+  someone in blockstun blocks a guard break and can't parry; a Block parries a guard break on its frame.
+- **Stage width** 2800 by default since 0.30.0 (05:27 "I feel our map is small"; YOMI's default is 800 in its own
+  units, with much smaller fighters); 1v1 still starts 600 apart.
 - Step 3 - much cooler moves (projectiles, a stance with its own moves, rekka chains, a command grab, a launcher route,
   a counter stance, supers with their own animation); ~~step 4 - effects per move~~ (0.20.0: a hit looks like what
   made it - `StageView._hit_style`: her fans cut (Fx "slash"), kicks and knees thump (the spark on the dark starburst),

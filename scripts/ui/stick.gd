@@ -23,6 +23,12 @@ static var style := {"limb": 9.0, "head": 11.5, "body": 1.45, "hips": 1.45, "fis
 	"ink": 0.3}
 
 
+## Each character's build over the shared style - the same body, their own prop (22:30 the mods "just do it with their
+## props"): the Bruiser broader through the chest, in boxing gloves (05:03 Muay Thai + Little Mac); the Dancer as A is.
+const BUILD := {"bruiser": {"fist": 1.2, "body": 1.8, "hips": 1.5, "glove": true}}
+const CUFF := Color("#f2f2f7")    ## the gloves' wrist band
+
+
 ## A limb's thickness on screen for a fighter scaled `scale` (pose units -> px).
 static func limb(scale: float) -> float:
 	return float(style["limb"]) * scale
@@ -37,8 +43,10 @@ const INK := Color(0.02, 0.02, 0.03)   ## the outline by default (Style's "Ink")
 
 
 static func draw(ci: CanvasItem, pose: Dictionary, origin: Vector2, scale: float, facing: float, col: Color,
-		thick: float, head_r: float, edge := true, ink_col := INK) -> Dictionary:
+		thick: float, head_r: float, edge := true, ink_col := INK, ch := "") -> Dictionary:
 	var pts := _place(pose, origin, scale, facing)
+	var build: Dictionary = BUILD.get(ch, {})
+	var glove := bool(build.get("glove", false))
 	var gap := float(style.get("gap", 0.0)) * thick
 	if gap > 0.0:   # (the head floats a little off the body)
 		var up := ((pts["head"] as Vector2) - (pts["neck"] as Vector2)).normalized()
@@ -46,9 +54,9 @@ static func draw(ci: CanvasItem, pose: Dictionary, origin: Vector2, scale: float
 	var taper := float(style.get("taper", 0.0))
 	var toe := float(style.get("toe", 0.0)) * thick
 	var ring := float(style.get("ring", 0.0)) * thick
-	var chest := thick * float(style["body"])
-	var hips := thick * float(style["hips"])
-	var fist := thick * float(style["fist"])
+	var chest := thick * float(build.get("body", style["body"]))
+	var hips := thick * float(build.get("hips", style["hips"]))
+	var fist := thick * float(build.get("fist", style["fist"]))
 	var foot := thick * float(style["foot"])
 	if edge:
 		var ink := Color(ink_col.r, ink_col.g, ink_col.b, col.a)   # (the outline - your Style's, 02:28)
@@ -73,7 +81,10 @@ static func draw(ci: CanvasItem, pose: Dictionary, origin: Vector2, scale: float
 		_bone(ci, pts[b[0]], pts[b[1]], _w(b, 0, thick, taper), _w(b, 1, thick, taper), far)
 	if toe > 0.0:
 		_toe(ci, pts, "b", facing, toe, thick * (1.0 - 0.55 * taper), far)
-	ci.draw_circle(pts["hand_b"], fist * (1.0 - 0.6 * taper), far, true, -1.0, true)
+	if glove:
+		_glove(ci, pts, "b", fist, far, CUFF.darkened(FAR))
+	else:
+		ci.draw_circle(pts["hand_b"], fist * (1.0 - 0.6 * taper), far, true, -1.0, true)
 	if foot > 0.0:
 		_foot(ci, pts, "b", facing, foot, thick, far)
 	_torso(ci, pts, chest, thick * float(style.get("waist", 0.0)), hips, col)
@@ -83,12 +94,29 @@ static func draw(ci: CanvasItem, pose: Dictionary, origin: Vector2, scale: float
 		_foot(ci, pts, "f", facing, foot, thick, col)
 	if toe > 0.0:
 		_toe(ci, pts, "f", facing, toe, thick * (1.0 - 0.55 * taper), col)
-	ci.draw_circle(pts["hand_f"], fist * (1.0 - 0.6 * taper), col, true, -1.0, true)
+	if glove:
+		_glove(ci, pts, "f", fist, col, CUFF)
+	else:
+		ci.draw_circle(pts["hand_f"], fist * (1.0 - 0.6 * taper), col, true, -1.0, true)
 	if ring > 0.0:
 		ci.draw_arc(pts["head"], head_r - ring / 2.0, 0.0, TAU, 40, col, ring, true)
 	else:
 		ci.draw_circle(pts["head"], head_r, col, true, -1.0, true)
 	return pts
+
+
+## A boxing glove (the Bruiser's): a big round fist in their colour, a thumb along it, a white band at the wrist.
+static func _glove(ci: CanvasItem, pts: Dictionary, side: String, r: float, c: Color, cuff: Color) -> void:
+	var hand: Vector2 = pts["hand_" + side]
+	var elbow: Vector2 = pts["elbow_" + side]
+	var d := (hand - elbow).normalized() if hand.distance_to(elbow) > 0.5 else Vector2.RIGHT
+	var n := Vector2(-d.y, d.x)
+	var band := cuff
+	band.a = c.a
+	ci.draw_line(hand - d * r * 0.95 - n * r * 0.6, hand - d * r * 0.95 + n * r * 0.6, band, r * 0.5, true)
+	ci.draw_circle(hand + d * r * 0.1, r, c.lightened(0.08), true, -1.0, true)
+	ci.draw_circle(hand + d * r * 0.1, r * 0.62, c.lightened(0.2), true, -1.0, true)   # (a shine on the leather)
+	ci.draw_circle(hand + n * r * 0.6 - d * r * 0.15, r * 0.36, c.darkened(0.12), true, -1.0, true)   # (the thumb)
 
 
 ## A limb's width at its start (end 0) or end (1): with taper, upper arms / thighs start a little thicker and the

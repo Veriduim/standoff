@@ -36,9 +36,11 @@ are study only.
   rushers off, untouchable as it starts), Cyclone (2 bars: a whirlwind sent slowly forward, hitting every 10 ticks,
   not stopped by other projectiles), Grand Finale (3 bars: eight fans falling from the sky across the stage in front).
   The spectral fans aren't her two.
-- **Getting out:** Fan Gust, Silk Glide (low profile, passes under projectiles), Snap Step, Back Step, Dodge.
+- **Getting out:** Fan Gust, Silk Glide (low profile, passes under projectiles), Back Step, Dodge. (Snap Step went
+  at 0.30.0 - a rushdown's step; her forward dash is 15, not 17: a zoner is slower going in.)
 - **Tempo:** beats from landing, being blocked or dodging through a hit. Each beat adds damage and movement speed.
-  At four she gets Encore.
+  At four she gets Encore - since 0.30.0 a finisher from range: three spectral fans in a burst, the last floors
+  them (it was a four-kick rush).
 
 ## Limits
 - **Point blank she's weaker.** Hits with her body almost touching theirs (`CLOSE_PX` 40) do x0.8 damage, -3 hitstun,

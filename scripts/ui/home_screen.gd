@@ -15,8 +15,14 @@ const VERSION := "v" + Version.TAG
 
 const SETTINGS := "user://settings.cfg"
 
+## The fighter you play - the Dancer or the Bruiser (05:03 "we will work on our next char"); saved, read by every match
+## you start or join.
+static var fighter := "dancer"
+const TAGS := {"dancer": "Zoner · war fans", "bruiser": "Rushdown · Muay Thai"}
+
 var colour := 0
 var opponents := 3
+var picks: Array[FighterCard] = []
 var mode := "ffa"
 
 var dim: ColorRect
@@ -36,6 +42,22 @@ func _ready() -> void:
 	title = TitleArt.new()
 	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(title)
+	var who := ConfigFile.new()   # (your fighter: big cards under the title, in the empty space - the card is full)
+	if who.load(SETTINGS) == OK:
+		fighter = str(who.get_value("home", "fighter", "dancer"))
+	if not Moves.ROSTER.has(fighter):
+		fighter = "dancer"
+	for ch: String in Moves.ORDER:
+		var fc := FighterCard.new()
+		fc.ch = ch
+		fc.tag = str(TAGS.get(ch, ""))
+		fc.name = "Pick_" + ch
+		fc.custom_minimum_size = Vector2(170, 196)
+		fc.pressed.connect(func() -> void: set_fighter(ch))
+		for look in ["normal", "hover", "pressed", "focus"]:
+			fc.add_theme_stylebox_override(look, StyleBoxEmpty.new())
+		picks.append(fc)
+		add_child(fc)
 	card = PanelContainer.new()
 	var st := Ui.box(Color("#15161ee8"), 18)
 	st.set_content_margin_all(16)
@@ -154,7 +176,7 @@ func _ready() -> void:
 			if box is StyleBoxFlat:
 				(box as StyleBoxFlat).content_margin_left = 14
 				(box as StyleBoxFlat).content_margin_right = 14
-	var ver := Ui.label(VERSION + "  ·  the Dancer: her war fans and her Tempo", 15, Color("#6b6b78"))
+	var ver := Ui.label(VERSION + "  ·  the Dancer and the Bruiser", 15, Color("#6b6b78"))
 	ver.name = "Version"
 	add_child(ver)
 	var saved := ConfigFile.new()   # (your colour, kept between plays - 21:37 "remember the last option we choice")
@@ -196,6 +218,25 @@ func _set_colour(i: int) -> void:
 		swatches[k].set_pressed_no_signal(k == i)
 	title.colour = StageView.COLOURS[i]
 	title.queue_redraw()
+	for fc in picks:
+		fc.col = StageView.COLOURS[i]
+		fc.on = fc.ch == fighter
+		fc.queue_redraw()
+
+
+## The fighter you play; saved.
+func set_fighter(ch: String) -> void:
+	if not Moves.ROSTER.has(ch):
+		return
+	fighter = ch
+	var cfg := ConfigFile.new()
+	cfg.load(SETTINGS)
+	cfg.set_value("home", "fighter", ch)
+	cfg.save(SETTINGS)
+	for fc in picks:
+		fc.on = fc.ch == fighter
+		fc.queue_redraw()
+	Sfx.ui("ui_click")
 
 
 ## Easy / Normal / Hard - the game's bots; saved.
@@ -234,6 +275,17 @@ func _layout() -> void:
 	ver.position = Vector2(24, vp.y - 36)
 	(get_node("Sound") as Button).position = Vector2(14, 12)   # (top left, small)
 	(get_node("HowToPlay") as Button).position = Vector2(72, 12)
+	var gap := 16.0   # (your fighter: the two cards side by side under the title)
+	var row_w := 0.0
+	for fc in picks:
+		row_w += fc.custom_minimum_size.x
+	row_w += gap * float(picks.size() - 1)
+	var px := title.position.x + (title.size.x - row_w) / 2.0
+	var py := minf(vp.y * 0.08 + 22.0 + 190.0, vp.y - 110.0 - 196.0)
+	for fc in picks:
+		fc.size = fc.custom_minimum_size
+		fc.position = Vector2(px, py)
+		px += fc.size.x + gap
 	var x := 24.0
 	for n: String in ["Training", "Replays"]:   # (side by side along the bottom)
 		var b := get_node(n) as Button
@@ -260,3 +312,35 @@ class TitleArt:
 		draw_string(font, Vector2(0, top + 160), "Up to six fighters. Everyone moves at once.", HORIZONTAL_ALIGNMENT_CENTER,
 				size.x, 22, Color("#b8b8c8"))
 		# (no drawn fighters here - the live match behind the screen is the picture)
+
+
+## A fighter to pick (05:03): them standing in your colour, their name and what they are; a ring in your colour round
+## the one you play.
+class FighterCard:
+	extends Button
+	var ch := "dancer"
+	var tag := ""
+	var col := Color("#e5484d")
+	var on := false
+
+	func _draw() -> void:
+		var r := Rect2(Vector2.ZERO, size)
+		var bg := StyleBoxFlat.new()
+		bg.bg_color = Color("#15161ee8") if on else Color("#15161eb0")
+		bg.set_corner_radius_all(16)
+		bg.border_color = col if on else Color("#2c2f3c")
+		bg.set_border_width_all(4 if on else 2)
+		draw_style_box(bg, r)
+		var pose := Poses.get_pose(Poses.idle_of(ch))
+		var sc := (size.y - 70.0) / 112.0
+		var origin := Vector2(size.x / 2.0 - 4.0, size.y - 56.0)
+		var c := col if on else col.darkened(0.45)
+		if ch == "dancer":
+			Stick.fan_at(self, Stick._place(pose, origin, sc, 1.0), "b", 1.0, sc, 0.55, c)
+		var pts := Stick.draw(self, pose, origin, sc, 1.0, c, Stick.limb(sc), Stick.head(sc), true, Stick.INK, ch)
+		if ch == "dancer":
+			Stick.fan_at(self, pts, "f", 1.0, sc, 0.55, c)
+		var font := get_theme_default_font()
+		draw_string(font, Vector2(0, size.y - 30), str(Moves.stats(ch)["name"]), HORIZONTAL_ALIGNMENT_CENTER, size.x, 22,
+				Color("#f2f2f7") if on else Color("#a7a7b8"))
+		draw_string(font, Vector2(0, size.y - 10), tag, HORIZONTAL_ALIGNMENT_CENTER, size.x, 14, Color("#8a8a9c"))

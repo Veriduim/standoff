@@ -60,6 +60,10 @@ var tempo := 0           ## Tempo: beats (Sim.TEMPO_MAX)
 var tempo_key := ""      ## ...what gave the last one (a move / a fan / a dodge gives one beat, once)
 var tempo_idle := 0      ## ...ticks since then (a beat fades every Sim.TEMPO_FADE)
 var form := "flow"       ## Forms: "flow" | "snap" | "floor"
+var grit := 0            ## the Bruiser's Grit (Sim.GRIT_MAX = the K.O. Punch is there)
+var armor_left := 0      ## hits the running move's Super Armor can still take (one, as a rule)
+var slide := 0           ## ticks a fling keeps them sliding (Sim.FLING_FRICTION)
+var repeats := 0         ## times in a row they've gone again into a move that repeats (the clinch knee)
 var ko := false
 
 
@@ -103,7 +107,8 @@ func to_dict() -> Dictionary:
 		"cancelled": cancelled, "cancel_frame": cancel_frame, "fc": fc, "freed": freed, "whiffed": whiffed, "down": down, "down_pick": down_pick,
 		"kd": kd, "sad": sad, "sadness": sadness, "sad_warned": sad_warned, "dist": dist, "parry_at": parry_at, "pushed": pushed, "prorate": prorate, "bounce_due": bounce_due, "bounced": bounced,
 		"splat_due": splat_due, "splats": splats, "splat": splat, "launched": launched, "restand": restand, "stance": stance, "initiative": initiative, "fans": fans, "tempo": tempo,
-		"tempo_key": tempo_key, "tempo_idle": tempo_idle, "form": form, "ko": ko}
+		"tempo_key": tempo_key, "tempo_idle": tempo_idle, "form": form, "grit": grit, "armor_left": armor_left,
+		"repeats": repeats, "slide": slide, "ko": ko}
 
 
 static func from_dict(d: Dictionary) -> Fighter:
@@ -164,5 +169,9 @@ static func from_dict(d: Dictionary) -> Fighter:
 	f.tempo_key = str(d.get("tempo_key", ""))
 	f.tempo_idle = int(d.get("tempo_idle", 0))
 	f.form = str(d.get("form", "flow"))
+	f.grit = int(d.get("grit", 0))
+	f.armor_left = int(d.get("armor_left", 0))
+	f.repeats = int(d.get("repeats", 0))
+	f.slide = int(d.get("slide", 0))
 	f.ko = bool(d["ko"])
 	return f
