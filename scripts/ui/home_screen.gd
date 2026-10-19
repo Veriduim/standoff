@@ -7,6 +7,7 @@ extends Control
 signal fight(opponents: int, mode: String, colour: int)
 signal online(colour: int)   ## the online lobbies (YOMI's Steam lobbies - Timmy 20:19)
 signal help                  ## How to play (19 Oct 01:32)
+signal replays               ## the saved replays (02:15 "When can I save replays??")
 
 const VERSION := "v" + Version.TAG
 
@@ -133,6 +134,13 @@ func _ready() -> void:
 	for s in ["normal", "hover", "focus"]:
 		look.add_theme_stylebox_override(s, Ui.box(Color("#1e2029e8"), 12))
 	add_child(look)
+	var rep := Ui.button("Replays", func() -> void: replays.emit(), 18)
+	rep.name = "Replays"
+	for s in ["normal", "hover", "focus"]:
+		rep.add_theme_stylebox_override(s, Ui.box(Color("#1e2029e8"), 12))
+	add_child(rep)
+	for b: Button in [snd, how, look, rep]:   # (four along the bottom - narrow enough to clear the card on 16:9)
+		b.custom_minimum_size = Vector2(132, 46)
 	var ver := Ui.label(VERSION + "  ·  the Dancer: her war fans and her Tempo", 15, Color("#6b6b78"))
 	ver.name = "Version"
 	add_child(ver)
@@ -227,9 +235,10 @@ func _layout() -> void:
 	var ver := get_node("Version") as Label
 	ver.position = Vector2(24, vp.y - 36)
 	var snd := get_node("Sound") as Button
-	snd.position = Vector2(24, vp.y - 92)
-	(get_node("HowToPlay") as Button).position = Vector2(184, vp.y - 92)
-	(get_node("Look") as Button).position = Vector2(344, vp.y - 92)
+	var x := 24.0
+	for n: String in ["Sound", "HowToPlay", "Look", "Replays"]:
+		(get_node(n) as Button).position = Vector2(x, vp.y - 92)
+		x += 140.0
 
 
 

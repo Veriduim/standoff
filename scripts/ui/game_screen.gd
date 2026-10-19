@@ -50,6 +50,10 @@ var _turn_left := 0.0        ## seconds left on your turn
 var _ask := ""               ## what your turn asks (the banner)
 var _replay_log: Array = []   ## every turn as it played this match (frames, events, shots, first tick) - Replay
 var _replaying := false
+var _rec := {}               ## this match, recorded to save (02:15): {v, when, names, colours, me, mode, start, turns}
+var _rec_saved := false
+var _saved_replay := false   ## watching a saved replay (from the home screen) - its end goes back home
+var replay_list: ReplayList
 var _replay_i := -1
 var replay_btn: Button
 var menu_btn: Button         ## ☰ - the match menu (00:28 "How do I quit a game with bots?")
@@ -132,6 +136,11 @@ func _ready() -> void:
 	how.name = "HowToPlay"
 	add_child(how)
 	home.help.connect(func() -> void: how.open())
+	replay_list = ReplayList.new()
+	replay_list.name = "ReplayList"
+	add_child(replay_list)
+	home.replays.connect(func() -> void: replay_list.open())
+	replay_list.picked.connect(watch_saved)
 	get_viewport().size_changed.connect(_layout)
 	_layout()
 	_show_start()
@@ -310,10 +319,12 @@ func start_local(opponents: int, mode: String, colour := 0) -> void:
 	stage.you = me
 	stage.time_scale = speed
 	stage.show_tick(sim.record(), [], sim.record_shots())
+	_rec_begin()
 	_lag.clear()
 	home.visible = false
 	fast_btn.visible = true
 	over_panel.visible = false
+	_saved_replay = false
 	_build_cards()
 	_next()
 
@@ -566,6 +577,8 @@ func start_online(nm: NetMatch) -> void:
 	stage.ceiling = sim.ceiling
 	stage.time_scale = speed
 	stage.show_tick(sim.record(), [], sim.record_shots())
+	_rec_begin()
+	_saved_replay = false
 	_lag.clear()
 	home.visible = false
 	lobby.visible = false
@@ -583,6 +596,7 @@ func _on_resync(snap: Dictionary) -> void:
 	_net_queue.clear()
 	pick.close()
 	sim = Sim.from_dict(snap)
+	_rec_jump(snap)
 	stage.fx.clear()
 	stage.show_tick(sim.record(), [], sim.record_shots())
 	_update_cards()
@@ -622,6 +636,7 @@ func _on_net_turn(t: int, picks: Dictionary, snap: Dictionary) -> void:
 	if sim.tick != t:   # (out of step - take the host's state as it is)
 		if not snap.is_empty():
 			sim = Sim.from_dict(snap)
+			_rec_jump(snap)
 			stage.show_tick(sim.record(), [], sim.record_shots())
 			_update_cards()
 		return
@@ -629,6 +644,7 @@ func _on_net_turn(t: int, picks: Dictionary, snap: Dictionary) -> void:
 	_stage_band()
 	stage.deciding = []
 	stage.advantage = {}
+	_rec_turn(t, picks)
 	sim.apply(picks)
 	var seg := sim.run_segment()
 	if net_match.is_host():
@@ -654,6 +670,7 @@ func _on_net_end(reason: String) -> void:
 	phase = "over"
 	pick.close()
 	(over_panel.find_child("Result", true, false) as Label).text = reason if reason != "" else "The match ended"
+	_rec_save(reason if reason != "" else "The match ended")
 	(over_panel.find_child("Rematch", true, false) as Button).visible = false
 	(over_panel.find_child("Menu", true, false) as Button).text = "Back to lobby"
 	over_panel.visible = true
@@ -853,11 +870,75 @@ func _end_replay() -> void:
 	_layout()
 
 
+## Recording the match to save (02:15): its start now, each turn's picks, a jump to the host's state online.
+func _rec_begin() -> void:
+	_rec = {"v": Version.TAG, "when": int(Time.get_unix_time_from_system()), "me": me, "mode": sim.mode,
+		"names": sim.fighters.map(func(f: Fighter) -> String: return f.name),
+		"colours": sim.fighters.map(func(f: Fighter) -> String: return stage.colour_of(f.id).to_html(false)),
+		"start": NetMatch.wire(sim.to_dict()), "turns": []}
+	_rec_saved = false
+
+
+func _rec_turn(t: int, picks: Dictionary) -> void:
+	if not _rec.is_empty() and not _replaying:
+		(_rec["turns"] as Array).append({"t": t, "p": NetMatch.wire(picks)})
+
+
+func _rec_jump(snap: Dictionary) -> void:
+	if not _rec.is_empty() and not _replaying:
+		(_rec["turns"] as Array).append({"t": int(snap.get("tick", 0)), "s": snap.duplicate(true)})
+
+
+## The match over: saved (once), with how it ended - unless it never got going, or it's a replay being watched.
+func _rec_save(result: String) -> void:
+	if _rec.is_empty() or _rec_saved or _saved_replay or (_rec["turns"] as Array).is_empty():
+		return
+	_rec["result"] = result
+	Replays.save(_rec)
+	_rec_saved = true
+
+
+## A saved replay from the home screen: the match played again from its picks, then watched.
+func watch_saved(path: String) -> void:
+	var rec := Replays.load_rec(path)
+	if rec.is_empty() or not rec.has("start"):
+		return
+	_demo = null
+	bots.clear()
+	net_match = null
+	var built := Replays.rebuild(rec)
+	sim = Sim.from_dict(rec["start"])
+	me = int(rec.get("me", 0))
+	stage.setup(sim.fighters.map(func(f: Fighter) -> String: return f.character),
+			sim.fighters.map(func(f: Fighter) -> String: return f.name))
+	stage.palette = (rec.get("colours", []) as Array).map(func(c: String) -> Color: return Color(c))
+	stage.you = me
+	stage.half = sim.half
+	stage.ceiling = sim.ceiling
+	stage.time_scale = speed
+	_lag.clear()
+	_history.clear()
+	home.visible = false
+	_build_cards()
+	_replay_log = built[0]
+	sim = built[1]
+	_saved_replay = true
+	_rec = {}
+	(over_panel.find_child("Result", true, false) as Label).text = str(rec.get("result", ""))
+	(over_panel.find_child("Rematch", true, false) as Button).visible = false
+	(over_panel.find_child("Menu", true, false) as Button).text = "Menu"
+	phase = "over"
+	watch_replay()
+
+
 ## Undo (against bots only): back to your last pick - the match as it was, everyone's ghosts and cards with it.
 func undo() -> void:
 	if net_match != null or _history.is_empty() or phase != "pick":
 		return
 	sim = Sim.from_dict(_history.pop_back())
+	_replay_log = _replay_log.filter(func(s: Dictionary) -> bool: return int(s["first"]) <= sim.tick)
+	if not _rec.is_empty():   # (and out of the saved one)
+		_rec["turns"] = (_rec["turns"] as Array).filter(func(x: Dictionary) -> bool: return int(x.get("t", 0)) < sim.tick)
 	pick.close()
 	stage.fx.clear()
 	stage.show_tick(sim.record(), [], sim.record_shots())
@@ -900,6 +981,7 @@ func _commit(mine: Dictionary) -> void:
 	_stage_band()
 	stage.deciding = []
 	stage.advantage = {}
+	_rec_turn(sim.tick, picks)
 	sim.apply(picks)
 	var seg := sim.run_segment()
 	_frames = seg["frames"]
@@ -1023,6 +1105,7 @@ func _finish() -> void:
 	if sim.timed_out() and not text.begins_with("Time"):
 		text = "Time! " + text
 	(over_panel.find_child("Result", true, false) as Label).text = text
+	_rec_save(text)
 	(over_panel.find_child("Rematch", true, false) as Button).visible = net_match == null
 	menu_btn.visible = false
 	_menu_shown(false)

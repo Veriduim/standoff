@@ -103,6 +103,12 @@ func _test_online_match() -> void:
 		same = same and a.sim.fighters[i].hp == b.sim.fighters[i].hp and a.sim.fighters[i].hp == c.sim.fighters[i].hp
 	_check("...and ends the same everywhere (tick %d, winners %s / %s / %s)" % [a.sim.tick, a.sim.winners(),
 			b.sim.winners(), c.sim.winners()], same and a.sim.winners() == b.sim.winners())
+	var rec := Replays.load_rec(str(Replays.paths()[0])) if not Replays.paths().is_empty() else {}
+	var again: Sim = Replays.rebuild(rec)[1] if not rec.is_empty() else null
+	var replay_same: bool = again != null and again.tick == a.sim.tick
+	for i in 3:
+		replay_same = replay_same and again.fighters[i].hp == a.sim.fighters[i].hp
+	_check("its saved replay plays again to the same end (tick %s)" % [again.tick if again != null else -1], replay_same)
 	for g: Control in [a, b, c]:
 		g._leave_match()
 	_poll([a, b, c])

@@ -527,3 +527,37 @@ func _test_bot_levels() -> void:
 			and g.home.find_child("BotsNormal", true, false) != null and g.home.find_child("Look", true, false) != null)
 	(g.home as HomeScreen).set_level(was)
 	g.queue_free()
+
+
+func _test_saved_replays() -> void:
+	_section("Saved replays (02:15): a finished match is kept; from the list it plays again exactly as it went")
+	var g := _screen()
+	var before: int = Replays.paths().size()
+	g.auto_me = true
+	g.start_local(1, "ffa")
+	var guard := 0
+	while g.phase != "over" and guard < 3000:
+		g.finish_playback()
+		guard += 1
+	var kept: Array = Replays.paths()
+	var rec := Replays.load_rec(str(kept[0])) if not kept.is_empty() else {}
+	_check("the match is saved when it ends (%d turns, \"%s\")" % [(rec.get("turns", []) as Array).size(),
+			rec.get("result", "")], g.phase == "over" and (kept.size() > before or kept.size() == Replays.KEEP)
+			and not (rec.get("turns", []) as Array).is_empty())
+	var built := Replays.rebuild(rec)
+	var again: Sim = built[1]
+	var same: bool = again.tick == g.sim.tick
+	for i in g.sim.fighters.size():
+		same = same and again.fighters[i].hp == g.sim.fighters[i].hp and again.fighters[i].pos == g.sim.fighters[i].pos
+	_check("played again from its picks it ends exactly the same (tick %d / %d)" % [again.tick, g.sim.tick], same)
+	g._show_start()
+	g.home.replays.emit()
+	var listed: int = g.replay_list._box.get_child_count()
+	g.watch_saved(str(kept[0]))
+	_check("the home screen's Replays lists it (%d) and watching plays it (%s)" % [listed, g.phase],
+			g.replay_list != null and listed >= 1 and g._replaying and g.phase == "play")
+	g._end_replay()
+	_check("its end: the result, and Menu goes home", g.phase == "over" and g.over_panel.visible
+			and not (g.over_panel.find_child("Rematch", true, false) as Button).visible)
+	DirAccess.remove_absolute(str(kept[0]))   # (the test's own replay)
+	g.queue_free()
