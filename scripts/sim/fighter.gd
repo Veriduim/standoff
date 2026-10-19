@@ -102,7 +102,7 @@ func to_dict() -> Dictionary:
 		"air_moves": air_moves, "burst": burst, "di": [di.x, di.y], "combo_used": combo_used.duplicate(true),
 		"cancelled": cancelled, "cancel_frame": cancel_frame, "fc": fc, "freed": freed, "whiffed": whiffed, "down": down, "down_pick": down_pick,
 		"kd": kd, "sad": sad, "sadness": sadness, "sad_warned": sad_warned, "dist": dist, "parry_at": parry_at, "pushed": pushed, "prorate": prorate, "bounce_due": bounce_due, "bounced": bounced,
-		"splat_due": splat_due, "splats": splats, "splat": splat, "stance": stance, "initiative": initiative, "fans": fans, "tempo": tempo,
+		"splat_due": splat_due, "splats": splats, "splat": splat, "launched": launched, "restand": restand, "stance": stance, "initiative": initiative, "fans": fans, "tempo": tempo,
 		"tempo_key": tempo_key, "tempo_idle": tempo_idle, "form": form, "ko": ko}
 
 
@@ -155,6 +155,8 @@ static func from_dict(d: Dictionary) -> Fighter:
 	f.splat_due = bool(d.get("splat_due", false))
 	f.splats = int(d.get("splats", 0))
 	f.splat = int(d.get("splat", 0))
+	f.launched = bool(d.get("launched", false))
+	f.restand = int(d.get("restand", 0))
 	f.stance = str(d.get("stance", ""))
 	f.initiative = bool(d.get("initiative", false))
 	f.fans = int(d.get("fans", 2))

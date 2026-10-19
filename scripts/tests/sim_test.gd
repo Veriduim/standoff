@@ -898,6 +898,12 @@ func _test_xfactors() -> void:
 			% [s.fighters[0].fans, w.fighters[0].fans], w.xf.size() == 3 and w.fighters[0].fans == s.fighters[0].fans
 			and w.shots.size() == s.shots.size() and w.fighters[1].form == "floor"
 			and w.fighters[0].pos == s.fighters[0].pos and w.tick == s.tick)
+	var saved := Fighter.new().to_dict()
+	var missing: Array[String] = []
+	for prop: Dictionary in Fighter.new().get_property_list():   # (every fighter variable goes in the saved state -
+		if int(prop["usage"]) & PROPERTY_USAGE_SCRIPT_VARIABLE and not saved.has(str(prop["name"])):   # online starts
+			missing.append(str(prop["name"]))                                                         # every turn from it)
+	_check("every fighter variable is in the saved state (missing: %s)" % [missing], missing.is_empty())
 	var turns_all := []
 	var ended := 0
 	for rule in ["fans", "tempo", "forms", "fans,tempo", "fans,forms", "tempo,forms"]:
