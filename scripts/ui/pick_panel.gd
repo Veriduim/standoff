@@ -192,10 +192,28 @@ func _ready() -> void:
 	visible = false
 
 
+## The bottom bar's height: BAR_H, or more if what's in it ever needs more - it grows up, never off the screen.
+func bar_h() -> float:
+	return maxf(BAR_H, bar.get_combined_minimum_size().y) if bar != null else BAR_H
+
+
+## A pad arrow, drawn (the same on every phone): a shaft and a head pointing the button's way.
+func _draw_arrow(b: Button, d: Vector2) -> void:
+	var c := b.size / 2.0
+	var u := d.normalized()
+	var n := Vector2(-u.y, u.x)
+	var l := minf(b.size.x, b.size.y) * 0.62
+	var col := Color("#5a5d6b") if b.disabled else (Color.WHITE if b.button_pressed else Color("#e8e8f0"))
+	b.draw_line(c - u * l * 0.45, c + u * l * 0.1, col, maxf(3.0, l * 0.13), true)
+	b.draw_colored_polygon(PackedVector2Array([c + u * l * 0.5, c + u * l * 0.02 + n * l * 0.34,
+		c + u * l * 0.02 - n * l * 0.34]), col)
+
+
 func _layout() -> void:
 	var vp := get_viewport_rect().size
+	var bh := bar_h()
 	var tab_h := 54.0 * Moves.TABS.size() + 5.0 * (Moves.TABS.size() - 1)
-	var tab_y := maxf(Ui.CARD_H + 60.0, (vp.y - BAR_H + Ui.CARD_H - tab_h) / 2.0)
+	var tab_y := maxf(Ui.CARD_H + 60.0, (vp.y - bh + Ui.CARD_H - tab_h) / 2.0)
 	tabs_box.position = Vector2(6.0, tab_y)   # (yours down the left)
 	tabs_box.size = Vector2(TAB_W, 0)
 	foe_box.position = Vector2(vp.x - TAB_W - 6.0, tab_y)   # (the enemy's down the right)
@@ -204,12 +222,12 @@ func _layout() -> void:
 	foe_name.size = Vector2(220.0, 22.0)
 	var right := who != me   # (the drawer opens from the side whose tabs it is)
 	drawer.position = Vector2(vp.x - TAB_W - 14.0 - DRAWER_W if right else TAB_W + 14.0, Ui.CARD_H + 52.0)   # (under
-	drawer.size = Vector2(DRAWER_W, vp.y - BAR_H - Ui.CARD_H - 62.0)                                          # the banner)
+	drawer.size = Vector2(DRAWER_W, vp.y - bh - Ui.CARD_H - 62.0)                                          # the banner)
 	if undo_btn != null:
 		undo_btn.position = Vector2(vp.x - 230.0, Ui.CARD_H + 44.0)
 		undo_btn.size = Vector2(100, 40)
-	bar.position = Vector2(0, vp.y - BAR_H)
-	bar.size = Vector2(vp.x, BAR_H)
+	bar.position = Vector2(0, vp.y - bh)
+	bar.size = Vector2(vp.x, bh)
 	info.position = Vector2(TAB_W + 20.0, Ui.CARD_H + 62.0)   # (top left, beside your tabs - the fighters stand low)
 
 
@@ -469,11 +487,19 @@ func _build_card(parent: Control, side: String) -> Dictionary:
 			grid.add_child(Control.new())
 			continue
 		var aim_at := func() -> void: _pad_tap(side, d)
-		var b := Ui.button(ARROWS[k], aim_at, 24)
-		b.name = "d%d" % k
+		var b := Ui.button("", aim_at, 24)   # (the arrow drawn, not a glyph - 06:56 "the bottom of the screen is cutting
+		b.name = "d%d" % k                  # off": a phone's font drew the diagonals taller and the bar spilled off it)
+		b.tooltip_text = ARROWS[k]
 		b.custom_minimum_size = Vector2(56, 38)
+		for look in ["normal", "hover", "pressed", "hover_pressed", "disabled", "focus"]:
+			var sb := b.get_theme_stylebox(look)
+			if sb is StyleBoxFlat:
+				var flat := (sb as StyleBoxFlat).duplicate() as StyleBoxFlat
+				flat.set_content_margin_all(0)
+				b.add_theme_stylebox_override(look, flat)
+		b.draw.connect(_draw_arrow.bind(b, d))
 		var on := Ui.box(Color("#3e8ed0"), 6)
-		on.set_content_margin_all(2)
+		on.set_content_margin_all(0)
 		b.add_theme_stylebox_override("pressed", on)
 		b.add_theme_stylebox_override("hover_pressed", on)
 		b.toggle_mode = true

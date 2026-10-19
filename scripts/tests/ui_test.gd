@@ -720,6 +720,21 @@ func _test_drawer_order() -> void:
 
 
 
+func _test_bar_fits() -> void:
+	_section("The bottom bar stays on the screen (06:56 \"the bottom of the screen is cutting off now\")")
+	var g := _screen()
+	g.start_local(1, "ffa")
+	var p: PickPanel = g.pick
+	p.open(g.sim, 0, g.stage)
+	var need := p.bar.get_combined_minimum_size().y
+	var vp := g.get_viewport_rect().size
+	_check("what's in it fits its height (%.0f of %.0f), the pad's arrows drawn - no glyph to grow them - and its foot is "
+			% [need, PickPanel.BAR_H] + "the screen's (%.0f / %.0f)" % [p.bar.position.y + p.bar.size.y, vp.y],
+			need <= PickPanel.BAR_H and (p.pad.get_node("d0") as Button).text == ""
+			and is_equal_approx(p.bar.position.y + p.bar.size.y, vp.y))
+	g.queue_free()
+
+
 func _test_squash_and_lag() -> void:
 	_section("Squash and stretch, the head and fans lagging (06:38 \"Try the rest except 6\")")
 	var g := _screen()
