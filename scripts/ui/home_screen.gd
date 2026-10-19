@@ -124,15 +124,15 @@ func _ready() -> void:
 	for s in ["normal", "hover", "focus"]:
 		lobbies.add_theme_stylebox_override(s, Ui.box(Color("#2b4f8a"), 12))
 	v.add_child(lobbies)
-	var snd := Ui.button(Sfx.label(), func() -> void: _toggle_sound(), 18)   # (19 Oct: sound on / off, kept)
-	snd.name = "Sound"
-	snd.custom_minimum_size = Vector2(150, 46)
+	var snd := Ui.button(Sfx.icon(), func() -> void: _toggle_sound(), 22)   # (sound on / off - a small icon, 03:11
+	snd.name = "Sound"                                                       # "hone screen is getting very cluttered")
+	snd.custom_minimum_size = Vector2(52, 48)
 	for s in ["normal", "hover", "focus"]:
 		snd.add_theme_stylebox_override(s, Ui.box(Color("#1e2029e8"), 12))
 	add_child(snd)
-	var how := Ui.button("How to play", func() -> void: help.emit(), 18)
+	var how := Ui.button("?", func() -> void: help.emit(), 24)   # (How to play - a small icon by it)
 	how.name = "HowToPlay"
-	how.custom_minimum_size = Vector2(150, 46)
+	how.custom_minimum_size = Vector2(52, 48)
 	for s in ["normal", "hover", "focus"]:
 		how.add_theme_stylebox_override(s, Ui.box(Color("#1e2029e8"), 12))
 	add_child(how)
@@ -146,18 +146,14 @@ func _ready() -> void:
 	for s in ["normal", "hover", "focus"]:
 		train.add_theme_stylebox_override(s, Ui.box(Color("#2b6e4a"), 12))
 	add_child(train)
-	for b: Button in [snd, how, rep, train]:   # (four along the bottom - narrow enough to clear the card on 16:9)
-		b.custom_minimum_size = Vector2(0, 46)
+	for b: Button in [rep, train]:   # (just these two along the bottom)
+		b.custom_minimum_size = Vector2(150, 50)
 		b.add_theme_constant_override("h_separation", 0)
 		for look in ["normal", "hover", "focus", "pressed"]:
 			var box := b.get_theme_stylebox(look)
 			if box is StyleBoxFlat:
 				(box as StyleBoxFlat).content_margin_left = 14
 				(box as StyleBoxFlat).content_margin_right = 14
-	var key := Ui.label("ON THE MOVE ICONS\n" + Moves.BADGE_KEY.replace("   ", "\n"), 16, Color("#a7a7b8"))   # (03:05:
-	key.name = "BadgeKey"                                     # the badge key here, off the drawer)
-	key.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(key)
 	var ver := Ui.label(VERSION + "  ·  the Dancer: her war fans and her Tempo", 15, Color("#6b6b78"))
 	ver.name = "Version"
 	add_child(ver)
@@ -219,7 +215,7 @@ func _toggle_sound() -> void:
 
 ## The button shows what's saved (the ☰ menu can change it too).
 func sync_sound() -> void:
-	(get_node("Sound") as Button).text = Sfx.label()
+	(get_node("Sound") as Button).text = Sfx.icon()
 
 
 func _set_count(n: int) -> void:
@@ -236,11 +232,10 @@ func _layout() -> void:
 	title.size = Vector2(maxf(300.0, card.position.x - 60.0), vp.y)
 	var ver := get_node("Version") as Label
 	ver.position = Vector2(24, vp.y - 36)
-	var key := get_node("BadgeKey") as Label
-	key.position = Vector2(30, maxf(300.0, vp.y * 0.5))
-	var snd := get_node("Sound") as Button
+	(get_node("Sound") as Button).position = Vector2(14, 12)   # (top left, small)
+	(get_node("HowToPlay") as Button).position = Vector2(72, 12)
 	var x := 24.0
-	for n: String in ["Sound", "HowToPlay", "Replays", "Training"]:   # (side by side, each as wide as its words)
+	for n: String in ["Training", "Replays"]:   # (side by side along the bottom)
 		var b := get_node(n) as Button
 		b.reset_size()
 		b.position = Vector2(x, vp.y - 92)
@@ -256,7 +251,7 @@ class TitleArt:
 	func _draw() -> void:
 		var font := get_theme_default_font()
 		var cx := size.x / 2.0
-		var top := size.y * 0.08
+		var top := size.y * 0.08 + 22.0   # (room for the two icons top left - 03:11)
 		draw_string_outline(font, Vector2(0, top + 96), "STANDOFF", HORIZONTAL_ALIGNMENT_CENTER, size.x, 104, 14,
 				Color("#0b0b0f"))
 		draw_string(font, Vector2(0, top + 96), "STANDOFF", HORIZONTAL_ALIGNMENT_CENTER, size.x, 104, Color("#f2f2f7"))

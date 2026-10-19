@@ -97,6 +97,10 @@ static func set_on(v: bool) -> void:
 	cfg.save(SETTINGS)
 
 
+static func icon() -> String:
+	return "🔊" if on else "🔇"
+
+
 static func label() -> String:
 	return "Sound: on" if on else "Sound: off"
 
@@ -127,7 +131,9 @@ func event(e: Dictionary) -> void:
 		"countered":
 			play("countered")
 		"shot":
-			play("gust" if str(e.get("kind", "")) == "ripple" else "fan_throw", -2.0, vary)
+			play("gust" if str(e.get("kind", "")) in ["ripple", "cyclone"] else "fan_throw", -2.0, vary)
+		"galering":
+			play("gust", 2.0)
 		"catch":
 			play("catch", -2.0)
 		"recall":

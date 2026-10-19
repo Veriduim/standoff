@@ -13,6 +13,9 @@ const PAGES := [
 		"out - then you all pick again. Winning is about guessing what they'll do.", "straight"],
 	["Pick a move", "The tabs down the left: Attack, Special, Super, Movement, Defense. Tap a tab, then a move - your " +
 		"card at the bottom shows it. The arrows aim it; tap the lit arrow again for no direction.", "fan"],
+	["The move icons", "Each tab's moves go fastest first - the f number is the frame it hits. The badges: ✊ beats " +
+		"blocks, ⚡ better with initiative (the enemy was choosing too), 👻 dodges, 🔻 hits low, 💥 guard break, " +
+		"🎯 a projectile.", "grab"],
 	["Watch the ghost", "The faded figures show what happens if you pick that. \"Ready in 12\" means you can act " +
 		"again 12 frames later - green if you're first. Guess an enemy's move with their tabs on the right, and their " +
 		"ghost plays against yours.", "dash"],

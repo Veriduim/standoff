@@ -231,6 +231,11 @@ one stage; each attack aims at a picked target.
   a zoner's** - Fan Storm (1 bar, five spectral fans in a spread), Gale (1 bar, wind all round her, blows rushers off),
   Cyclone (2 bars, a whirlwind sent forward that keeps hitting), Grand Finale (3 bars, fans from the sky) - spawn lists,
   piercing / rehit / heavy projectiles.
+- 03:11 "Those superstars definitely need some animation improvements. Also hone screen is getting very cluttered" ->
+  0.27.0: new poses (twirl_a / twirl_b pirouette, fan_spread, gather, throw_high, throw_back) and a sequence for each
+  super; spectral fans glow (kind "sfan") and the falling ones cast a shadow where they'll land; Gale's ring of wind
+  arcs; home: Sound and How to play as two small icons top left, Training and Replays alone at the bottom, the badge
+  key a How to play card. The slash shape's repeated tip points (a "triangulation failed") fixed.
 
 ## To tune / later
 - **Match length with 6:** bot matches take 120-270 decision points with 6 fighters (50-90 with 2). At ~10 s a decision

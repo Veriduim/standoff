@@ -128,6 +128,11 @@ func on_event(type: String, at: Vector2, face: float, dmg: int, by: Color, victi
 			_add("sweep", at, Vector2.ZERO, 0.25, by, 70.0, 0.0)
 		"sweep", "sweep_up":   # (a giant fan swept out in her colour - Violet's arc in the mod study; up for Updraft)
 			_add("sweep", at, Vector2.ZERO, 0.3, by, 92.0, face if type == "sweep" else 0.0)
+		"galering":   # (Gale: a ring of short wind arcs racing out all round her - arcs, not a white circle)
+			for k in 3:
+				_add("windring", at, Vector2.ZERO, 0.32 + 0.06 * k, by.lightened(0.55), 40.0 + 34.0 * k)
+				parts[-1]["w"] = 0.0
+			kick(3.0)
 		"gust":   # (Updraft: wind off both fans, rushing up in front of her)
 			for k in 9:
 				var off := Vector2(face * _rng.randf_range(-20.0, 60.0), _rng.randf_range(-20.0, 30.0))
@@ -626,9 +631,17 @@ func draw_parts(st: StageView) -> void:
 						top.append(mid + nrm * w * bend)
 						bot.append(mid - nrm * w * bend)
 					bot.reverse()
+					bot = bot.slice(1, bot.size() - 1)   # (the tips are already in top - no repeated points)
 					var cc := c if layer == 0 else Color(1, 1, 1, 1)
 					cc.a = (0.95 if layer == 0 else 1.0) * fade
 					st.draw_colored_polygon(top + bot, cc)
+			"windring":   # (Gale's wind: twelve short arcs opening out round her, fading)
+				var e := 1.0 - pow(1.0 - t, 2.0)
+				c.a = 0.85 * (1.0 - t)
+				var rad := s * (0.5 + 1.6 * e)
+				for k in 12:
+					var a0 := float(p["r"]) + TAU * k / 12.0
+					st.draw_arc(at, rad, a0, a0 + 0.32, 6, c, maxf(1.5, 4.0 * z * (1.0 - t)), true)
 			"tglint", "ember", "petal", "wisp":   # (a trail's bits - Style, 02:28)
 				draw_trail(st, at, p, z)
 			"star":   # (near full size the moment it lands - the freeze shows it - then it shrinks away)

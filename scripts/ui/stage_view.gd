@@ -169,7 +169,7 @@ func _effect(e: Dictionary, prev: Array) -> void:
 		fx.burst_out(a, _chest(a), colour_of(a), n + a)
 		return
 	if type in ["down", "whiff", "sad", "sadness", "bounce", "splat", "ic", "beat", "onbeat", "catch", "recall",
-			"form_snap", "form_floor", "form_flow", "gust", "sweep", "sweep_up", "blink"]:   # (a = who it happened to)
+			"form_snap", "form_floor", "form_flow", "gust", "sweep", "sweep_up", "blink", "galering"]:   # (a = who it happened to)
 		var at := _chest(a) if not type in ["down", "bounce"] else Vector2(float(frame[a][0]), -6.0)
 		if type == "gust":   # (in front of her, low)
 			at = Vector2(float(frame[a][0]) + face * 50.0, -70.0)
@@ -210,7 +210,8 @@ func _effect(e: Dictionary, prev: Array) -> void:
 func _hit_style(e: Dictionary, a: int) -> String:
 	var src := str(e.get("src", ""))
 	if src != "":
-		return "wave" if src == "ripple" else ("slash" if src in ["fan", "airfan"] else "blunt")
+		return "wave" if src == "ripple" else ("slash" if src in ["fan", "airfan", "fanstorm", "finale", "cyclone"]
+				else "blunt")
 	var mv := str(frame[a][3])
 	if mv == "" or _char(a) != "dancer":
 		return "blunt"
@@ -483,6 +484,26 @@ func _shot(s: Array, alpha: float) -> void:
 			var turn := Vector2.from_angle(spin)
 			Stick.fan(self, at - turn * r * 0.5, turn, r, 0.9, colour_of(int(s[3])) if alpha >= 1.0 else col,
 					alpha >= 1.0)   # (spun round its middle, the way a thrown fan turns)
+		"sfan":   # (a super's spectral fan: glowing, see-through, white-edged - and falling from the sky, its shadow on
+			var r := Stick.FAN_R * float(Moves.stats(_char(int(s[3])))["height"]) / 100.0 * zoom   # the floor first)
+			var ghostly := colour_of(int(s[3])).lightened(0.45)
+			ghostly.a = 0.8 if alpha >= 1.0 else 0.3
+			if float(s[5]) > 6.0:   # (falling: where it'll land, a dark oval growing as it comes)
+				var floor_at := w2s(Vector2(float(s[0]), 0.0))
+				var near := clampf(1.0 - absf(float(s[1])) / 440.0, 0.15, 1.0)
+				var sh := Color(0.0, 0.0, 0.0, 0.45 * near)
+				var oval := PackedVector2Array()
+				for n in 14:
+					var a := TAU * n / 14.0
+					oval.append(floor_at + Vector2(cos(a) * r * (0.5 + 0.6 * near), sin(a) * r * 0.18))
+				draw_colored_polygon(oval, sh)
+			for k in 3:   # (the glow)
+				var g := ghostly
+				g.a = 0.12 * (3 - k) * (1.0 if alpha >= 1.0 else 0.4)
+				draw_circle(at, r * (0.9 + 0.35 * k), g, true, -1.0, true)
+			var turn := Vector2.from_angle(spin)
+			Stick.fan(self, at - turn * r * 0.5, turn, r, 0.9, ghostly, alpha >= 1.0, Color(1, 1, 1, ghostly.a),
+					Color(1, 1, 1, 0.9))
 		"cyclone":   # (her Cyclone super: a whirlwind - rings stacked up its height, turning, wider at the top)
 			var turn := float(s[6]) * 0.5
 			for k in 7:
