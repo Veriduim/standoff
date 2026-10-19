@@ -412,6 +412,8 @@ func update(delta: float) -> void:
 		if p["k"] == "chip":
 			v.y += 1100.0 * delta
 			v *= pow(0.3, delta)
+		elif p["k"] in ["petal", "ember"]:
+			v = _bit_motion(p, v, delta)
 		else:
 			v *= pow(0.02, delta)
 		p["v"] = v
@@ -627,6 +629,8 @@ func draw_parts(st: StageView) -> void:
 					var cc := c if layer == 0 else Color(1, 1, 1, 1)
 					cc.a = (0.95 if layer == 0 else 1.0) * fade
 					st.draw_colored_polygon(top + bot, cc)
+			"tglint", "ember", "petal", "wisp":   # (a trail's bits - Style, 02:28)
+				draw_trail(st, at, p, z)
 			"star":   # (near full size the moment it lands - the freeze shows it - then it shrinks away)
 				var grow := (0.75 + 0.25 * minf(1.0, t / 0.2)) * (1.0 - maxf(0.0, (t - 0.5) / 0.5))
 				_star(st, at, s * grow, float(p["r"]), p["sp"], c)
@@ -708,6 +712,89 @@ func draw_parts(st: StageView) -> void:
 				var side := Vector2(-dir.y, dir.x) * s * 0.28
 				st.draw_colored_polygon(PackedVector2Array([at + dir * s, at - dir * s * 0.4 + side,
 						at - dir * s * 0.4 - side]), c)
+
+
+## A trail bit off someone moving (their Style's trail): world `at`.
+func trail_bit(trail: String, at: Vector2, col: Color, seed_n: int) -> void:
+	_rng.seed = seed_n
+	trail_bit_into(parts, trail, at, col, _rng)
+
+
+## Trails (02:28 "3"): small bits off a moving fighter - Glints (white-gold sparkles), Embers (rising sparks),
+## Petals (drifting down), Wisps (short streaks in their colour).
+static func trail_bit_into(list: Array, trail: String, at: Vector2, col: Color, rng: RandomNumberGenerator) -> void:
+	var p := {"p": at + Vector2(rng.randf_range(-10.0, 10.0), rng.randf_range(-22.0, 12.0)), "age": 0.0,
+		"r": rng.randf() * TAU, "w": 0.0, "x": rng.randf_range(-0.5, 0.5), "c": col, "v": Vector2.ZERO}
+	match trail:
+		"Glints":
+			p.merge({"k": "tglint", "life": 0.45, "s": rng.randf_range(5.0, 8.0),
+				"c": Color("#fff3c4") if rng.randf() < 0.5 else Color.WHITE,
+				"v": Vector2(rng.randf_range(-20.0, 20.0), rng.randf_range(-30.0, 0.0))}, true)
+		"Embers":
+			p.merge({"k": "ember", "life": 0.6, "s": rng.randf_range(3.0, 4.5), "c": Color("#ffb347"),
+				"v": Vector2(rng.randf_range(-25.0, 25.0), -85.0)}, true)
+		"Petals":
+			p.merge({"k": "petal", "life": 0.9, "s": rng.randf_range(5.0, 7.0),
+				"c": Color("#ffb3d1") if rng.randf() < 0.6 else Color("#ff8fbf"), "w": rng.randf_range(-5.0, 5.0)}, true)
+		"Wisps":
+			p.merge({"k": "wisp", "life": 0.35, "s": 16.0, "c": col.lightened(0.45)}, true)
+		_:
+			return
+	list.append(p)
+
+
+## A trail bit's drift: petals sway down, embers keep rising.
+static func _bit_motion(p: Dictionary, v: Vector2, delta: float) -> Vector2:
+	if p["k"] == "petal":
+		return Vector2(sin(float(p["age"]) * 6.0 + float(p["r"])) * 35.0, 45.0)
+	return Vector2(v.x * pow(0.3, delta), -85.0)
+
+
+## (The Style preview's own bits.)
+static func age_bits(list: Array, delta: float) -> void:
+	for p: Dictionary in list:
+		p["age"] = float(p["age"]) + delta
+		var v: Vector2 = p["v"]
+		if p["k"] in ["petal", "ember"]:
+			v = _bit_motion(p, v, delta)
+		else:
+			v *= pow(0.02, delta)
+		p["v"] = v
+		p["p"] = (p["p"] as Vector2) + v * delta
+		p["r"] = float(p["r"]) + float(p["w"]) * delta
+	var keep := list.filter(func(p: Dictionary) -> bool: return float(p["age"]) < float(p["life"]))
+	list.clear()
+	list.append_array(keep)
+
+
+## One trail bit, at a screen point, at zoom z.
+static func draw_trail(ci: CanvasItem, at: Vector2, p: Dictionary, z: float) -> void:
+	var t := float(p["age"]) / float(p["life"])
+	var c: Color = p["c"]
+	var s := float(p["s"]) * z
+	match str(p["k"]):
+		"tglint":
+			c.a = 1.0 - t
+			var l := s * (1.0 - 0.4 * t)
+			ci.draw_colored_polygon(PackedVector2Array([at + Vector2(0, -l), at + Vector2(l * 0.25, 0), at + Vector2(0, l),
+				at + Vector2(-l * 0.25, 0)]), c)
+			ci.draw_colored_polygon(PackedVector2Array([at + Vector2(-l, 0), at + Vector2(0, -l * 0.25), at + Vector2(l, 0),
+				at + Vector2(0, l * 0.25)]), c)
+		"ember":
+			c = c.lerp(Color("#ff3b1f"), t)
+			c.a = 1.0 - t
+			ci.draw_circle(at, maxf(0.8, s * (1.0 - 0.6 * t)), c, true, -1.0, true)
+		"petal":
+			c.a = 1.0 - t * t
+			var pts := PackedVector2Array()
+			for k in 8:
+				var a := TAU * k / 8.0
+				pts.append(at + Vector2(cos(a) * s, sin(a) * s * 0.55).rotated(float(p["r"])))
+			ci.draw_colored_polygon(pts, c)
+		"wisp":
+			c.a = 0.8 * (1.0 - t)
+			var dir := Vector2.from_angle(float(p["x"]))
+			ci.draw_line(at - dir * s * 0.5, at + dir * s * 0.5, c, maxf(1.5, 2.5 * z), true)
 
 
 ## A super's cut-in (step 4): a dark slanted band across the screen, edged in their colour, speed lines running

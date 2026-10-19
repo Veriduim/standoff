@@ -27,6 +27,8 @@ const LEAN_MAX := 0.32   ## what can strike (the one nearest the hit box leaves 
 
 var characters: Array = []   ## per fighter id
 var palette: Array = []      ## each fighter's colour (empty = COLOURS in order) - the player picks theirs
+var outlines: Array = []     ## each fighter's outline colour (empty = ink) - their Style (02:28)
+var trails: Array = []       ## each fighter's trail ("None" / "Glints" / ...) - their Style
 var names: Array = []
 var frame: Array = []        ## the tick shown (Sim.record)
 var ghost: Array = []        ## a preview's ticks, looped
@@ -125,6 +127,9 @@ func _motion_fx(prev: Array) -> void:
 		_after_n[i] = int(_after_n.get(i, 0)) + 1 if fast else 0
 		if fast and int(_after_n[i]) % 3 == 1:   # (a fading copy every third tick they're quick - fx keeps them longer)
 			fx.afterimage(i, r)
+		var tr := str(trails[i]) if i < trails.size() else "None"   # (their Style's trail, while they move)
+		if tr != "None" and int(r[5]) != 4 and (speed > 2.0 or float(r[1]) < -12.0) and (_tick_n + i) % 2 == 0:
+			fx.trail_bit(tr, Vector2(float(r[0]), float(r[1]) - 40.0), colour_of(i), _tick_n * 11 + i)
 		var dy := float(r[1]) - float(p[1])
 		_vx[i] = float(r[0]) - float(p[0])
 		if mv == "glide" and int(r[5]) == 0 and absf(_vx[i]) > 2.0:   # (Silk Glide: a ribbon of her colour along the
@@ -615,6 +620,7 @@ func _figure(i: int, r: Array, alpha: float, bare := false) -> void:
 	elif fx.flash.has(i):   # (the impact frame: drawn white)
 		col = Color.WHITE
 	var head_r := Stick.head(h * zoom)
+	var ink: Color = outlines[i] if i < outlines.size() else Stick.INK   # (their Style's outline)
 	var pose := Poses.for_record(ch, r)
 	if alpha >= 1.0 and int(r[5]) == 0 and (str(r[3]) == "" or str(r[3]) == "wait") and float(r[1]) >= -1.0:
 		var bob := sin(_time * 3.2 + i * 1.3) * 1.6   # (standing free: breathing - the top half rises and falls)
@@ -649,10 +655,10 @@ func _figure(i: int, r: Array, alpha: float, bare := false) -> void:
 			pose = Poses.blend(pose, Poses.get_pose("idle2"), k * (1.0 if alpha >= 1.0 else 0.0))
 		var pre := Stick._place(pose, w2s(base), sc, face)
 		if fans >= 2 and not bare:   # (an afterimage: just her - its fans would double what it costs to draw)
-			Stick.fan_at(self, pre, "b", face, sc, open, col, alpha >= 1.0, Stick.STEEL if alpha >= 1.0 else col)
-	var pts := Stick.draw(self, pose, w2s(base), sc, face, col, Stick.limb(sc), head_r, alpha >= 1.0)
+			Stick.fan_at(self, pre, "b", face, sc, open, col, alpha >= 1.0, Stick.STEEL if alpha >= 1.0 else col, ink)
+	var pts := Stick.draw(self, pose, w2s(base), sc, face, col, Stick.limb(sc), head_r, alpha >= 1.0, ink)
 	if dancer and fans >= 1 and not bare:   # (ghosts: their fans in their own faded colour, not bright steel)
-		Stick.fan_at(self, pts, "f", face, sc, open, col, alpha >= 1.0, Stick.STEEL if alpha >= 1.0 else col)
+		Stick.fan_at(self, pts, "f", face, sc, open, col, alpha >= 1.0, Stick.STEEL if alpha >= 1.0 else col, ink)
 	if alpha < 1.0:
 		return
 	if alpha >= 1.0 and r.size() > 15 and int(r[15]) > 0 and int(r[5]) != 4:   # (Tempo: shards of her colour orbit her,

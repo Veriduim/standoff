@@ -33,8 +33,11 @@ static func head(scale: float) -> float:
 
 
 ## pose: joint -> Vector2 (Poses); thick = a limb's thickness on screen. edge = false for ghosts (no outline).
+const INK := Color(0.02, 0.02, 0.03)   ## the outline by default (Style's "Ink")
+
+
 static func draw(ci: CanvasItem, pose: Dictionary, origin: Vector2, scale: float, facing: float, col: Color,
-		thick: float, head_r: float, edge := true) -> Dictionary:
+		thick: float, head_r: float, edge := true, ink_col := INK) -> Dictionary:
 	var pts := _place(pose, origin, scale, facing)
 	var gap := float(style.get("gap", 0.0)) * thick
 	if gap > 0.0:   # (the head floats a little off the body)
@@ -48,7 +51,7 @@ static func draw(ci: CanvasItem, pose: Dictionary, origin: Vector2, scale: float
 	var fist := thick * float(style["fist"])
 	var foot := thick * float(style["foot"])
 	if edge:
-		var ink := Color(0.02, 0.02, 0.03, col.a)
+		var ink := Color(ink_col.r, ink_col.g, ink_col.b, col.a)   # (the outline - your Style's, 02:28)
 		var ew := maxf(1.5, thick * float(style["ink"]))
 		for b: Array in BACK + FRONT:
 			_bone(ci, pts[b[0]], pts[b[1]], _w(b, 0, thick, taper) + ew * 2.0, _w(b, 1, thick, taper) + ew * 2.0, ink)
@@ -178,20 +181,20 @@ static func fan_open(state: int, kind: String) -> float:
 
 ## A fan held in a hand (side "f" / "b"): pointing on along the forearm, tipped up a little.
 static func fan_at(ci: CanvasItem, pts: Dictionary, side: String, facing: float, scale: float, open: float, col: Color,
-		edge := true, metal := STEEL) -> void:
+		edge := true, metal := STEEL, ink_col := INK) -> void:
 	var hand: Vector2 = pts["hand_" + side]
 	var elbow: Vector2 = pts["elbow_" + side]
 	var dir := (hand - elbow).normalized() if hand.distance_to(elbow) > 0.5 else Vector2(facing, 0.0)
 	dir = dir.rotated(-0.3 * facing)
 	fan(ci, hand - dir * 2.0 * scale, dir, FAN_R * scale, open, col.darkened(FAR) if side == "b" else col, edge,
-			metal.darkened(FAR) if side == "b" else metal)
+			metal.darkened(FAR) if side == "b" else metal, ink_col)
 
 
 ## A folding war fan: pivot, the way it points (unit, on screen), its reach; open 0 (shut - a stick) to 1 (spread wide).
 ## The leaf in `col` (the fighter's colour), steel ribs and a steel edge (`metal` - a ghost passes its own faded colour),
 ## an ink outline.
 static func fan(ci: CanvasItem, pivot: Vector2, dir: Vector2, radius: float, open: float, col: Color, edge := true,
-		metal := STEEL) -> void:
+		metal := STEEL, ink_col := INK) -> void:
 	var half := lerpf(0.07, 1.25, clampf(open, 0.0, 1.0))
 	var a0 := dir.angle() - half
 	var a1 := dir.angle() + half
@@ -199,7 +202,7 @@ static func fan(ci: CanvasItem, pivot: Vector2, dir: Vector2, radius: float, ope
 	var inner := radius * 0.32
 	var gold := metal
 	gold.a = col.a
-	var ink := Color(0.02, 0.02, 0.03, col.a)
+	var ink := Color(ink_col.r, ink_col.g, ink_col.b, col.a)
 	var tri := PackedVector2Array()   # (02:39 "choppy ... with 4": the ink edge and the leaf, one batched draw - not 16)
 	var cols := PackedColorArray()
 	if edge:   # (the ink edge: the leaf a little bigger, under it)

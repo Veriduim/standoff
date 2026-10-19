@@ -9,6 +9,7 @@ signal online(colour: int)   ## the online lobbies (YOMI's Steam lobbies - Timmy
 signal help                  ## How to play (19 Oct 01:32)
 signal replays               ## the saved replays (02:15 "When can I save replays??")
 signal training(colour: int) ## training mode against a dummy (02:28)
+signal style(colour: int)    ## your look - outline and trail (02:28 "3")
 
 const VERSION := "v" + Version.TAG
 
@@ -45,7 +46,15 @@ func _ready() -> void:
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 7)
 	card.add_child(v)
-	v.add_child(_heading("YOUR COLOUR"))
+	var head := HBoxContainer.new()   # (YOUR COLOUR, and Style - the outline and trail - beside it)
+	v.add_child(head)
+	var hl := _heading("YOUR COLOUR")
+	hl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	head.add_child(hl)
+	var sty := Ui.button("Style", func() -> void: style.emit(colour), 15)
+	sty.name = "Style"
+	sty.custom_minimum_size = Vector2(84, 30)
+	head.add_child(sty)
 	var sw := HBoxContainer.new()
 	sw.add_theme_constant_override("separation", 10)
 	v.add_child(sw)

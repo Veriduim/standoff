@@ -364,9 +364,10 @@ func _on_status(state: String, detail: String) -> void:
 			note.text = ""
 			_tries = 0
 			if in_match.is_empty():
-				net.set_member({"status": "idle", "colour": my_colour, "match": ""})
+				net.set_member({"status": "idle", "colour": my_colour, "match": "", "outline": Style.outline,
+					"trail": Style.trail})
 			else:   # (back after a drop, mid-match: still in it - the game asks the host for its seat)
-				net.set_member(in_match.merged({"colour": my_colour}))
+				net.set_member(in_match.merged({"colour": my_colour, "outline": Style.outline, "trail": Style.trail}))
 				rejoined.emit()
 			_show("room")
 		"ended":   # (the nearby host closed it: off the list, and why)
@@ -806,11 +807,13 @@ func _cancel_out() -> void:
 func start_match() -> void:
 	if _out.is_empty():
 		return
-	var seats: Array = [{"peer": net.id, "name": my_name, "colour": my_colour, "team": 0}]
+	var seats: Array = [{"peer": net.id, "name": my_name, "colour": my_colour, "team": 0, "outline": Style.outline,
+		"trail": Style.trail}]
 	for id in _out["invited"]:
 		if (_out["answers"] as Dictionary).get(int(id), false) and net.members.has(int(id)):
 			var data: Dictionary = net.members[int(id)].get("data", {})
 			seats.append({"peer": int(id), "name": str(net.members[int(id)]["name"]), "colour": int(data.get("colour", 0)),
+				"outline": int(data.get("outline", 0)), "trail": int(data.get("trail", 0)),
 				"team": seats.size() % 2})
 	for i in int(_out["bots"]):
 		seats.append({"peer": 0, "name": "Bot %d" % (i + 1), "colour": 0, "team": seats.size() % 2})

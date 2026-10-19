@@ -651,3 +651,29 @@ func _test_replay_codes() -> void:
 			and packed.length() < JSON.stringify(rec).length())
 	_check("the server address is the lobby server's (%s)" % Replays.share_url(),
 			Replays.share_url().begins_with("https://") and Replays.share_url().ends_with("/replays"))
+
+
+func _test_style() -> void:
+	_section("Your look (02:28): an outline and a trail - picked, kept, worn in a match, the trail following you")
+	var g := _screen()
+	var was := [Style.outline, Style.trail]
+	g.home.style.emit(0)
+	g.style_panel.pick(2, 1)   # (Gold, Glints)
+	g.style_panel.close()
+	var cfg := ConfigFile.new()
+	cfg.load(Style.SETTINGS)
+	g.start_local(1, "ffa")
+	var worn: bool = g.stage.outlines[0] == Style.outline_colour(2) and str(g.stage.trails[0]) == "Glints"
+	g._commit({"move": "dash", "x": 1.0})
+	var seen := false
+	for _i in 120:
+		g._process(1.0 / 60.0)
+		g.stage._process(1.0 / 60.0)
+		seen = seen or g.stage.fx.parts.any(func(p: Dictionary) -> bool: return str(p["k"]) == "tglint")
+		if g.phase != "play":
+			break
+	_check("Gold + Glints: saved (%s / %s), worn, and glints trail off you as you dash" % [cfg.get_value("style",
+			"outline", -1), cfg.get_value("style", "trail", -1)], worn and seen
+			and int(cfg.get_value("style", "outline", -1)) == 2)
+	Style.set_mine(int(was[0]), int(was[1]))
+	g.queue_free()

@@ -218,6 +218,10 @@ one stage; each attack aims at a picked target.
   ~2x lighter (scripts/dev/perf.gd, `--perf=25 --opp=3`: 4 fighters 1,581 draw calls a frame -> 813, worst 3,635 ->
   914; fans and starbursts batched - Stick.tris; afterimages capped 2 a fighter / 6 in all, every 3rd tick, no fans).
   Video: Godot can't record video on a phone by itself - the phone's screen recorder for now.
+- 0.25.0 (02:28 "2" and "3"): **Rematch online** (the same players, bots and mode challenged again; their phones go
+  from the result to the invite) and **your look** (Style by YOUR COLOUR: outline Ink / White / Gold / Cyan / Pink /
+  Violet, trail None / Glints / Embers / Petals / Wisps, with a live preview; saved; online it goes with your seat;
+  replays keep it). This closes step 4.
 
 ## To tune / later
 - **Match length with 6:** bot matches take 120-270 decision points with 6 fighters (50-90 with 2). At ~10 s a decision

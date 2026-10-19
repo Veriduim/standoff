@@ -54,6 +54,7 @@ var _rec := {}               ## this match, recorded to save (02:15): {v, when, 
 var _rec_saved := false
 var _saved_replay := false   ## watching a saved replay (from the home screen) - its end goes back home
 var replay_list: ReplayList
+var style_panel: StylePanel   ## your look (02:28 "3")
 var _replay_i := -1
 var replay_btn: Button
 var menu_btn: Button         ## ☰ - the match menu (00:28 "How do I quit a game with bots?")
@@ -143,6 +144,14 @@ func _ready() -> void:
 	replay_list.name = "ReplayList"
 	add_child(replay_list)
 	home.replays.connect(func() -> void: replay_list.open())
+	Style.load_saved()
+	style_panel = StylePanel.new()
+	style_panel.name = "StylePanel"
+	add_child(style_panel)
+	home.style.connect(func(c: int) -> void: style_panel.open(StageView.COLOURS[c]))
+	style_panel.closed.connect(func() -> void:   # (in a lobby: everyone's told your new look)
+		if lobby.net.in_lobby():
+			lobby.net.set_member({"outline": Style.outline, "trail": Style.trail}))
 	home.training.connect(func(c: int) -> void: start_local(1, "ffa", c, true))
 	_build_train_bar()
 	replay_list.picked.connect(watch_saved)
@@ -226,6 +235,8 @@ func _build_over() -> void:
 func _show_start() -> void:
 	phase = "menu"
 	home.visible = true
+	stage.outlines = []   # (the demo behind the home screen: plain)
+	stage.trails = []
 	training = false
 	if train_bar != null:
 		train_bar.visible = false
@@ -335,6 +346,8 @@ func start_local(opponents: int, mode: String, colour := 0, train := false) -> v
 		if c != StageView.COLOURS[colour]:
 			palette.append(c)
 	stage.palette = palette
+	stage.outlines = [Style.outline_colour(Style.outline)]   # (your look; the bots plain)
+	stage.trails = [Style.trail_name(Style.trail)]
 	stage.you = me
 	stage.time_scale = speed
 	stage.show_tick(sim.record(), [], sim.record_shots())
@@ -591,6 +604,8 @@ func start_online(nm: NetMatch) -> void:
 			sim.fighters.map(func(f: Fighter) -> String: return f.name))
 	stage.palette = nm.seats.map(func(s: Dictionary) -> Color:
 		return StageView.COLOURS[int(s.get("colour", 0)) % StageView.COLOURS.size()])
+	stage.outlines = nm.seats.map(func(s: Dictionary) -> Color: return Style.outline_colour(int(s.get("outline", 0))))
+	stage.trails = nm.seats.map(func(s: Dictionary) -> String: return Style.trail_name(int(s.get("trail", 0))))
 	stage.you = me
 	stage.half = sim.half
 	stage.ceiling = sim.ceiling
@@ -979,6 +994,10 @@ func _rec_begin() -> void:
 	_rec = {"v": Version.TAG, "when": int(Time.get_unix_time_from_system()), "me": me, "mode": sim.mode,
 		"names": sim.fighters.map(func(f: Fighter) -> String: return f.name),
 		"colours": sim.fighters.map(func(f: Fighter) -> String: return stage.colour_of(f.id).to_html(false)),
+		"outlines": sim.fighters.map(func(f: Fighter) -> String:
+			return (stage.outlines[f.id] if f.id < stage.outlines.size() else Stick.INK).to_html(false)),
+		"trails": sim.fighters.map(func(f: Fighter) -> String:
+			return str(stage.trails[f.id]) if f.id < stage.trails.size() else "None"),
 		"start": NetMatch.wire(sim.to_dict()), "turns": []}
 	_rec_saved = false
 
@@ -1016,6 +1035,8 @@ func watch_saved(path: String) -> void:
 	stage.setup(sim.fighters.map(func(f: Fighter) -> String: return f.character),
 			sim.fighters.map(func(f: Fighter) -> String: return f.name))
 	stage.palette = (rec.get("colours", []) as Array).map(func(c: String) -> Color: return Color(c))
+	stage.outlines = (rec.get("outlines", []) as Array).map(func(c: String) -> Color: return Color(c))
+	stage.trails = rec.get("trails", [])
 	stage.you = me
 	stage.half = sim.half
 	stage.ceiling = sim.ceiling

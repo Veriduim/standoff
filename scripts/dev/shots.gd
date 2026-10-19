@@ -31,6 +31,18 @@ func run(game: Control, out: String) -> void:
 	await _wait(4)
 	await _snap(out.path_join("1r_replays.png"))
 	game.replay_list.visible = false
+	var was_style := [Style.outline, Style.trail]   # (your look - 02:28)
+	Style.set_mine(2, 3)
+	game.style_panel.open(StageView.COLOURS[0])
+	await _wait(70)
+	await _snap(out.path_join("1s_style.png"))
+	game.style_panel.visible = false
+	Style.set_mine(1, 1)
+	game.style_panel.open(StageView.COLOURS[0])
+	await _wait(70)
+	await _snap(out.path_join("1s_style2.png"))
+	game.style_panel.visible = false
+	Style.set_mine(int(was_style[0]), int(was_style[1]))
 	game.start_local(1, "ffa", 0, true)   # (training - 02:28)
 	game.set_dummy("Block")
 	await _wait(30)
