@@ -39,6 +39,26 @@ static func export_to_device(path: String) -> String:
 	return out
 
 
+## A replay packed small to send (gzip + base64) - and back.
+static func pack(rec: Dictionary) -> String:
+	var raw := JSON.stringify(rec, "", false, true).to_utf8_buffer()
+	return Marshalls.raw_to_base64(raw.compress(FileAccess.COMPRESSION_GZIP))
+
+
+static func unpack(text: String) -> Dictionary:
+	var gz := Marshalls.base64_to_raw(text.strip_edges())
+	if gz.is_empty():
+		return {}
+	var raw := gz.decompress_dynamic(64 * 1024 * 1024, FileAccess.COMPRESSION_GZIP)
+	var d: Variant = JSON.parse_string(raw.get_string_from_utf8())
+	return d if d is Dictionary and (d as Dictionary).has("start") else {}
+
+
+## Where shared replays go: the lobby server's /replays (02:36 "I cant share those with my friends?").
+static func share_url() -> String:
+	return LobbyNet.online_url.replace("wss://", "https://").replace("ws://", "http://") + "/replays"
+
+
 ## Save a finished match's record: {v, when, names, colours, me, mode, result, start, turns}.
 static func save(rec: Dictionary) -> String:
 	DirAccess.make_dir_recursive_absolute(DIR)

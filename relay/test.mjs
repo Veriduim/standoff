@@ -73,6 +73,12 @@ check("an empty lobby waits for them to come back (Timmy 00:11 - the phone put a
   && m.owner === m.id));
 back.close();
 await sleep(300);
+const put = await (await fetch(HTTP + "/replays", { method: "POST", body: JSON.stringify({ data: "H4sIAAAAAAAAA-test", v: "0.24.0" }) })).json();
+const got = put.code ? await (await fetch(HTTP + "/replays/" + put.code)).json() : {};
+check("a replay shared gets a code, and the code gets it back (02:36)", /^[0-9]{6}$/.test(put.code || "")
+  && got.data === "H4sIAAAAAAAAA-test" && got.v === "0.24.0");
+const none404 = await fetch(HTTP + "/replays/000000");
+check("a wrong replay code says so", none404.status === 404);
 const failed = results.filter((r) => !r[1]).length;
 console.log(`${results.length - failed}/${results.length} lobby checks passed`);
 process.exit(failed ? 1 : 0);

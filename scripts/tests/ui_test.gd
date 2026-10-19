@@ -637,3 +637,17 @@ func _test_floor_on_screen() -> void:
 			floor_y <= g.stage.view_bottom - 20.0)
 	g.stage.ghost = []
 	g.queue_free()
+
+
+func _test_replay_codes() -> void:
+	_section("Sharing replays by a code (02:36 \"I cant share those with my friends?\"): packed small, unpacked the same")
+	var rec := {"v": Version.TAG, "when": 1760000000, "names": ["You", "Bot 1"], "result": "You win!",
+		"start": Sim.create([{"character": "dancer"}, {"character": "dancer"}]).to_dict(), "turns": [{"t": 0,
+		"p": {"0": {"move": "jab", "x": 1.0}, "1": {"move": "wait"}}}]}
+	var packed := Replays.pack(rec)
+	var back := Replays.unpack(packed)
+	_check("packed (%d characters, from %d) and back, the same" % [packed.length(), JSON.stringify(rec).length()],
+			back.get("result", "") == "You win!" and (back["turns"] as Array).size() == 1
+			and packed.length() < JSON.stringify(rec).length())
+	_check("the server address is the lobby server's (%s)" % Replays.share_url(),
+			Replays.share_url().begins_with("https://") and Replays.share_url().ends_with("/replays"))

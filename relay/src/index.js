@@ -4,6 +4,8 @@
 // matches going on with spectate, the owner's rules, chat).
 //
 //   GET /lobbies                 the public lobbies: [{code, name, version, players, max}]
+//   POST /replays {data, v}      a replay shared (19 Oct 02:36 "I cant share those with my friends?") -> {code}
+//   GET /replays/<CODE>          that replay: {data, v} (kept 30 days)
 //   WS  /lobby/<CODE>?name=..&create=1&lname=..&public=1&max=8&v=..   create (create=1) or join a lobby
 //
 // One Durable Object per lobby keeps its members' sockets and passes messages along. It knows nothing about the game:
@@ -17,6 +19,9 @@
 // owner left - the next one in takes over) and {t:"error", msg}. A second Durable Object keeps the public list.
 
 const CODE = /^\/lobby\/([0-9]{4,6})$/;
+const REPLAY = /^\/replays\/([0-9]{6})$/;
+const REPLAY_MAX = 600 * 1024;          // a shared replay's most (it comes packed: gzip + base64)
+const REPLAY_KEEP = 30 * 24 * 3600 * 1000;
 const MAX_MEMBERS = 16;
 const GRACE = 120 * 1000;   // an empty lobby waits this long for someone to come back (Timmy 00:11)
 const STALE_MS = 3 * 60 * 1000;
@@ -29,6 +34,7 @@ export default {
     const url = new URL(req.url);
     if (url.pathname === "/") return new Response("Standoff lobbies - ok\n");
     if (url.pathname === "/lobbies") return env.DIRECTORY.get(env.DIRECTORY.idFromName("all")).fetch(req);
+    if (url.pathname === "/replays" || REPLAY.test(url.pathname)) return env.SHELF.get(env.SHELF.idFromName("all")).fetch(req);
     const m = url.pathname.match(CODE);
     if (!m) return new Response("not found\n", { status: 404 });
     if (req.headers.get("Upgrade") !== "websocket") return new Response("expected a websocket\n", { status: 426 });
@@ -62,6 +68,46 @@ export class Directory {
       else if (v.public && v.players > 0) out.push({ code: v.code, name: v.name, version: v.version, players: v.players, max: v.max });
     }
     return json(out);
+  }
+}
+
+// Shared replays, each under a 6-digit code; a day's alarm clears the ones older than REPLAY_KEEP.
+export class Shelf {
+  constructor(ctx) {
+    this.ctx = ctx;
+  }
+
+  async fetch(req) {
+    const url = new URL(req.url);
+    if (req.method === "POST" && url.pathname === "/replays") {
+      const body = await req.text();
+      if (body.length > REPLAY_MAX) return json({ error: "That replay is too big to share" }, 413);
+      let d;
+      try { d = JSON.parse(body); } catch { return json({ error: "Not a replay" }, 400); }
+      if (typeof d.data !== "string" || d.data.length < 10) return json({ error: "Not a replay" }, 400);
+      let code = "";
+      for (let i = 0; i < 20 && !code; i++) {
+        const c = String(100000 + Math.floor(Math.random() * 900000));
+        if (!(await this.ctx.storage.get("r:" + c))) code = c;
+      }
+      if (!code) return json({ error: "Try again" }, 503);
+      await this.ctx.storage.put("r:" + code, { data: d.data, v: String(d.v || "?"), at: Date.now() });
+      if (!(await this.ctx.storage.getAlarm())) await this.ctx.storage.setAlarm(Date.now() + 24 * 3600 * 1000);
+      return json({ code });
+    }
+    const m = url.pathname.match(REPLAY);
+    if (req.method === "GET" && m) {
+      const r = await this.ctx.storage.get("r:" + m[1]);
+      return r ? json({ data: r.data, v: r.v }) : json({ error: "No replay with that code" }, 404);
+    }
+    return new Response("not found\n", { status: 404 });
+  }
+
+  async alarm() {
+    const all = await this.ctx.storage.list({ prefix: "r:" });
+    const now = Date.now();
+    for (const [k, v] of all) if (now - v.at > REPLAY_KEEP) await this.ctx.storage.delete(k);
+    if (all.size) await this.ctx.storage.setAlarm(now + 24 * 3600 * 1000);
   }
 }
 
