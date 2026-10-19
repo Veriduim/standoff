@@ -31,6 +31,6 @@ touch "$pages/.nojekyll"   # (no Jekyll: serve the files as they are)
 )
 rm -rf "$pages"
 if ! gh api "repos/$REPO/pages" >/dev/null 2>&1; then   # (the first time: switch Pages on for the branch)
-	gh api -X POST "repos/$REPO/pages" -f "source[branch]=gh-pages" -f "source[path]=/" >/dev/null
+	gh api -X POST "repos/$REPO/pages" -f "source[branch]=gh-pages" -f "source[path]=/" >/dev/null 2>&1 || true   # (a gh-pages push can switch it on by itself first - "already enabled")
 fi
 echo "published web $ver -> https://veriduim.github.io/standoff/ (live in a minute or two)"

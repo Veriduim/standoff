@@ -25,4 +25,4 @@ screen).
 - **Android:** `godot --headless --path . --export-debug "Android" build/Standoff-<version>.apk`.
 - **Web:** `bash tools/release_web.sh` builds it and puts it on GitHub Pages (`--build` to only build). The icons the
   game's text uses come in its own small fonts (`assets/fonts`, made by `tools/icon_fonts.py`), since a browser has no
-  system fonts to borrow.
+  system fonts to borrow. `node tools/web_check.mjs` plays it in a hidden Chrome posing as a phone (screenshots, console).
