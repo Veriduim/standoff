@@ -507,7 +507,12 @@ func _start(f: Fighter, c: Dictionary) -> void:
 		c = DEFAULT
 		mid = "wait"
 	var m := Moves.move(f.character, mid)
-	f.param = aim(str(m.get("aim", "none")), Vector2(float(c.get("x", 0.0)), float(c.get("y", 0.0))), f.facing)
+	var raw := Vector2(float(c.get("x", 0.0)), float(c.get("y", 0.0)))
+	if raw.length() <= 0.01:   # (no direction - the pad left neutral, 01:15: at the nearest enemy)
+		var near := nearest_enemy(f)
+		if near != null and absf(near.pos.x - f.pos.x) > 1.0:
+			f.facing = 1 if near.pos.x > f.pos.x else -1
+	f.param = aim(str(m.get("aim", "none")), raw, f.facing)
 	if absf(f.param.x) > 0.2:
 		f.facing = 1 if f.param.x > 0.0 else -1   # (aimed left or right - they turn that way)
 	elif str(m.get("aim", "none")) in ["none", "height", "lean"]:   # (no way picked: they turn to the nearest enemy -

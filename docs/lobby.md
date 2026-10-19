@@ -80,7 +80,7 @@ Timmy, 19 Oct 00:38: "Whats local multiplayer over Bluetooth or the likes?". The
   leaves. `--lobbyshots` adds `L5_nearby_list` / `L6_nearby_host`.
 
 ## Not done yet
-- YOMI's chess-clock timer.
+- Everyone's Chess Timer bank on screen (each phone keeps and shows its own).
 - Saving your own rule presets by name.
 - Character select (there is one character).
 - Rating / ranked.

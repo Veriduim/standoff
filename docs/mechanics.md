@@ -86,7 +86,8 @@ the rules of play. The names, art, characters and code are not ours to take, and
 | Undo | Single player only: undo a turn | ↶ Undo at the top right against bots (up to 40 turns back) |
 
 ## Later
-- **Chess Timer** (a lobby rule: a time bank each instead of the turn clock).
+- ~~**Chess Timer**~~ built 0.17.0: a lobby rule - a bank each (only running while you decide), then the minimum
+  turn clock every turn; a Ranked preset (the wiki's rules page).
 - **Super Armor** on a move (it tanks one hit).
 - **Initiative** on more moves (faster startup with it, as some of the wiki's do).
 - **Restands** (a hit as they land from an air combo puts them back in a grounded combo).

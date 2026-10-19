@@ -171,6 +171,10 @@ one stage; each attack aims at a picked target.
 - 00:57 "its side by side instead of stacked" (the result panel) -> 0.15.1: Rematch / Replay / Menu stacked.
 - 0.16.0: **Nearby play** - a phone hosts the lobby on the Wi-Fi / its hotspot, the others find it (docs/lobby.md
   "Nearby").
+- 0.17.0: **YOMI's Chess Timer** as a lobby rule (a bank each, then the minimum a turn; a Ranked preset = the wiki's
+  YomiRanked / Starlight rules); 01:15 "make the direction arrows a little bigger ... select the same arrow again to
+  have no direction/netural" -> the pad 56x38 (the bar 144 tall), and the lit arrow tapped again = neutral for every
+  move: at the nearest enemy (a jump straight up, a block high).
 
 ## To tune / later
 - **Match length with 6:** bot matches take 120-270 decision points with 6 fighters (50-90 with 2). At ~10 s a decision

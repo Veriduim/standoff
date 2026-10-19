@@ -423,3 +423,35 @@ func _test_sound() -> void:
 	g.toggle_menu()
 	Sfx.set_on(was)
 	g.queue_free()
+
+
+var _check_size := Vector2.ZERO
+
+
+func _test_pad_neutral() -> void:
+	_section("The pad (01:15): bigger arrows; the lit arrow tapped again = no direction, at the nearest enemy")
+	var g := _screen()
+	g.start_local(1, "ffa")
+	var p: PickPanel = g.pick
+	p.select("straight")
+	var lit_first: bool = absf(float(p.choice["x"])) > 0.5
+	var toward := signf(float(p.choice["x"]))
+	p._pad_tap("me", Vector2(toward, 0.0))
+	var neutral: bool = is_zero_approx(float(p.choice["x"])) and is_zero_approx(float(p.choice["y"]))
+	var none_lit := true
+	for k in 9:
+		var b := (p.cards["me"]["pad"] as GridContainer).get_node_or_null("d%d" % k) as Button
+		if b != null:
+			none_lit = none_lit and not b.button_pressed
+			_check_size = b.custom_minimum_size
+	_check("a move starts aimed at the enemy; tapping that arrow again leaves it neutral, nothing lit", lit_first
+			and neutral and none_lit)
+	_check("the arrows are bigger (%s)" % _check_size, _check_size.x >= 56.0 and _check_size.y >= 38.0)
+	g.queue_free()
+	var s := Sim.create([{"character": "dancer"}, {"character": "dancer"}], "ffa")
+	s.fighters[0].pos = Vector2(200, 0)
+	s.fighters[1].pos = Vector2(-200, 0)
+	s.fighters[0].facing = 1   # (facing away - neutral still goes at the enemy)
+	s.apply({0: {"move": "straight", "x": 0.0, "y": 0.0}, 1: {"move": "wait"}})
+	_check("neutral in the sim: she turns to the nearest enemy (facing %d)" % s.fighters[0].facing,
+			s.fighters[0].facing == -1)

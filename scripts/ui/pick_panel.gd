@@ -25,7 +25,7 @@ var can_undo := false        ## (set by the game screen each turn: against bots,
 const TAB_W := 96.0
 const COLS := 4
 const DRAWER_W := COLS * 92.0 + 34.0
-const BAR_H := 118.0
+const BAR_H := 144.0          ## (01:15 "make the direction arrows a little bigger" - three rows of 38 fit)
 const DIRS := [Vector2(-1, -1), Vector2(0, -1), Vector2(1, -1), Vector2(-1, 0), Vector2.ZERO, Vector2(1, 0),
 	Vector2(-1, 1), Vector2(0, 1), Vector2(1, 1)]
 const ARROWS := ["↖", "↑", "↗", "←", "", "→", "↙", "↓", "↘"]
@@ -124,7 +124,12 @@ func _ready() -> void:
 	scroll.add_child(drawer_grid)
 	drawer.visible = false
 	bar = PanelContainer.new()
-	bar.add_theme_stylebox_override("panel", Ui.box(Color("#16171ff0"), 0))
+	var bar_st := Ui.box(Color("#16171ff0"), 0)
+	bar_st.content_margin_top = 6
+	bar_st.content_margin_bottom = 6
+	bar_st.content_margin_left = 8
+	bar_st.content_margin_right = 8
+	bar.add_theme_stylebox_override("panel", bar_st)
 	add_child(bar)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
@@ -428,7 +433,7 @@ func _build_card(parent: Control, side: String) -> Dictionary:
 	icon.custom_minimum_size = Vector2(72, 0)
 	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var label := Ui.label("", 14, Color("#c9c9d6"))
-	label.custom_minimum_size = Vector2(132, 0)
+	label.custom_minimum_size = Vector2(110, 0)
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT if right else HORIZONTAL_ALIGNMENT_LEFT
 	var grid := GridContainer.new()
@@ -442,9 +447,9 @@ func _build_card(parent: Control, side: String) -> Dictionary:
 			grid.add_child(Control.new())
 			continue
 		var aim_at := func() -> void: _pad_tap(side, d)
-		var b := Ui.button(ARROWS[k], aim_at, 17)
+		var b := Ui.button(ARROWS[k], aim_at, 24)
 		b.name = "d%d" % k
-		b.custom_minimum_size = Vector2(40, 30)
+		b.custom_minimum_size = Vector2(56, 38)
 		var on := Ui.box(Color("#3e8ed0"), 6)
 		on.set_content_margin_all(2)
 		b.add_theme_stylebox_override("pressed", on)
@@ -477,7 +482,7 @@ func _build_card(parent: Control, side: String) -> Dictionary:
 	slider.max_value = 100.0
 	slider.step = 5.0
 	slider.value = 100.0
-	slider.custom_minimum_size = Vector2(96, 30)
+	slider.custom_minimum_size = Vector2(84, 30)
 	var track := StyleBoxFlat.new()
 	track.bg_color = Color("#3a3d4d")
 	track.set_corner_radius_all(3)
@@ -565,13 +570,15 @@ func set_dir(d: Vector2) -> void:
 func _set_dir_for(id: int, d: Vector2) -> void:
 	var f := sim.fighters[id]
 	var c := _pick_of(id)
-	var a := Sim.aim(str(Moves.move(f.character, str(c["move"])).get("aim", "none")), d, f.facing)
+	var a := Sim.aim(str(Moves.move(f.character, str(c["move"])).get("aim", "none")), d, f.facing) \
+			if d.length() > 0.01 else Vector2.ZERO   # (no direction: neutral - at the nearest enemy)
 	c["x"] = a.x
 	c["y"] = a.y
 	refresh()
 
 
-## A pad arrow on a card: aims that pick that way. A lean is optional - tapping the lit arrow again takes it off.
+## A pad arrow on a card: aims that pick that way. Tapping the lit arrow again takes it off - neutral (01:15 "Just
+## select the same arrow again to have no direction/netural"): at the nearest enemy, a jump straight up.
 func _pad_tap(side: String, d: Vector2) -> void:
 	var id := _side_id(side)
 	if id < 0 or (id != me and str(_pick_of(id).get("move", "")) == ""):
@@ -580,7 +587,8 @@ func _pad_tap(side: String, d: Vector2) -> void:
 	var c := _pick_of(id)
 	var kind := str(Moves.move(f.character, str(c["move"])).get("aim", "none"))
 	var now := Vector2(float(c.get("x", 0.0)), float(c.get("y", 0.0)))
-	_set_dir_for(id, Vector2.ZERO if kind == "lean" and now.is_equal_approx(d.normalized()) else d)
+	var lit := now.length() > 0.01 and now.is_equal_approx(Sim.aim(kind, d, f.facing))
+	_set_dir_for(id, Vector2.ZERO if lit else d)
 
 
 ## The ghost and the line about it for the picks as they stand; then both cards.
