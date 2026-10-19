@@ -297,7 +297,7 @@ func start_local(opponents: int, mode: String, colour := 0) -> void:
 	stage.ceiling = sim.ceiling
 	bots.clear()
 	for i in range(1, players.size()):
-		bots[i] = Bot.new(i * 7 + 3)
+		bots[i] = Bot.new(i * 7 + 3, true)   # (thinking bots - 01:32 "smarter bots")
 	me = 0
 	stage.setup(sim.fighters.map(func(f: Fighter) -> String: return f.character),
 			sim.fighters.map(func(f: Fighter) -> String: return f.name))

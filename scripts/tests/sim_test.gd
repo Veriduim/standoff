@@ -764,6 +764,22 @@ func _test_initiative_faster() -> void:
 			with == 2 and without == 0)
 
 
+func _test_thinking_bot() -> void:
+	_section("Smarter bots (01:32): a thinking bot punishes an enemy stuck in a move's recovery, in reach")
+	var hits := 0
+	for k in 4:   # (a few seeds - it isn't always the same pick, but it should land)
+		var s := _duel("dancer", "dancer", 80.0)
+		var t: Fighter = s.fighters[1]
+		s._start(t, {"move": "sidekick", "x": -1.0})
+		t.frame = 15   # (its hit's gone by - in recovery)
+		var pick := Bot.new(k * 5 + 1, true).choose(s, 0)
+		var evs: Array = s.preview({0: pick}, 30)["events"]
+		if evs.any(func(e: Dictionary) -> bool: return str(e["type"]) == "hit" and int(e["a"]) == 0):
+			hits += 1
+	_check("it lands a punish %d times in 4 (it's not reading their pick - only the state anyone can see)" % hits,
+			hits >= 3)
+
+
 ## Two Dancers with these x-factors on (Sim RULES "xf"), gap apart, facing each other.
 func _xf(rule: String, gap := 300.0) -> Sim:
 	var s := Sim.create([{"character": "dancer"}, {"character": "dancer"}], "ffa", {"xf": rule})

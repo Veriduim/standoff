@@ -1,8 +1,10 @@
 class_name Bot
 extends RefCounted
-## A simple opponent - fills empty seats and plays the test matches. It reads the stage the way a new player would: get
-## close to the nearest enemy, then mix strikes, grabs, guard and parries, with the odd super when there's meter. Every
-## pick is a move and a direction (toward that enemy). Seeded, so a test match plays the same every time.
+## An opponent - fills empty seats and plays the test matches. The quick way (_quick) reads the stage the way a new
+## player would: get close to the nearest enemy, then mix strikes, grabs, guard and parries, with the odd super when
+## there's meter. A thinking bot (`smart` - the game's bots, 19 Oct 01:32 "smarter bots") tries a handful of those picks
+## forward against a few likely answers from the enemy - the same sim the ghost preview runs, the two of them alone -
+## and plays the one that went best. Seeded, so a test match plays the same every time.
 
 const GROUND_HITS := ["jab", "straight", "lowkick", "sidekick", "uppercut", "spin", "sweep", "axekick", "kneedash",
 	"flashkick", "onetwo", "spinfinish", "swaykick", "risingheel", "stomp", "fanslash", "pop", "snapkick", "windmill",
@@ -17,11 +19,18 @@ const SUPERS := ["flurry", "cyclone", "finale"]
 const CLOSE_IN := ["walk", "dash", "roll", "kneedash", "floorslide", "snapstep", "fanstep"]
 const BACK_OFF := ["backstep", "walk", "dash"]
 
+const LOOK := 28        ## (thinking) frames each try is played forward
+const TRIES := 6        ## ...its own picks it tries
+const GUESSES := 3      ## ...the enemy's answers each is tried against
+const NEAR := 380.0     ## ...only with an enemy this close (farther off it's the quick way)
+
 var rng := RandomNumberGenerator.new()
+var smart := false      ## looks ahead before it picks (the game's bots); off = the quick bot (the demo, the tests)
 
 
-func _init(seed_value := 1) -> void:
+func _init(seed_value := 1, think := false) -> void:
 	rng.seed = seed_value
+	smart = think
 
 
 ## What the enemy's running attack will do next: {frame: how many ticks until its next hit is out, height}.
@@ -35,6 +44,126 @@ func _read(t: Fighter) -> Dictionary:
 
 
 func choose(sim: Sim, id: int) -> Dictionary:
+	var quick := _quick(sim, id)
+	if not smart:
+		return quick
+	var f := sim.get_f(id)
+	var t := sim.nearest_enemy(f)
+	if t == null or sim.reeling(f) or f.down > 0 or absf(t.pos.x - f.pos.x) > NEAR:
+		return quick
+	var tries: Array = [quick]
+	for _i in TRIES * 3:   # (a handful of different picks the quick way would make)
+		if tries.size() >= TRIES:
+			break
+		var c := _quick(sim, id)
+		if not tries.any(func(x: Dictionary) -> bool: return str(x["move"]) == str(c["move"])):
+			tries.append(c)
+	var legal := sim.legal_moves(id)
+	if legal.has("block") and not tries.any(func(x: Dictionary) -> bool: return str(x["move"]) == "block"):
+		var read := _read(t)   # (and a block read off their move, parrying on the frame it lands)
+		tries.append({"move": "block", "y": 1.0 if str(read.get("height", "mid")) == "low" else -1.0,
+			"pf": int(read.get("frame", 0))})
+	var answers: Array = []
+	if sim.deciders().has(t.id):   # (what they might do - the quick way's guesses for them)
+		var them := Bot.new(rng.randi())
+		for _i in GUESSES:
+			answers.append(them._quick(sim, t.id))
+	else:
+		answers.append({"move": "hold"})
+	var base := _duel(sim, f, t)
+	var scored: Array = []
+	for c: Dictionary in tries:
+		var sum := 0.0
+		var worst := INF
+		for a: Dictionary in answers:
+			var v := _play(base, c, a)
+			sum += v
+			worst = minf(worst, v)
+		scored.append([0.6 * sum / answers.size() + 0.4 * worst, c])
+	scored.sort_custom(func(a: Array, b: Array) -> bool: return float(a[0]) > float(b[0]))
+	if scored.size() > 1 and float(scored[1][0]) > float(scored[0][0]) - 4.0 and rng.randf() < 0.25:
+		return scored[1][1]   # (now and then the near-best - a bot that always does the same is easy to read)
+	return scored[0][1]
+
+
+## The two of them alone, as saved state (fighter 0 = this bot, 1 = the enemy; their shots kept).
+static func _duel(sim: Sim, f: Fighter, t: Fighter) -> Dictionary:
+	var d := sim.to_dict()
+	var keep := {f.id: 0, t.id: 1}
+	var fs: Array = []
+	for g: Fighter in [f, t]:
+		var gd := g.to_dict()
+		gd["id"] = fs.size()
+		gd["team"] = fs.size()
+		gd["target"] = -1
+		fs.append(gd)
+	d["fighters"] = fs
+	d["mode"] = "ffa"
+	var flying: Array = []
+	for s: Dictionary in d["shots"]:
+		if keep.has(int(s["owner"])):
+			s["owner"] = keep[int(s["owner"])]
+			s["team"] = s["owner"]
+			if s.has("hits"):
+				s["hits"] = (s["hits"] as Array).filter(func(x: Variant) -> bool: return keep.has(int(x))).map(
+						func(x: Variant) -> int: return int(keep[int(x)]))
+			flying.append(s)
+	d["shots"] = flying
+	return d
+
+
+## One try played forward: this pick against that answer until someone can act again (or LOOK frames); how it went
+## for the bot - damage both ways, who's reeling or down, who acts first, the Dancer at her fan's distance.
+func _play(base: Dictionary, mine: Dictionary, theirs: Dictionary) -> float:
+	var s := Sim.from_dict(base)
+	var f := s.fighters[0]
+	var t := s.fighters[1]
+	var hp_f := f.hp
+	var hp_t := t.hp
+	var picks := {}
+	var free := s.deciders()
+	if free.has(0):
+		picks[0] = mine
+	if free.has(1):
+		picks[1] = theirs
+	s.apply(picks)
+	for _i in LOOK:
+		s.step()
+		if s.over():
+			break
+		free = s.deciders()
+		if free.any(func(i: int) -> bool: return s.fighters[i].actionable()):
+			break   # (someone's free again - the exchange is over)
+		if not free.is_empty():
+			var hold := {}
+			for i: int in free:
+				hold[i] = {"move": "hold"}
+			s.apply(hold)
+	var v := float(hp_t - t.hp) - 1.3 * float(hp_f - f.hp)
+	if t.ko:
+		v += 60.0
+	if f.ko:
+		v -= 80.0
+	if t.stun > 0:
+		v += 10.0
+	if f.stun > 0:
+		v -= 12.0
+	if t.down > 0:
+		v += 6.0
+	if f.down > 0:
+		v -= 6.0
+	if f.actionable() and not t.actionable():
+		v += 4.0
+	elif t.actionable() and not f.actionable():
+		v -= 4.0
+	var gap := absf(t.pos.x - f.pos.x)
+	if f.character == "dancer" and gap > 80.0 and gap < 240.0:   # (a spacer: her fan's distance is hers)
+		v += 2.0
+	return v
+
+
+## The quick way: a reasonable pick from the stage as it is, no looking ahead.
+func _quick(sim: Sim, id: int) -> Dictionary:
 	var f := sim.get_f(id)
 	var t := sim.nearest_enemy(f)
 	if sim.reeling(f):   # (in a combo: Burst once it's a real combo or it's low - not on every first hit - else lean away)
