@@ -772,7 +772,7 @@ func _test_thinking_bot() -> void:
 		var t: Fighter = s.fighters[1]
 		s._start(t, {"move": "sidekick", "x": -1.0})
 		t.frame = 15   # (its hit's gone by - in recovery)
-		var pick := Bot.new(k * 5 + 1, true).choose(s, 0)
+		var pick := Bot.new(k * 5 + 1, 2).choose(s, 0)
 		var evs: Array = s.preview({0: pick}, 30)["events"]
 		if evs.any(func(e: Dictionary) -> bool: return str(e["type"]) == "hit" and int(e["a"]) == 0):
 			hits += 1

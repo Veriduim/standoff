@@ -193,6 +193,10 @@ one stage; each attack aims at a picked target.
   HEALTH in YOMI's yellow (the white chunk, the picks' damage in orange), BURST!! and LEVEL named under it, the full
   levels in a round badge; the head row unchanged; CARD_H 72. (A separate YOMI-layout 1v1 HUD was started and dropped
   for this.) Also: the restand state is saved (online lost it each turn) + a check that every fighter variable is.
+- 02:10 "You can make the repo private. Lets do difficulty please" -> the repo's private again; 0.22.0: BOTS Easy /
+  Normal / Hard on the home screen (the LOOK row's place; Look: Smooth / Pixel moved to the buttons bottom left), kept;
+  Easy = the quick bot, Normal thinks a little and plays loose, Hard thinks the most (bot_duel: Normal beat Easy 9 of
+  10, Hard beat Normal 8 of 10; ~10 / ~27 ms a pick on the PC). Online, the host's level runs the empty seats.
 
 ## To tune / later
 - **Match length with 6:** bot matches take 120-270 decision points with 6 fighters (50-90 with 2). At ~10 s a decision

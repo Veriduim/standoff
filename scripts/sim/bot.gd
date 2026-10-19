@@ -2,7 +2,7 @@ class_name Bot
 extends RefCounted
 ## An opponent - fills empty seats and plays the test matches. The quick way (_quick) reads the stage the way a new
 ## player would: get close to the nearest enemy, then mix strikes, grabs, guard and parries, with the odd super when
-## there's meter. A thinking bot (`smart` - the game's bots, 19 Oct 01:32 "smarter bots") tries a handful of those picks
+## there's meter. A thinking bot (Normal / Hard - 19 Oct 01:32 "smarter bots") tries a handful of those picks
 ## forward against a few likely answers from the enemy - the same sim the ghost preview runs, the two of them alone -
 ## and plays the one that went best. Seeded, so a test match plays the same every time.
 
@@ -20,17 +20,23 @@ const CLOSE_IN := ["walk", "dash", "roll", "kneedash", "floorslide", "snapstep",
 const BACK_OFF := ["backstep", "walk", "dash"]
 
 const LOOK := 28        ## (thinking) frames each try is played forward
-const TRIES := 6        ## ...its own picks it tries
-const GUESSES := 3      ## ...the enemy's answers each is tried against
+## By level (Timmy 02:10 "Lets do difficulty please"): 0 Easy - the quick bot; 1 Normal; 2 Hard.
+const LEVELS := ["Easy", "Normal", "Hard"]
+const TRIES := [0, 4, 7]        ## ...its own picks it tries
+const GUESSES := [0, 2, 3]      ## ...the enemy's answers each is tried against
+const LOOSE := [0.0, 0.2, 0.0]  ## ...how often it just plays the quick pick anyway
+const NEAR_BEST := [0.0, 0.4, 0.15]   ## ...how often it takes the near-best (so it can't be read)
+const MARGIN := [0.0, 8.0, 3.0]       ## ...how near "near-best" is
 const NEAR := 380.0     ## ...only with an enemy this close (farther off it's the quick way)
 
 var rng := RandomNumberGenerator.new()
-var smart := false      ## looks ahead before it picks (the game's bots); off = the quick bot (the demo, the tests)
+var level := 0          ## 0 Easy (the quick bot - the demo, the tests), 1 Normal, 2 Hard: they look ahead
+static var chosen := 1  ## the level picked on the home screen (the game's bots, here and the host's online)
 
 
-func _init(seed_value := 1, think := false) -> void:
+func _init(seed_value := 1, lvl := 0) -> void:
 	rng.seed = seed_value
-	smart = think
+	level = clampi(lvl, 0, 2)
 
 
 ## What the enemy's running attack will do next: {frame: how many ticks until its next hit is out, height}.
@@ -45,15 +51,15 @@ func _read(t: Fighter) -> Dictionary:
 
 func choose(sim: Sim, id: int) -> Dictionary:
 	var quick := _quick(sim, id)
-	if not smart:
+	if level == 0 or rng.randf() < LOOSE[level]:
 		return quick
 	var f := sim.get_f(id)
 	var t := sim.nearest_enemy(f)
 	if t == null or sim.reeling(f) or f.down > 0 or absf(t.pos.x - f.pos.x) > NEAR:
 		return quick
 	var tries: Array = [quick]
-	for _i in TRIES * 3:   # (a handful of different picks the quick way would make)
-		if tries.size() >= TRIES:
+	for _i in TRIES[level] * 3:   # (a handful of different picks the quick way would make)
+		if tries.size() >= TRIES[level]:
 			break
 		var c := _quick(sim, id)
 		if not tries.any(func(x: Dictionary) -> bool: return str(x["move"]) == str(c["move"])):
@@ -66,7 +72,7 @@ func choose(sim: Sim, id: int) -> Dictionary:
 	var answers: Array = []
 	if sim.deciders().has(t.id):   # (what they might do - the quick way's guesses for them)
 		var them := Bot.new(rng.randi())
-		for _i in GUESSES:
+		for _i in GUESSES[level]:
 			answers.append(them._quick(sim, t.id))
 	else:
 		answers.append({"move": "hold"})
@@ -81,7 +87,8 @@ func choose(sim: Sim, id: int) -> Dictionary:
 			worst = minf(worst, v)
 		scored.append([0.6 * sum / answers.size() + 0.4 * worst, c])
 	scored.sort_custom(func(a: Array, b: Array) -> bool: return float(a[0]) > float(b[0]))
-	if scored.size() > 1 and float(scored[1][0]) > float(scored[0][0]) - 4.0 and rng.randf() < 0.25:
+	if scored.size() > 1 and float(scored[1][0]) > float(scored[0][0]) - MARGIN[level] \
+			and rng.randf() < NEAR_BEST[level]:
 		return scored[1][1]   # (now and then the near-best - a bot that always does the same is easy to read)
 	return scored[0][1]
 

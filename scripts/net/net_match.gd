@@ -64,7 +64,7 @@ func host_start(lobby_net: LobbyNet, channel_name: String, the_seats: Array, the
 		var s: Dictionary = seats[i]
 		players.append({"name": s["name"], "character": "dancer", "team": int(s.get("team", i))})
 		if int(s["peer"]) == 0:
-			bots[i] = Bot.new(i * 7 + 3, true)
+			bots[i] = Bot.new(i * 7 + 3, Bot.chosen)
 		if int(s["peer"]) == net.id:
 			mine = i
 	start_snap = wire(Sim.create(players, mode, rules).to_dict())
@@ -173,7 +173,7 @@ func _on_left(id: int) -> void:
 			if int(seats[i]["peer"]) == id:
 				seats[i]["peer"] = 0
 				seats[i]["left"] = true   # (theirs to take back if they return - reclaim)
-				bots[i] = Bot.new(i * 7 + 3, true)
+				bots[i] = Bot.new(i * 7 + 3, Bot.chosen)
 				if turn_t >= 0 and sim != null and sim.deciders().has(i) and not picks.has(i):
 					picks[i] = (bots[i] as Bot).choose(sim, i)   # (the bot picks for them now, not at the clock)
 		if turn_t >= 0:

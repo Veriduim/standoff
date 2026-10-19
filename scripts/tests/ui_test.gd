@@ -508,3 +508,22 @@ func _test_clearer_bars() -> void:
 	_check("a pick that would hit: their health shows the damage in orange (%s, %.2f of the bar)" % [pred, share],
 			int(pred.get(1, 0)) > 0 and bar.visible and is_equal_approx(share, float(pred[1]) / g.sim.fighters[1].max_hp))
 	g.queue_free()
+
+
+func _test_bot_levels() -> void:
+	_section("Bot difficulty (02:10): Easy / Normal / Hard on the home screen, kept; the match's bots play it")
+	var g := _screen()
+	var was := Bot.chosen
+	(g.home as HomeScreen).set_level(2)
+	g.start_local(1, "ffa")
+	var hard: int = (g.bots[1] as Bot).level
+	(g.home as HomeScreen).set_level(0)
+	g.start_local(1, "ffa")
+	var easy: int = (g.bots[1] as Bot).level
+	var cfg := ConfigFile.new()
+	cfg.load(HomeScreen.SETTINGS)
+	_check("Hard then Easy picked: the bots are %s then %s, and it's saved (%s)" % [Bot.LEVELS[hard], Bot.LEVELS[easy],
+			cfg.get_value("home", "bots", -1)], hard == 2 and easy == 0 and int(cfg.get_value("home", "bots", -1)) == 0
+			and g.home.find_child("BotsNormal", true, false) != null and g.home.find_child("Look", true, false) != null)
+	(g.home as HomeScreen).set_level(was)
+	g.queue_free()

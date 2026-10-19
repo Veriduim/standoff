@@ -82,26 +82,26 @@ func _ready() -> void:
 		b.add_theme_stylebox_override("pressed", Ui.box(Color("#3a3d4d"), 10))
 		b.add_theme_stylebox_override("normal", Ui.box(Color("#1e2029"), 10))
 		modes.add_child(b)
-	v.add_child(_heading("LOOK"))
-	var looks := HBoxContainer.new()
-	looks.add_theme_constant_override("separation", 8)
-	v.add_child(looks)
-	var look_group := ButtonGroup.new()
+	v.add_child(_heading("BOTS"))   # (02:10 "Lets do difficulty please" - in the LOOK row's place; that's bottom left)
+	var levels := HBoxContainer.new()
+	levels.add_theme_constant_override("separation", 6)
+	v.add_child(levels)
+	var level_group := ButtonGroup.new()
 	var cfg := ConfigFile.new()
 	if cfg.load(SETTINGS) == OK:
 		pixel = bool(cfg.get_value("look", "pixel", false))
-	for l: Array in [["Smooth", false], ["Pixel", true]]:
-		var px: bool = l[1]
-		var on_look := func() -> void: set_pixel(px)
-		var b := Ui.button(str(l[0]), on_look, 20)
-		b.name = "Look" + str(l[0])
+		Bot.chosen = clampi(int(cfg.get_value("home", "bots", 1)), 0, 2)
+	for k in Bot.LEVELS.size():
+		var lvl: int = k
+		var b := Ui.button(str(Bot.LEVELS[k]), func() -> void: set_level(lvl), 20)
+		b.name = "Bots" + str(Bot.LEVELS[k])
 		b.toggle_mode = true
-		b.button_group = look_group
-		b.button_pressed = px == pixel
-		b.custom_minimum_size = Vector2(160, 46)
+		b.button_group = level_group
+		b.button_pressed = k == Bot.chosen
+		b.custom_minimum_size = Vector2(105, 46)
 		b.add_theme_stylebox_override("pressed", Ui.box(Color("#3a3d4d"), 10))
 		b.add_theme_stylebox_override("normal", Ui.box(Color("#1e2029"), 10))
-		looks.add_child(b)
+		levels.add_child(b)
 	var go := Ui.button("FIGHT", func() -> void: fight.emit(opponents, mode, colour), 34)
 	go.name = "Fight"
 	go.custom_minimum_size = Vector2(0, 62)
@@ -127,6 +127,12 @@ func _ready() -> void:
 	for s in ["normal", "hover", "focus"]:
 		how.add_theme_stylebox_override(s, Ui.box(Color("#1e2029e8"), 12))
 	add_child(how)
+	var look := Ui.button(_look_label(), func() -> void: set_pixel(not pixel), 18)   # (the look switch, moved here)
+	look.name = "Look"
+	look.custom_minimum_size = Vector2(150, 46)
+	for s in ["normal", "hover", "focus"]:
+		look.add_theme_stylebox_override(s, Ui.box(Color("#1e2029e8"), 12))
+	add_child(look)
 	var ver := Ui.label(VERSION + "  ·  the Dancer: her war fans and her Tempo", 15, Color("#6b6b78"))
 	ver.name = "Version"
 	add_child(ver)
@@ -171,9 +177,24 @@ func _set_colour(i: int) -> void:
 	title.queue_redraw()
 
 
+## Easy / Normal / Hard - the game's bots; saved.
+func set_level(lvl: int) -> void:
+	Bot.chosen = clampi(lvl, 0, 2)
+	var cfg := ConfigFile.new()
+	cfg.load(SETTINGS)
+	cfg.set_value("home", "bots", Bot.chosen)
+	cfg.save(SETTINGS)
+
+
+func _look_label() -> String:
+	return "Look: Pixel" if pixel else "Look: Smooth"
+
+
 ## Smooth or pixel - saved, so the game opens the way it was left.
 func set_pixel(on: bool) -> void:
 	pixel = on
+	if has_node("Look"):
+		(get_node("Look") as Button).text = _look_label()
 	var cfg := ConfigFile.new()
 	cfg.load(SETTINGS)
 	cfg.set_value("look", "pixel", on)
@@ -208,6 +229,7 @@ func _layout() -> void:
 	var snd := get_node("Sound") as Button
 	snd.position = Vector2(24, vp.y - 92)
 	(get_node("HowToPlay") as Button).position = Vector2(184, vp.y - 92)
+	(get_node("Look") as Button).position = Vector2(344, vp.y - 92)
 
 
 
