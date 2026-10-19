@@ -63,6 +63,10 @@ func run(game: Control, out: String) -> void:
 	(game.lobby.modal.find_child("Pick%d" % (others[2] as LobbyNet).id, true, false) as Button).button_pressed = true
 	await _wait(20)
 	await _snap(out.path_join("L4_new_match.png"))
+	game.lobby.modal.visible = false
+	game.lobby._set_rules(game.lobby.PRESETS["Ranked"])   # (the Chess Timer on - the Ranked preset)
+	await _wait(20)
+	await _snap(out.path_join("L4b_chess_rules.png"))
 	game.lobby.modal.visible = false   # (Nearby: the list, then this phone hosting - on this PC only)
 	game.lobby.leave_lobby()
 	LobbyNet.use_loop = false

@@ -46,6 +46,8 @@ var _play_pos := 0.0
 var _shown := -1
 var _lag := {}               ## fighter id -> [HP shown by the white chunk, seconds before it drains, HP now]
 var _turn_left := 0.0        ## seconds left on your turn
+var _bank := -1.0            ## (the Chess Timer) seconds left in your bank for every turn; -1 = no Chess Timer
+var _bank_out := false       ## ...it ran out: the minimum turn clock every turn from here
 var _ask := ""               ## what your turn asks (the banner)
 var _replay_log: Array = []   ## every turn as it played this match (frames, events, shots, first tick) - Replay
 var _replaying := false
@@ -478,6 +480,8 @@ func start_online(nm: NetMatch) -> void:
 	stage.time_scale = speed
 	stage.show_tick(sim.record(), [], sim.record_shots())
 	_lag.clear()
+	_bank = float(nm.rules.get("bank", 10)) * 60.0 if int(nm.rules.get("chess", 0)) == 1 else -1.0
+	_bank_out = false
 	home.visible = false
 	lobby.visible = false
 	fast_btn.visible = true
@@ -577,6 +581,8 @@ func _next() -> void:
 	if free.has(me) and not auto_me:
 		phase = "pick"
 		_turn_left = float(net_match.rules.get("turn", TURN_SECONDS)) if net_match != null else TURN_SECONDS
+		if chess_timer():   # (the bank runs while you decide; empty - the minimum, every turn)
+			_turn_left = _bank if not _bank_out else float(net_match.rules.get("min_turn", 15))
 		_tick_at = -1
 		sfx.play("ui_turn", -8.0)
 		var f := sim.fighters[me]
@@ -741,7 +747,16 @@ func can_undo() -> bool:
 
 ## The line over the stage on your turn, with the seconds left.
 func _banner() -> void:
-	banner.text = "%s  ·  %d" % [_ask, ceili(_turn_left)]
+	if chess_timer() and not _bank_out:
+		var s := ceili(_turn_left)
+		banner.text = "%s  ·  bank %d:%02d" % [_ask, s / 60, s % 60]
+	else:
+		banner.text = "%s  ·  %d" % [_ask, ceili(_turn_left)]
+
+
+## YOMI's Chess Timer is on for this match (a lobby rule).
+func chess_timer() -> bool:
+	return _bank >= 0.0 and net_match != null
 
 
 func _commit(mine: Dictionary) -> void:
@@ -801,6 +816,12 @@ func _process(delta: float) -> void:
 		return
 	if phase == "pick":   # (the turn clock: when it runs out, what's picked goes in)
 		_turn_left -= delta
+		if chess_timer() and not _bank_out:   # (the bank only runs while you decide - locking in stops it)
+			_bank = maxf(0.0, _turn_left)
+			if _turn_left <= 0.0:   # (out: not a loss - the minimum turn clock from now on, this turn too)
+				_bank_out = true
+				_turn_left = float(net_match.rules.get("min_turn", 15))
+				_tick_at = -1
 		_banner()
 		var whole := ceili(_turn_left)
 		if whole <= 5 and whole >= 1 and whole != _tick_at:   # (the last five seconds tick)

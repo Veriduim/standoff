@@ -234,3 +234,46 @@ func _test_nearby() -> void:
 	LanHost.bind_to = "*"
 	a.queue_free()
 	b.queue_free()
+
+
+func _test_chess_timer() -> void:
+	_section("YOMI's Chess Timer (a lobby rule): a bank for every turn, only running while you decide; then the minimum")
+	LobbyNet.use_loop = true
+	LoopLobby.reset()
+	var a := _screen()
+	var b := _screen()
+	a.lobby.open(0)
+	a.lobby.create_lobby()
+	_poll([a, b])
+	a.lobby._set_rules({"chess": 1, "bank": 1, "min_turn": 10})
+	_poll([a, b])
+	var rows: Array = a.lobby.rules_box.get_children().map(func(r: Node) -> String:
+		return (r.get_child(0) as Label).text if r.get_child_count() > 0 and r.get_child(0) is Label else "")
+	_check("on: the lobby shows the bank and the minimum instead of the turn clock (%s)" % [rows],
+			rows.has("Time bank (each)") and rows.has("Then each turn") and not rows.has("Turn clock"))
+	b.lobby.open(1)
+	b.lobby.join(str(LoopLobby.list()[0]["code"]))
+	_poll([a, b])
+	a.lobby.challenge([b.lobby.net.id], 0, "ffa")
+	_poll([a, b])
+	b.lobby.answer(true)
+	_poll([a, b], 6)
+	for _i in 400:
+		if a.phase == "pick":
+			break
+		a.finish_playback()
+		_poll([a, b], 1)
+	var first: float = a._turn_left
+	a._process(20.0)
+	var spent: float = a._bank
+	_check("your first turn has the whole bank (%.0f s), and deciding spends it (%.0f left)" % [first, spent],
+			a.chess_timer() and is_equal_approx(first, 60.0) and is_equal_approx(spent, 40.0)
+			and a.banner.text.contains("bank 0:40"))
+	a._process(45.0)
+	_check("run dry: not a loss - the minimum turn clock instead (%.0f s, \"%s\")" % [a._turn_left, a.banner.text],
+			a._bank_out and a.phase == "pick" and is_equal_approx(a._turn_left, 10.0) and not a.banner.text.contains("bank"))
+	a._process(11.0)
+	_check("...and when that runs out, what's picked goes in", a.phase != "pick")
+	for g: Control in [a, b]:
+		g.queue_free()
+	LobbyNet.use_loop = false

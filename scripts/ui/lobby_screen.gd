@@ -14,12 +14,15 @@ signal closed                ## back to the home screen
 
 const SETTINGS := "user://settings.cfg"
 ## The rules the owner can set: [key, label, min, max, step, shown as].
-const RULE_ROWS := [["turn", "Turn clock", 10, 120, 5, "%d s"], ["round", "Round", 20, 120, 10, "%d s"],
+const RULE_ROWS := [["chess", "Chess timer", 0, 1, 1, "onoff"], ["turn", "Turn clock", 10, 120, 5, "%d s"],
+	["bank", "Time bank (each)", 1, 30, 1, "%d min"], ["min_turn", "Then each turn", 5, 60, 5, "%d s"],
+	["round", "Round", 20, 120, 10, "%d s"],
 	["start", "Start distance (1v1)", 0, 600, 50, "%d"], ["width", "Stage width", 1200, 3200, 200, "%d"],
 	["damage", "Damage", 0.5, 2.0, 0.25, "x%.2f"], ["hitstun", "Hitstun", 0.5, 2.0, 0.25, "x%.2f"],
 	["meter", "Starting meter", 0.0, 3.0, 0.5, "%.1f bars"], ["ceiling", "Ceiling", 400, 2000, 100, "%d"]]
 const PRESETS := {"Default": {}, "Quick": {"round": 2400, "damage": 1.25}, "Thinking": {"turn": 90},
-	"Big stage": {"width": 2800}}
+	"Big stage": {"width": 2800}, "Ranked": {"chess": 1, "bank": 15, "min_turn": 15, "round": 3000, "meter": 1.5, "width": 1200, "ceiling": 600}}
+## ("Ranked" = the wiki's YomiRanked / Starlight rules: 15 min banks, 15 s after, 1.5 bars, a smaller stage)
 const LIST_COLS := [440, 200, 120]   ## the list's columns: lobby name, version, players
 const MAIN := Color("#2b4f8a")       ## the main action's blue (as on the home screen)
 
@@ -457,9 +460,15 @@ func _build_room() -> void:
 	var right := _column(330)
 	room_view.add_child(right)
 	right.add_child(Ui.label("RULES", 15, Color("#8a8a9c")))
+	var rules_scroll := ScrollContainer.new()   # (more rules than a short screen holds - they scroll, the chat stays)
+	rules_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	rules_scroll.size_flags_stretch_ratio = 3.0
+	rules_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	right.add_child(rules_scroll)
 	rules_box = VBoxContainer.new()
+	rules_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	rules_box.add_theme_constant_override("separation", 2)
-	right.add_child(rules_box)
+	rules_scroll.add_child(rules_box)
 	right.add_child(Ui.label("CHAT", 15, Color("#8a8a9c")))
 	chat_log = RichTextLabel.new()
 	chat_log.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -621,15 +630,32 @@ func _fill_rules() -> void:
 		c.queue_free()
 	var rules := rules_now()
 	var owner := net.is_owner()
+	var chess := int(rules.get("chess", 0)) == 1
+	if owner:   # (the presets first - the rules below scroll on a short screen)
+		var pre := HFlowContainer.new()   # (five presets: they wrap on a narrow column)
+		pre.add_theme_constant_override("h_separation", 6)
+		pre.add_theme_constant_override("v_separation", 4)
+		pre.add_child(Ui.label("Presets", 15, Color("#8a8a9c")))
+		for p: String in PRESETS:
+			var preset: Dictionary = PRESETS[p]
+			var pb := Ui.button(p, func() -> void: _set_rules(preset), 14)
+			pb.custom_minimum_size = Vector2(0, 40)
+			pre.add_child(pb)
+		rules_box.add_child(pre)
+	else:
+		rules_box.add_child(Ui.label("(the lobby's owner sets these)", 13, Color("#6b6b78")))
 	for r: Array in RULE_ROWS:
 		var key := str(r[0])
+		if (key == "turn" and chess) or (key in ["bank", "min_turn"] and not chess):   # (the Chess Timer's own two)
+			continue
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 4)
 		var l := Ui.label(str(r[1]), 15, Color("#c9c9d6"))
 		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(l)
 		var val: float = float(rules[key]) / (60.0 if key == "round" else 1.0)
-		var shown := str(r[5]) % (int(val) if str(r[5]).contains("%d") else val)
+		var shown := ("on" if val > 0.5 else "off") if str(r[5]) == "onoff" \
+				else str(r[5]) % (int(val) if str(r[5]).contains("%d") else val)
 		if key == "start" and val == 0.0:
 			shown = "spread out"
 		if owner:
@@ -645,20 +671,6 @@ func _fill_rules() -> void:
 			more.custom_minimum_size = Vector2(46, 34)
 			row.add_child(more)
 		rules_box.add_child(row)
-	if owner:
-		var pre := HBoxContainer.new()
-		pre.add_theme_constant_override("separation", 6)
-		var pl := Ui.label("Presets", 15, Color("#8a8a9c"))
-		pl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		pre.add_child(pl)
-		for p: String in PRESETS:
-			var preset: Dictionary = PRESETS[p]
-			var pb := Ui.button(p, func() -> void: _set_rules(preset), 14)
-			pb.custom_minimum_size = Vector2(0, 40)
-			pre.add_child(pb)
-		rules_box.add_child(pre)
-	else:
-		rules_box.add_child(Ui.label("(the lobby's owner sets these)", 13, Color("#6b6b78")))
 
 
 ## The lobby's rules now (the owner's, on top of the defaults).
