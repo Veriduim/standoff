@@ -51,6 +51,34 @@ That was for study only: the screens here are our own layout, built from the sam
   - played to the end, and all three must end the same;
   - first run 20:59: everything passed, the match took 30.6 s.
 
+## Nearby: the same Wi-Fi or a phone's hotspot (0.16.0)
+Timmy, 19 Oct 00:38: "Whats local multiplayer over Bluetooth or the likes?". The options I gave him:
+1. hotspot / same Wi-Fi;
+2. Bluetooth / Wi-Fi Direct (needs an Android plugin);
+3. pass-and-play.
+
+00:43: "1 sounds like a pretty good soultion to me! I didnt know that worked".
+- **The lobby screen** has two tabs: **Online** (the server above) and **Nearby (Wi-Fi / hotspot)**.
+  - In Nearby, **Create lobby** makes this phone the server: `LanHost` (`scripts/net/lan_host.gd`).
+  - Its lobby line shows its address(es) and a **Copy address** button: "keep Standoff open".
+- **The host phone** runs the online server's rules in-process (`LoopLobby`).
+  - It uses WebSockets on port **47270**, with the same URLs and messages, so every `LobbyNet` works unchanged. The host
+    phone's own one connects through 127.0.0.1.
+  - Matches, chat, spectating and reconnecting all work as online.
+  - When the host leaves, it sends everyone a `bye` ("The host closed the lobby"), then closes their sockets 0.4 s later.
+    A WebSocket that closes drops what arrived with the close.
+- **Finding it** (`LanFinder`, `scripts/net/lan_finder.gd`):
+  - the host tells the network about itself every second (UDP broadcast to port 47272 — on the general address and
+    each network's own `.255`, as a hotspot isn't the phone's default route);
+  - finders also ask "standoff?" on port 47271 every 1.5 s, and the host answers them directly;
+  - a typed address is asked directly. That's the fallback when broadcasts don't get through (some phones filter
+    them).
+- **No internet needed.** The phones only need to be on one network: a router's Wi-Fi, or everyone joining the host
+  phone's hotspot.
+- **Test:** `online_test` `_test_nearby`, on real sockets bound to 127.0.0.1 (`LanHost.bind_to`, so the PC's firewall
+  isn't asked). A phone hosts, another joins by address, chat, a full match that ends the same on both, then the host
+  leaves. `--lobbyshots` adds `L5_nearby_list` / `L6_nearby_host`.
+
 ## Not done yet
 - YOMI's chess-clock timer.
 - Saving your own rule presets by name.

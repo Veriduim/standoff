@@ -14,7 +14,8 @@ signal status(state: String, detail: String)     ## "open" | "closed" | "error"
 
 ## The lobby server: relay/ on Timmy's Cloudflare (deployed 18 Oct 20:57); --lobbies=<url> picks another (main.gd).
 const DEFAULT_URL := "wss://standoff-relay.blissfulzephyr.workers.dev"
-static var url := DEFAULT_URL
+static var url := DEFAULT_URL          ## where this phone's lobby is (the server, or a nearby host phone)
+static var online_url := DEFAULT_URL   ## the online server (url goes back to it from Nearby)
 static var use_loop := false
 var reached := true          ## the last list fetch got an answer from the server
 var last_code := ""          ## the lobby this phone was in, and the name it used - to get back in (00:11)
@@ -152,10 +153,12 @@ func fetch_list(cb: Callable) -> void:
 	if _http == null:
 		_http = HTTPRequest.new()
 		add_child(_http)
+	if _http.get_http_client_status() != HTTPClient.STATUS_DISCONNECTED:   # (one still going: this one instead)
+		_http.cancel_request()
 	if _http.request_completed.is_connected(_on_list):
 		_http.request_completed.disconnect(_on_list)
 	_http.request_completed.connect(_on_list.bind(cb))
-	if _http.request(url.replace("wss://", "https://").replace("ws://", "http://") + "/lobbies") != OK:
+	if _http.request(online_url.replace("wss://", "https://").replace("ws://", "http://") + "/lobbies") != OK:
 		reached = false
 		cb.call([])
 
@@ -176,10 +179,12 @@ func poll() -> void:
 		var st := ws.get_ready_state()
 		if st == WebSocketPeer.STATE_OPEN:
 			_opened = true
-			while ws.get_available_packet_count() > 0:
-				var d: Variant = JSON.parse_string(ws.get_packet().get_string_from_utf8())
-				if d is Dictionary:
-					_handle(d)
+		while ws != null and ws.get_available_packet_count() > 0:   # (read what came, even with the close - a goodbye)
+			var d: Variant = JSON.parse_string(ws.get_packet().get_string_from_utf8())
+			if d is Dictionary:
+				_handle(d)
+		if ws == null:   # (a goodbye: left already)
+			pass
 		elif st == WebSocketPeer.STATE_CLOSED:
 			ws = null
 			if id != 0 or not _opened:
@@ -228,5 +233,10 @@ func _handle(d: Dictionary) -> void:
 			return
 		"error":
 			status.emit("error", str(d.get("msg", "")))
+			return
+		"bye":   # (a nearby host closing its lobby: no point trying to get back in)
+			var why := str(d.get("msg", "The lobby closed"))
+			leave()
+			status.emit("ended", why)
 			return
 	changed.emit()

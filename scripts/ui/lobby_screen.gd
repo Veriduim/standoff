@@ -53,6 +53,11 @@ var modal_body: VBoxContainer
 var _out := {}                ## my match invite going out: {ch, invited: [ids], answers: {id: true/false}, bots, mode}
 var _in := {}                 ## the invite I'm looking at: {from, ch, ...}
 var _waiting: NetMatch
+var nearby := false           ## the Nearby tab: lobbies on this Wi-Fi / hotspot, hosted by a phone (00:43)
+var finder: LanFinder         ## (Nearby) the lobbies around
+var host: LanHost             ## (Nearby) the lobby this phone hosts
+var _want_ip := ""            ## (Nearby) an address typed in: into its lobby as soon as it answers
+var _list_t := 0.0
 var _tries := 0               ## reconnect tries since the line dropped        ## accepted - waiting for the host to start
 
 
@@ -69,6 +74,10 @@ func _ready() -> void:
 	net.status.connect(_on_status)
 	net.direct.connect(_on_direct)
 	net.channel.connect(_on_channel)
+	finder = LanFinder.new()
+	finder.name = "LanFinder"
+	add_child(finder)
+	finder.set_process(false)
 	var cfg := ConfigFile.new()
 	if cfg.load(SETTINGS) == OK:
 		my_name = str(cfg.get_value("online", "name", my_name))
@@ -105,6 +114,9 @@ func open(colour: int) -> void:
 		_show("room")
 	else:
 		_show("list")
+		if nearby:
+			finder.start()
+			finder.set_process(true)
 		refresh()
 
 
@@ -136,7 +148,19 @@ func _build_list() -> void:
 	list_view = VBoxContainer.new()
 	(list_view as VBoxContainer).add_theme_constant_override("separation", 10)
 	add_child(list_view)
-	list_view.add_child(Ui.label("ONLINE LOBBIES", 30, Color("#f2f2f7")))
+	var tabs := HBoxContainer.new()   # (Online: the lobby server; Nearby: this Wi-Fi or a phone's hotspot - 00:43)
+	tabs.add_theme_constant_override("separation", 8)
+	list_view.add_child(tabs)
+	tabs.add_child(Ui.label("LOBBIES", 30, Color("#f2f2f7")))
+	var mode_group := ButtonGroup.new()
+	for m: Array in [["Online", false], ["Nearby (Wi-Fi / hotspot)", true]]:
+		var on: bool = m[1]
+		var b := Ui.button(str(m[0]), func() -> void: set_nearby(on), 18)
+		b.name = "ModeNearby" if on else "ModeOnline"
+		b.toggle_mode = true
+		b.button_group = mode_group
+		b.button_pressed = on == nearby
+		tabs.add_child(b)
 	var top := HBoxContainer.new()
 	top.add_theme_constant_override("separation", 8)
 	list_view.add_child(top)
@@ -153,7 +177,7 @@ func _build_list() -> void:
 	code_edit = _edit("", 110)
 	code_edit.placeholder_text = "lobby code"
 	top.add_child(code_edit)
-	var join_code := _main(Ui.button("Join", func() -> void: join(code_edit.text), 18))
+	var join_code := _main(Ui.button("Join", func() -> void: join_typed(code_edit.text), 18))
 	join_code.name = "JoinCode"
 	top.add_child(join_code)
 	var head := HBoxContainer.new()
@@ -176,6 +200,7 @@ func _build_list() -> void:
 	list_box.add_theme_constant_override("separation", 4)
 	scroll.add_child(list_box)
 	note = Ui.label("", 16, Color("#ffb86b"))
+	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART   # (a long one wraps instead of widening the screen)
 	list_view.add_child(note)
 	var make := HBoxContainer.new()
 	make.add_theme_constant_override("separation", 8)
@@ -219,7 +244,45 @@ func _set_max(n: int) -> void:
 	max_label.text = str(max_players)
 
 
+## Online or Nearby. Nearby: no server - the lobbies are phones on this Wi-Fi (or one phone's hotspot) hosting.
+func set_nearby(on: bool) -> void:
+	nearby = on
+	if not on:
+		LobbyNet.url = LobbyNet.online_url
+		finder.stop()
+	else:
+		finder.start()
+	finder.set_process(on)
+	code_edit.placeholder_text = "host's address" if on else "lobby code"
+	code_edit.custom_minimum_size.x = 180.0 if on else 110.0
+	public_btn.visible = not on
+	(list_view.find_child("ModeNearby", true, false) as Button).set_pressed_no_signal(on)
+	(list_view.find_child("ModeOnline", true, false) as Button).set_pressed_no_signal(not on)
+	lobbies = []
+	refresh()
+
+
+func _process(delta: float) -> void:
+	if not visible or not nearby or view != "list":
+		return
+	_list_t -= delta
+	if _list_t <= 0.0:   # (the nearby list keeps itself up to date)
+		_list_t = 1.0
+		lobbies = finder.list()
+		_fill_list()
+	if _want_ip != "":
+		for l: Dictionary in finder.list():
+			if str(l["ip"]) == _want_ip:
+				_want_ip = ""
+				join_lobby(l)
+				break
+
+
 func refresh() -> void:
+	if nearby:
+		lobbies = finder.list()
+		_fill_list()
+		return
 	note.text = "Looking for lobbies..."
 	net.fetch_list(func(found: Array) -> void:
 		lobbies = found
@@ -238,7 +301,7 @@ func _fill_list() -> void:
 		var row := Button.new()
 		row.name = "Lobby" + code
 		row.custom_minimum_size = Vector2(0, 48)
-		row.pressed.connect(func() -> void: join(code))
+		row.pressed.connect(func() -> void: join_lobby(l))
 		var cols := HBoxContainer.new()   # (the columns, under their headings)
 		cols.set_anchors_preset(Control.PRESET_FULL_RECT)
 		cols.offset_left = 16
@@ -254,14 +317,60 @@ func _fill_list() -> void:
 			cols.add_child(cl)
 		list_box.add_child(row)
 		shown += 1
+	if nearby:
+		note.text = "" if shown > 0 else ("No lobbies nearby yet. Create one (your phone hosts it), or type the host's "
+				+ "address - it shows in their lobby. Everyone on the same Wi-Fi, or on the host's hotspot.")
+		return
 	note.text = "" if shown > 0 else ("No lobbies yet - create one" if net.reached else "Can't reach the lobby server")
 
 
 func create_lobby() -> void:
 	note.text = "Creating..."
 	var lname := lname_edit.text.strip_edges()
-	net.create(LobbyNet.new_code(), my_name, lname if lname != "" else my_name + "'s Lobby", public_btn.button_pressed,
+	var code := LobbyNet.new_code()
+	if nearby:   # (this phone hosts it: the server runs here, and this phone joins it like anyone else)
+		_stop_host()
+		host = LanHost.new()
+		host.name = "LanHost"
+		add_child(host)
+		if not host.start(code):
+			_stop_host()
+			note.text = "Couldn't host here - is Standoff already hosting on this phone?"
+			return
+		LobbyNet.url = "ws://127.0.0.1:%d" % LanHost.WS_PORT
+	net.create(code, my_name, lname if lname != "" else my_name + "'s Lobby", public_btn.button_pressed or nearby,
 			max_players)
+
+
+func _stop_host() -> void:
+	if host != null:
+		host.stop()   # (it says goodbye, then frees itself)
+		host = null
+
+
+## A row in the list: online by its code; nearby at its host's address.
+func join_lobby(l: Dictionary) -> void:
+	if nearby:
+		LobbyNet.url = "ws://%s:%d" % [str(l["ip"]), int(l.get("port", LanHost.WS_PORT))]
+	join(str(l["code"]))
+
+
+## The box by Join: online a lobby code; nearby the host's address (or a code from the list).
+func join_typed(text: String) -> void:
+	text = text.strip_edges()
+	if not nearby or text == "":
+		join(text)
+		return
+	if text.contains("."):   # (an address - ask it, in when it answers)
+		_want_ip = text
+		finder.ask_at(text)
+		note.text = "Looking for a lobby at %s..." % text
+		return
+	for l: Dictionary in finder.list():
+		if str(l["code"]) == text:
+			join_lobby(l)
+			return
+	note.text = "No lobby %s nearby - type the host's address (it shows in their lobby)" % text
 
 
 func join(code: String) -> void:
@@ -278,14 +387,18 @@ func _on_status(state: String, detail: String) -> void:
 			_tries = 0
 			net.set_member({"status": "idle", "colour": my_colour, "match": ""})
 			_show("room")
+		"ended":   # (the nearby host closed it: off the list, and why)
+			finder.found.erase(net.last_code)
+			if view == "room":
+				_show("list")
+				refresh()
+			note.text = detail
 		"reconnecting":
 			code_label.text = "Reconnecting to lobby %s..." % net.last_code
 		"closed" when net.want_back and _tries < 8:   # (the line dropped / the phone was put aside: back in, 00:11)
 			_tries += 1
 			code_label.text = "Reconnecting to lobby %s..." % net.last_code
-			get_tree().create_timer(0.3 if _tries == 1 else 1.5).timeout.connect(func() -> void:
-				if not net.in_lobby() and net.want_back:
-					net.rejoin())
+			get_tree().create_timer(0.3 if _tries == 1 else 1.5).timeout.connect(_retry)
 		"error", "closed":
 			if net.want_back and view == "room":   # (it couldn't get back in - the lobby's gone)
 				net.want_back = false
@@ -295,8 +408,15 @@ func _on_status(state: String, detail: String) -> void:
 				_show("list")
 
 
+func _retry() -> void:
+	if not net.in_lobby() and net.want_back:
+		net.rejoin()
+
+
 func _close() -> void:
 	visible = false
+	if nearby and not net.in_lobby():
+		finder.set_process(false)
 	closed.emit()
 
 
@@ -322,6 +442,7 @@ func _build_room() -> void:
 	code_row.add_theme_constant_override("separation", 8)
 	mid.add_child(code_row)
 	code_label = Ui.label("", 16, Color("#a7a7b8"))
+	code_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART   # (the hosting line wraps - the chat stays on screen)
 	code_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	code_row.add_child(code_label)
 	var copy := Ui.button("Copy code", func() -> void: _copy_code(), 15)   # (send it without the lobby going - 00:11)
@@ -379,14 +500,18 @@ func _scroll_list(parent: Control) -> VBoxContainer:
 
 func _copy_code() -> void:
 	var code := str(net.lobby.get("code", ""))
+	if host != null and not LanHost.addresses().is_empty():   # (hosting nearby: the address is what they need)
+		code = LanHost.addresses()[0]
 	if code == "":
 		return
 	DisplayServer.clipboard_set(code)
 	var b := room_view.find_child("CopyCode", true, false) as Button
 	b.text = "Copied %s" % code
-	get_tree().create_timer(2.0).timeout.connect(func() -> void:
-		if is_instance_valid(b):
-			b.text = "Copy code")
+	get_tree().create_timer(2.0).timeout.connect(_copy_label)   # (a method: gone with the screen, no dangling lambda)
+
+
+func _copy_label() -> void:
+	(room_view.find_child("CopyCode", true, false) as Button).text = "Copy address" if host != null else "Copy code"
 
 
 func _send_chat() -> void:
@@ -396,6 +521,7 @@ func _send_chat() -> void:
 
 func leave_lobby() -> void:
 	net.leave()
+	_stop_host()   # (hosting: the lobby goes with you)
 	_show("list")
 	refresh()
 
@@ -406,6 +532,16 @@ func _refresh_room() -> void:
 	title.text = str(net.lobby.get("name", ""))
 	code_label.text = "Lobby code %s  ·  %s  ·  %d / %d" % [str(net.lobby.get("code", "")),
 		"public" if net.lobby.get("public", true) else "private", net.members.size(), int(net.lobby.get("max", 8))]
+	if host != null:   # (hosting nearby: the address anyone can type if their list doesn't find it)
+		code_label.text = "Nearby lobby  ·  your address %s  ·  %d / %d  ·  keep Standoff open" % [
+			" / ".join(LanHost.addresses()) if not LanHost.addresses().is_empty() else "(no Wi-Fi?)",
+			net.members.size(), int(net.lobby.get("max", 8))]
+	elif nearby:
+		code_label.text = "Nearby lobby  ·  %d / %d" % [net.members.size(), int(net.lobby.get("max", 8))]
+	var copy := room_view.find_child("CopyCode", true, false) as Button
+	copy.visible = not nearby or host != null
+	if not copy.text.begins_with("Copied"):
+		_copy_label()
 	for c in members_box.get_children():
 		members_box.remove_child(c)
 		c.queue_free()

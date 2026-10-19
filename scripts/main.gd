@@ -13,6 +13,7 @@ func _ready() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--lobbies="):   # (another lobby server - a local one: ws://127.0.0.1:8787)
 			LobbyNet.url = arg.trim_prefix("--lobbies=")
+			LobbyNet.online_url = LobbyNet.url
 	if "--livecheck" in OS.get_cmdline_user_args():   # (dev: a match on the real lobby server - scripts/dev/live_check.gd)
 		var live: Node = load("res://scripts/dev/live_check.gd").new()
 		add_child(live)

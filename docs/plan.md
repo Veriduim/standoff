@@ -168,6 +168,9 @@ one stage; each attack aims at a picked target.
     by `Sfx` (scripts/ui/sfx.gd) on every event, swing, super, drop landing, menu button, your turn and the last 5 s
     of the clock; a limiter on the master bus; quiet behind the home screen; Sound on/off on the home screen and in
     the ☰ menu, kept. `SOUND=1 tools/reel.sh` keeps the audio.
+- 00:57 "its side by side instead of stacked" (the result panel) -> 0.15.1: Rematch / Replay / Menu stacked.
+- 0.16.0: **Nearby play** - a phone hosts the lobby on the Wi-Fi / its hotspot, the others find it (docs/lobby.md
+  "Nearby").
 
 ## To tune / later
 - **Match length with 6:** bot matches take 120-270 decision points with 6 fighters (50-90 with 2). At ~10 s a decision

@@ -167,3 +167,70 @@ func _test_rejoin() -> void:
 	a.queue_free()
 	b.queue_free()
 	LobbyNet.use_loop = false
+
+
+## Frames until `cond` holds (or `secs` pass) - real sockets need real time.
+func _until(cond: Callable, secs := 3.0) -> bool:
+	var end := Time.get_ticks_msec() + int(secs * 1000.0)
+	while Time.get_ticks_msec() < end:
+		if cond.call():
+			return true
+		await get_tree().process_frame
+	return bool(cond.call())
+
+
+func _test_nearby() -> void:
+	_section("Nearby play (00:43 \"1 sounds like a pretty good soultion\"): a phone hosts, another finds it and joins")
+	LobbyNet.use_loop = false
+	LoopLobby.reset()
+	LanHost.bind_to = "127.0.0.1"   # (this PC only)
+	var keep := LobbyNet.url
+	var a := _screen()
+	var b := _screen()
+	a.lobby.open(0)
+	a.lobby.set_nearby(true)
+	a.lobby.lname_edit.text = "Nearby Test"
+	a.lobby.create_lobby()
+	var hosting: bool = await _until(func() -> bool: return a.lobby.view == "room")
+	_check("Create on Nearby: this phone hosts the lobby and is in it, its owner", hosting and a.lobby.host != null
+			and LanHost.active != null and a.lobby.net.is_owner() and a.lobby.title.text == "Nearby Test")
+	b.lobby.open(1)
+	b.lobby.set_nearby(true)
+	b.lobby.join_typed("127.0.0.1")   # (the host's address typed in: asked, and in when it answers)
+	var joined: bool = await _until(func() -> bool: return b.lobby.view == "room" and a.lobby.net.members.size() == 2)
+	_check("the other phone finds it at the host's address and joins (%s)" % [b.lobby.finder.list()], joined
+			and b.lobby.title.text == "Nearby Test" and b.lobby.code_label.text.begins_with("Nearby lobby"))
+	b.lobby.net.say("hello from nearby")
+	var heard: bool = await _until(func() -> bool: return a.lobby.net.log.any(func(e: Array) -> bool:
+			return str(e[1]) == "hello from nearby"))
+	_check("chat goes through the host phone", heard)
+	a.lobby.challenge([b.lobby.net.id], 0, "ffa")
+	var asked: bool = await _until(func() -> bool: return b.lobby.modal.visible and not b.lobby._in.is_empty())
+	b.lobby.answer(true)
+	var started: bool = await _until(func() -> bool: return a.net_match != null and b.net_match != null)
+	_check("a challenge over the Wi-Fi: the match starts on both", asked and started)
+	if started:
+		a.auto_me = true   # (bots play for both - the picks go phone to phone through the host phone)
+		b.auto_me = true
+		a._next()
+		b._next()
+		var end := Time.get_ticks_msec() + 90000
+		while Time.get_ticks_msec() < end and not (a.phase == "over" and b.phase == "over"):
+			for g: Control in [a, b]:
+				g.finish_playback()
+			await get_tree().process_frame
+		_check("...played to the end, the same on both (tick %d / %d, %s / %s)" % [a.sim.tick, b.sim.tick, a.phase,
+				b.phase], a.phase == "over" and b.phase == "over" and a.sim.tick == b.sim.tick
+				and a.sim.winners() == b.sim.winners())
+		for g: Control in [a, b]:
+			g._leave_match()
+		await _until(func() -> bool: return a.lobby.view == "room" and b.lobby.view == "room")
+	a.lobby.leave_lobby()
+	var dropped: bool = await _until(func() -> bool: return b.lobby.view == "list", 6.0)
+	_check("the host leaving takes the lobby with it: the other phone is back at the list, told why (%s)"
+			% b.lobby.note.text, LanHost.active == null and dropped and b.lobby.note.text == "The host closed the lobby")
+	b.lobby.set_nearby(false)
+	LobbyNet.url = keep
+	LanHost.bind_to = "*"
+	a.queue_free()
+	b.queue_free()

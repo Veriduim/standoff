@@ -63,4 +63,21 @@ func run(game: Control, out: String) -> void:
 	(game.lobby.modal.find_child("Pick%d" % (others[2] as LobbyNet).id, true, false) as Button).button_pressed = true
 	await _wait(20)
 	await _snap(out.path_join("L4_new_match.png"))
+	game.lobby.modal.visible = false   # (Nearby: the list, then this phone hosting - on this PC only)
+	game.lobby.leave_lobby()
+	LobbyNet.use_loop = false
+	LanHost.bind_to = "127.0.0.1"
+	game.lobby.set_nearby(true)
+	await _wait(30)
+	await _snap(out.path_join("L5_nearby_list.png"))
+	game.lobby.lname_edit.text = "Timmy's Standoff"
+	game.lobby.create_lobby()
+	for _i in 120:
+		if game.lobby.view == "room":
+			break
+		await get_tree().process_frame
+	await _wait(10)
+	await _snap(out.path_join("L6_nearby_host.png"))
+	game.lobby.leave_lobby()
+	await _wait(5)
 	get_tree().quit()
