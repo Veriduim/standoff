@@ -200,31 +200,55 @@ static func fan(ci: CanvasItem, pivot: Vector2, dir: Vector2, radius: float, ope
 	var gold := metal
 	gold.a = col.a
 	var ink := Color(0.02, 0.02, 0.03, col.a)
+	var tri := PackedVector2Array()   # (02:39 "choppy ... with 4": the ink edge and the leaf, one batched draw - not 16)
+	var cols := PackedColorArray()
 	if edge:   # (the ink edge: the leaf a little bigger, under it)
 		var e := maxf(1.5, radius * 0.09)
 		var ea := e / maxf(radius, 1.0)
 		for k in n:
 			var u0 := lerpf(a0 - ea, a1 + ea, float(k) / n)
 			var u1 := lerpf(a0 - ea, a1 + ea, float(k + 1) / n)
-			ci.draw_colored_polygon(PackedVector2Array([pivot + Vector2.from_angle(u0) * (radius + e),
-				pivot + Vector2.from_angle(u1) * (radius + e), pivot + Vector2.from_angle(u1) * maxf(0.0, inner - e),
-				pivot + Vector2.from_angle(u0) * maxf(0.0, inner - e)]), ink)
-	for k in n:   # (the leaf, a quad a fold - every piece convex)
+			_quad(tri, cols, pivot + Vector2.from_angle(u0) * (radius + e), pivot + Vector2.from_angle(u1) * (radius + e),
+				pivot + Vector2.from_angle(u1) * maxf(0.0, inner - e), pivot + Vector2.from_angle(u0) * maxf(0.0, inner - e), ink)
+	for k in n:   # (the leaf, a quad a fold)
 		var u0 := lerpf(a0, a1, float(k) / n)
 		var u1 := lerpf(a0, a1, float(k + 1) / n)
 		var c := col.lightened(0.18) if k % 2 == 0 else col
-		ci.draw_colored_polygon(PackedVector2Array([pivot + Vector2.from_angle(u0) * radius,
-			pivot + Vector2.from_angle(u1) * radius, pivot + Vector2.from_angle(u1) * inner,
-			pivot + Vector2.from_angle(u0) * inner]), c)
+		_quad(tri, cols, pivot + Vector2.from_angle(u0) * radius, pivot + Vector2.from_angle(u1) * radius,
+			pivot + Vector2.from_angle(u1) * inner, pivot + Vector2.from_angle(u0) * inner, c)
+	tris(ci, tri, cols)
 	var w := maxf(1.0, radius * 0.07)
-	for k in 5:   # (the ribs, from the pivot)
+	var ribs := PackedVector2Array()   # (the ribs, from the pivot - one draw)
+	for k in 5:
 		var u := lerpf(a0, a1, float(k) / 4.0)
-		ci.draw_line(pivot, pivot + Vector2.from_angle(u) * radius, gold.darkened(0.2), w, true)
+		ribs.append(pivot)
+		ribs.append(pivot + Vector2.from_angle(u) * radius)
+	ci.draw_multiline(ribs, gold.darkened(0.2), w, true)
 	var rim := PackedVector2Array()
 	for k in n + 1:
 		rim.append(pivot + Vector2.from_angle(lerpf(a0, a1, float(k) / n)) * radius)
 	ci.draw_polyline(rim, gold, maxf(1.5, radius * 0.11), true)
 	ci.draw_circle(pivot, w * 1.3, gold, true, -1.0, true)
+
+
+## Two triangles of a quad (a, b, c, d round its edge) into a batch.
+static func _quad(tri: PackedVector2Array, cols: PackedColorArray, a: Vector2, b: Vector2, c: Vector2, d: Vector2,
+		col: Color) -> void:
+	for p: Vector2 in [a, b, c, a, c, d]:
+		tri.append(p)
+		cols.append(col)
+
+
+## A batch of triangles (every three points one, each point its colour) in one draw call - the 2D renderer otherwise
+## sends each polygon on its own (a phone wants few draws).
+static func tris(ci: CanvasItem, tri: PackedVector2Array, cols: PackedColorArray) -> void:
+	if tri.is_empty():
+		return
+	var idx := PackedInt32Array()
+	idx.resize(tri.size())
+	for i in tri.size():
+		idx[i] = i
+	RenderingServer.canvas_item_add_triangle_array(ci.get_canvas_item(), idx, tri, cols)
 
 
 ## A pose's extent (joints + head), for fitting it in a box.

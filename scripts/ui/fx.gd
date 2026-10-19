@@ -37,6 +37,8 @@ var trails := {}             ## fighter id -> {pts: [[tip, pivot], ...], c: colo
 var flash := {}              ## fighter id -> seconds they're drawn white (the impact frame)
 var afters: Array = []       ## afterimages: {id, rec: Sim.record row, age, life}
 const BIG := 1.3              ## every effect this much bigger (22:40 "elevate this a lot")
+const AFTER_EACH := 2        ## afterimages a fighter at most, and in all (each is a whole figure to draw)
+const AFTER_ALL := 6
 const INK := Color("#3b3f52")    ## the dark starburst behind a hit (23:05)
 var dim := 0.0               ## how dark the stage goes round a super (0-1); `dim_id` is drawn over it
 var dim_id := -1
@@ -300,6 +302,11 @@ func splash(amount: float, at: Vector2) -> void:
 
 ## A fading copy of a fast mover (StageView calls it every couple of ticks they're quick).
 func afterimage(id: int, rec: Array) -> void:
+	var mine := afters.filter(func(a: Dictionary) -> bool: return int(a["id"]) == id)
+	if mine.size() >= AFTER_EACH:   # (capped - each copy is a whole figure to draw; 02:39 "choppy ... with 4")
+		afters.erase(mine[0])
+	if afters.size() >= AFTER_ALL:
+		afters.pop_front()
 	afters.append({"id": id, "rec": rec.duplicate(), "age": 0.0, "life": 0.32})
 
 
@@ -515,8 +522,13 @@ func draw_back(st: StageView) -> void:
 		var pts: Array[Vector2] = []
 		for i in n:
 			pts.append(at + Vector2.from_angle(float(p["r"]) + i * TAU / n) * s * float(sp[i]))
+		var tri := PackedVector2Array()   # (one batched draw, not 36 - 02:39 "choppy ... with 4")
+		var cols := PackedColorArray()
 		for i in n:
-			st.draw_colored_polygon(PackedVector2Array([at, pts[i], pts[(i + 1) % n]]), c)
+			for q: Vector2 in [at, pts[i], pts[(i + 1) % n]]:
+				tri.append(q)
+				cols.append(c)
+		Stick.tris(st, tri, cols)
 
 
 ## The mod-study pieces drawn behind the fighters: a throw's dark sphere, a super's ring on the floor, a glide's ribbon.
@@ -565,6 +577,8 @@ func draw_parts(st: StageView) -> void:
 			"sweep":   # (a giant fan sweeping open: from up behind her round to the way she faces (x = facing; 0 = up))
 				var face := float(p["x"])
 				var e := 1.0 - pow(1.0 - minf(1.0, t / 0.45), 3.0)
+				if e < 0.02:   # (not open yet - nothing to draw, and no zero-size shapes)
+					continue
 				var a0 := -PI / 2.0 - 0.9 if face != 0.0 else -PI / 2.0 - 1.2   # (worked out facing right, then mirrored)
 				var a1 := 0.25 if face != 0.0 else -PI / 2.0 + 1.2
 				var mx := face if face != 0.0 else 1.0
@@ -593,6 +607,8 @@ func draw_parts(st: StageView) -> void:
 			"slash":   # (a fan's cut across the hit: a thin crescent drawn out fast, white at its core; x = the way)
 				var e := 1.0 - pow(1.0 - minf(1.0, t / 0.3), 2.0)
 				var fade := 1.0 - maxf(0.0, (t - 0.35) / 0.65)
+				if fade < 0.03:   # (gone - no zero-width shape)
+					continue
 				var way := 1.0 if float(p["x"]) >= 0.0 else -1.0
 				var dir := Vector2.from_angle(-0.55 * absf(float(p["x"])) * way) * way
 				var nrm := Vector2(-dir.y, dir.x)

@@ -123,7 +123,7 @@ func _motion_fx(prev: Array) -> void:
 		var speed := maxf(absf(float(r[0]) - float(p[0])), absf(float(r[1]) - float(p[1])) * 0.8)
 		var fast := int(r[5]) != 4 and (speed > 5.5 or kind in ["super", "burst"])
 		_after_n[i] = int(_after_n.get(i, 0)) + 1 if fast else 0
-		if fast and int(_after_n[i]) % 2 == 1:   # (a fading copy every other tick they're quick - fx keeps them longer)
+		if fast and int(_after_n[i]) % 3 == 1:   # (a fading copy every third tick they're quick - fx keeps them longer)
 			fx.afterimage(i, r)
 		var dy := float(r[1]) - float(p[1])
 		_vx[i] = float(r[0]) - float(p[0])
@@ -430,7 +430,7 @@ func _draw() -> void:
 	for a: Dictionary in fx.afters:   # (afterimages - fading copies behind fast movers)
 		var id := int(a["id"])
 		if id < frame.size():
-			_figure(id, a["rec"], 0.5 * (1.0 - float(a["age"]) / float(a["life"])))
+			_figure(id, a["rec"], 0.5 * (1.0 - float(a["age"]) / float(a["life"])), true)
 	for i in frame.size():   # (the knocked out first - the standing stay on top)
 		if int(frame[i][5]) == 4:
 			_figure(i, frame[i], 1.0)
@@ -598,7 +598,7 @@ func _boxes(i: int, r: Array) -> void:
 			draw_rect(rect, Color(1.0, 0.3, 0.35, 0.9), false, 2.0)
 
 
-func _figure(i: int, r: Array, alpha: float) -> void:
+func _figure(i: int, r: Array, alpha: float, bare := false) -> void:
 	var ch := _char(i)
 	var h := float(Moves.stats(ch)["height"]) / 100.0
 	var base := Vector2(float(r[0]), float(r[1]))
@@ -648,10 +648,10 @@ func _figure(i: int, r: Array, alpha: float) -> void:
 			var k := 0.5 + 0.5 * sin(_time * 1.9 + i * 1.1)
 			pose = Poses.blend(pose, Poses.get_pose("idle2"), k * (1.0 if alpha >= 1.0 else 0.0))
 		var pre := Stick._place(pose, w2s(base), sc, face)
-		if fans >= 2:
+		if fans >= 2 and not bare:   # (an afterimage: just her - its fans would double what it costs to draw)
 			Stick.fan_at(self, pre, "b", face, sc, open, col, alpha >= 1.0, Stick.STEEL if alpha >= 1.0 else col)
 	var pts := Stick.draw(self, pose, w2s(base), sc, face, col, Stick.limb(sc), head_r, alpha >= 1.0)
-	if dancer and fans >= 1:   # (ghosts and afterimages: their fans in their own faded colour, not bright steel)
+	if dancer and fans >= 1 and not bare:   # (ghosts: their fans in their own faded colour, not bright steel)
 		Stick.fan_at(self, pts, "f", face, sc, open, col, alpha >= 1.0, Stick.STEEL if alpha >= 1.0 else col)
 	if alpha < 1.0:
 		return

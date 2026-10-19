@@ -212,6 +212,12 @@ one stage; each attack aims at a picked target.
   meter full, an endless round, Undo; not kept as a replay). 02:34 "Cant see myself anymore" (a screenshot: a ghost
   going high had the camera so high the floor was under the bar - from 0.23.0's whole-path framing) -> the camera
   always keeps the floor on screen. The home buttons sized by their words (they overlapped).
+- 02:36 "Replays save as Jsons. I cant share those with my friends?" -> replay codes: Share puts it on the lobby
+  server (Shelf, 30 days) under a 6-digit code; Replays -> type a code -> Watch code. 02:39 "I just want to be able to
+  send my friend a short video in messenger? Also ... the replay was choppy on my ohone with 4" -> 0.24.0: drawing
+  ~2x lighter (scripts/dev/perf.gd, `--perf=25 --opp=3`: 4 fighters 1,581 draw calls a frame -> 813, worst 3,635 ->
+  914; fans and starbursts batched - Stick.tris; afterimages capped 2 a fighter / 6 in all, every 3rd tick, no fans).
+  Video: Godot can't record video on a phone by itself - the phone's screen recorder for now.
 
 ## To tune / later
 - **Match length with 6:** bot matches take 120-270 decision points with 6 fighters (50-90 with 2). At ~10 s a decision
