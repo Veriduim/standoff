@@ -186,6 +186,13 @@ one stage; each attack aims at a picked target.
 - 0.19.0: **restands** and **initiative** on more moves (the wiki; docs/mechanics.md). 01:46 the Bruiser, later: "a mix
   of the Nakmuay and Super Smash bros little mac".
 - 0.20.0: **step 4 - effects per move**: fan cuts, kick thumps, the ripple's dust, a super cut-in (docs/mechanics.md).
+- 0.21.0: **smarter bots** (Bot.smart: each pick tried forward against a few likely answers, the best taken - it never
+  sees the player's pick; scripts/dev/bot_duel.gd: 8 of 8 against the quick bot, ~24 ms a pick on the PC). 01:56 "match
+  the health, burst and level meters more to YOMIH style"; 02:01 "I want this working for the 6 mode but im worried it
+  will clutter ... I like where we put our resources btw! Its just the bars I want go be clearer!" -> every card:
+  HEALTH in YOMI's yellow (the white chunk, the picks' damage in orange), BURST!! and LEVEL named under it, the full
+  levels in a round badge; the head row unchanged; CARD_H 72. (A separate YOMI-layout 1v1 HUD was started and dropped
+  for this.) Also: the restand state is saved (online lost it each turn) + a check that every fighter variable is.
 
 ## To tune / later
 - **Match length with 6:** bot matches take 120-270 decision points with 6 fighters (50-90 with 2). At ~10 s a decision

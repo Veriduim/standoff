@@ -2,7 +2,7 @@ class_name Ui
 extends RefCounted
 ## Shared look for the screens: labels, buttons and rounded boxes in the game's dark style.
 
-const CARD_H := 64.0
+const CARD_H := 72.0   ## the top band: the cards (02:01 - a little taller for clearer bars)
 const FONT := 22
 
 

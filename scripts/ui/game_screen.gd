@@ -26,6 +26,7 @@ var sfx: Sfx                 ## the sounds (stage events, the menus, your turn)
 var _tick_at := -1           ## the last whole second the turn clock ticked on
 var pick: PickPanel
 var cards: HBoxContainer
+var _pred := {}              ## fighter id -> the damage the picks being looked at would do (the cards' orange)
 var banner: Label
 var home: HomeScreen
 var lobby: LobbyScreen
@@ -355,41 +356,86 @@ func _build_cards() -> void:
 		extras.add_theme_font_size_override("normal_font_size", 12 if w < 190.0 else 13)
 		extras.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		head.add_child(extras)
-		var hpb := _hp_bar(stage.colour_of(f.id))
+		var hpb := _hp_bar()
 		v.add_child(hpb)
-		var mb := _bar("Meter", Color("#ffd166"), 6)
-		for k in [1, 2]:   # (meter in three bars: two dividers)
-			var cut := ColorRect.new()
-			cut.color = Color("#0e0f14")
-			cut.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			mb.add_child(cut)
-			cut.anchor_left = k / 3.0
-			cut.anchor_right = k / 3.0
-			cut.anchor_bottom = 1.0
-			cut.offset_left = -1.0
-			cut.offset_right = 1.0
-		v.add_child(mb)
-		v.add_child(_bar("Burst", Color("#6fd3ff"), 4))
+		var gauges := HBoxContainer.new()   # (BURST!! and LEVEL side by side under the health - YOMI's, 02:01)
+		gauges.add_theme_constant_override("separation", 4)
+		gauges.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		v.add_child(gauges)
+		var burst := _named_bar("Burst", Color("#4fb8ff"), "BURST!!")
+		var level := HBoxContainer.new()
+		level.add_theme_constant_override("separation", 3)
+		level.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		level.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var badge := Label.new()   # (the full levels, in a round badge)
+		badge.name = "Level"
+		badge.text = "0"
+		badge.custom_minimum_size = Vector2(20, 18)
+		badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		badge.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		badge.add_theme_font_size_override("font_size", 13)
+		badge.add_theme_stylebox_override("normal", Ui.box(Color("#0e0f14"), 9))
+		(badge.get_theme_stylebox("normal") as StyleBoxFlat).set_content_margin_all(0)
+		(badge.get_theme_stylebox("normal") as StyleBoxFlat).border_color = Color("#ffd166")
+		(badge.get_theme_stylebox("normal") as StyleBoxFlat).set_border_width_all(2)
+		badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var meter := _named_bar("Meter", Color("#ffd166"), "LEVEL")
+		level.add_child(badge)
+		level.add_child(meter)
+		gauges.add_child(burst)
+		gauges.add_child(level)
 		cards.add_child(p)
+		if mirror and f.id == 1:   # (the right one's the other way round: its gauges and its badge by the middle)
+			gauges.move_child(level, 0)
+			level.move_child(badge, 1)
 		if mirror and f.id == 1:
 			for b in p.find_children("*", "ProgressBar", true, false):
 				(b as ProgressBar).fill_mode = ProgressBar.FILL_END_TO_BEGIN
 	_update_cards()
 
 
-## HP in their colour over a white chunk: the HP just lost shows white a moment, then drains away (pick 10).
-func _hp_bar(col: Color) -> Control:
+## HEALTH: YOMI's yellow over a white chunk - the HP just lost shows white a moment, then drains away (pick 10) - and
+## in orange, the damage the picks being looked at would do (YOMI's predicted damage, 02:01).
+func _hp_bar() -> Control:
 	var stack := Control.new()
 	stack.name = "HPStack"
-	stack.custom_minimum_size = Vector2(0, 12)
+	stack.custom_minimum_size = Vector2(0, 16)
 	stack.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var lag := _bar("Lag", Color(1, 1, 1, 0.85), 12)
-	var hp := _bar("HP", col, 12)
+	var lag := _bar("Lag", Color(1, 1, 1, 0.85), 16)
+	var hp := _bar("HP", Color("#ffd23f"), 16)
 	hp.add_theme_stylebox_override("background", StyleBoxEmpty.new())
 	for b: ProgressBar in [lag, hp]:
 		b.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		stack.add_child(b)
 		b.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var pred := ColorRect.new()   # (orange: placed over the end of the yellow by _update_cards)
+	pred.name = "Pred"
+	pred.color = Color("#ff8a3d")
+	pred.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	pred.visible = false
+	stack.add_child(pred)
+	return stack
+
+
+## A thin gauge with its name on it (BURST!!, LEVEL).
+func _named_bar(bar_name: String, col: Color, label: String) -> Control:
+	var stack := Control.new()
+	stack.custom_minimum_size = Vector2(0, 18)
+	stack.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	stack.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var b := _bar(bar_name, col, 18)
+	b.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	stack.add_child(b)
+	b.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var l := Ui.label(label, 11, Color("#f2f2f7"))
+	l.name = bar_name + "Name"
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	l.add_theme_constant_override("outline_size", 4)
+	l.add_theme_color_override("font_outline_color", Color(0.02, 0.02, 0.03))
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	stack.add_child(l)
+	l.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	return stack
 
 
@@ -430,13 +476,34 @@ func _update_cards(rec: Array = []) -> void:
 		var lb := card.find_child("Lag", true, false) as ProgressBar
 		lb.max_value = f.max_hp
 		lb.value = float(l[0])
-		var mb := card.find_child("Meter", true, false) as ProgressBar
-		mb.max_value = Sim.METER_MAX
-		mb.value = meter
+		var mb := card.find_child("Meter", true, false) as ProgressBar   # (LEVEL: the next level filling; the badge, the full)
+		var levels := int(meter / float(Sim.BAR))
+		mb.max_value = Sim.BAR
+		mb.value = Sim.BAR if levels >= Sim.METER_MAX / Sim.BAR else meter - levels * Sim.BAR
+		var badge := card.find_child("Level", true, false) as Label
+		badge.text = str(levels)
+		badge.add_theme_color_override("font_color", Color("#ffd166") if levels > 0 else Color("#6b6b78"))
+		var pv := int(_pred.get(f.id, 0))   # (the orange: what the picks being looked at would take)
+		var pr := card.find_child("Pred", true, false) as ColorRect
+		pr.visible = pv > 0 and hp > 0.0
+		if pr.visible:   # (by anchors - a share of the bar, whatever its size)
+			var fa := clampf((hp - float(pv)) / float(f.max_hp), 0.0, 1.0)
+			var fb := clampf(hp / float(f.max_hp), 0.0, 1.0)
+			var mirrored := sim.fighters.size() == 2 and f.id == 1
+			pr.anchor_top = 0.0
+			pr.anchor_bottom = 1.0
+			pr.anchor_left = 1.0 - fb if mirrored else fa
+			pr.anchor_right = 1.0 - fa if mirrored else fb
+			pr.offset_left = 0.0
+			pr.offset_right = 0.0
+			pr.offset_top = 0.0
+			pr.offset_bottom = 0.0
 		var bb := card.find_child("Burst", true, false) as ProgressBar   # (the Burst gauge - bright when it's full)
 		bb.max_value = Sim.BURST_FULL
 		bb.value = float(rec[f.id][8]) if not rec.is_empty() and rec[f.id].size() > 8 else float(f.burst)
 		bb.modulate = Color(1.6, 1.6, 1.6) if bb.value >= Sim.BURST_FULL else Color(0.75, 0.75, 0.75)
+		(card.find_child("BurstName", true, false) as Label).modulate = Color.WHITE if bb.value >= Sim.BURST_FULL \
+				else Color(0.7, 0.7, 0.75)
 		var fcs := int(rec[f.id][9]) if not rec.is_empty() and rec[f.id].size() > 9 else f.fc
 		var airs := int(rec[f.id][10]) if not rec.is_empty() and rec[f.id].size() > 10 else Sim.AIR_OPTIONS - f.air_moves
 		var ex := card.find_child("Extras", true, false) as RichTextLabel
@@ -446,6 +513,18 @@ func _update_cards(rec: Array = []) -> void:
 		if ex.text != text:
 			ex.text = text
 		card.modulate = Color(1, 1, 1, 0.45) if hp <= 0.0 else Color.WHITE
+
+
+## The damage each fighter would take from the picks being looked at (the ghost preview) - YOMI's orange.
+func _predicted() -> Dictionary:
+	var out := {}
+	if pick == null or phase != "pick":
+		return out
+	for e: Dictionary in pick.preview_events:
+		if str(e.get("type", "")) == "hit":
+			var d := int(e.get("d", -1))
+			out[d] = int(out.get(d, 0)) + int(e.get("dmg", 0))
+	return out
 
 
 ## The x-factors on trial on a card: the form (Flow / Snap / Floor), the beats (pink), the fans in hand (gold).
@@ -837,6 +916,10 @@ func _commit(mine: Dictionary) -> void:
 func _process(delta: float) -> void:
 	_post()
 	sfx.quiet = phase == "menu"   # (the demo behind the home screen plays silently)
+	var pred := _predicted()   # (the orange on the cards follows the picks as they change)
+	if pred != _pred:
+		_pred = pred
+		_update_cards()
 	clock.visible = phase != "menu" and sim != null
 	if clock.visible:
 		var left := maxi(0, sim.round_len - (_first_tick + maxi(_shown, 0) if phase == "play" else sim.tick))

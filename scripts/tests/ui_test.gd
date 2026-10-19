@@ -481,3 +481,30 @@ func _test_how_to_play() -> void:
 			and is_equal_approx(g._turn_left, t0))
 	g.how.close()
 	g.queue_free()
+
+
+func _test_clearer_bars() -> void:
+	_section("Clearer bars, YOMI's way, on every card (02:01): HEALTH yellow + orange, BURST!!, LEVEL with its badge")
+	var g := _screen()
+	for n: int in [1, 5]:
+		g.start_local(n, "ffa")
+		g.sim.fighters[0].meter = Sim.BAR + Sim.BAR / 2
+		g._update_cards()
+		var card: Node = g.cards.get_child(0)
+		var badge := (card.find_child("Level", true, false) as Label).text
+		var part := (card.find_child("Meter", true, false) as ProgressBar).value
+		_check("%d fighters: BURST!! and LEVEL named on every card; a level and a half = badge %s, the next half-full (%d)"
+				% [n + 1, badge, part], g.cards.get_child_count() == n + 1 and badge == "1"
+				and is_equal_approx(part, float(Sim.BAR / 2)) and card.find_child("BurstName", true, false) != null
+				and card.find_child("MeterName", true, false) != null)
+	g.start_local(1, "ffa")
+	g.sim.fighters[0].pos.x = -30.0   # (close enough that a Straight lands)
+	g.sim.fighters[1].pos.x = 30.0
+	g.pick.select("straight")
+	g._process(0.0)
+	var pred: Dictionary = g._pred
+	var bar := g.cards.get_child(1).find_child("Pred", true, false) as ColorRect
+	var share := bar.anchor_right - bar.anchor_left
+	_check("a pick that would hit: their health shows the damage in orange (%s, %.2f of the bar)" % [pred, share],
+			int(pred.get(1, 0)) > 0 and bar.visible and is_equal_approx(share, float(pred[1]) / g.sim.fighters[1].max_hp))
+	g.queue_free()
