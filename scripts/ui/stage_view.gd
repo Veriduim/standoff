@@ -62,6 +62,12 @@ var _spin := {}              ## fighter id -> how far round a launched fighter h
 var _after_n := {}           ## fighter id -> ticks they've been moving fast (an afterimage every other one)
 var _land := {}              ## fighter id -> ticks of landing squash left (weight - 19:38)
 var _vx := {}                ## fighter id -> how far they moved last tick (they lean into it)
+var _vy := {}                ## ...and up / down (squash and stretch - 06:38 "Try the rest except 6")
+var _prev: Array = []        ## the tick before this one (a strike's smear runs from where the limb was)
+var _head := {}              ## fighter id -> [offset, velocity] - the head on a spring, trailing fast moves
+var _fans := {}              ## "id:side" -> [angle offset, angular velocity] - her fans on a spring, lagging the arm
+var _sprung := {}            ## fighter id -> the _time their springs last stepped (once a frame, however often drawn)
+var _dt := 0.016
 var _tick_n := 0
 var _glow: GradientTexture2D
 var advantage := {}          ## your pick: enemy id -> the ticks you're free before them (drawn "+N" under them)
@@ -81,11 +87,16 @@ func setup(chars: Array, fighter_names: Array) -> void:
 	_after_n.clear()
 	_land.clear()
 	_vx.clear()
+	_vy.clear()
+	_prev = []
+	_head.clear()
+	_fans.clear()
 	advantage = {}
 
 
 func show_tick(rec: Array, events: Array = [], flying: Array = []) -> void:
 	var prev := frame
+	_prev = prev
 	frame = rec
 	shots = flying
 	for sh: Array in flying:   # (a thrown fan trails a ribbon of her colour - the mods' beams)
@@ -134,6 +145,7 @@ func _motion_fx(prev: Array) -> void:
 			fx.trail_bit(tr, Vector2(float(r[0]), float(r[1]) - 40.0), colour_of(i), _tick_n * 11 + i)
 		var dy := float(r[1]) - float(p[1])
 		_vx[i] = float(r[0]) - float(p[0])
+		_vy[i] = dy
 		if mv == "glide" and int(r[5]) == 0 and absf(_vx[i]) > 2.0:   # (Silk Glide: a ribbon of her colour along the
 			fx.ribbon(Vector2(float(p[0]), -16.0), Vector2(float(r[0]), -16.0), colour_of(i))   # floor - the mods' beams)
 		if float(p[1]) < -6.0 and float(r[1]) >= -0.5 and int(r[5]) != 4:   # (landed: squash, and dust if it was a drop)
@@ -359,6 +371,7 @@ func _striking(i: int, mv: String, f: int) -> String:
 
 func _process(delta: float) -> void:
 	_time += delta
+	_dt = clampf(delta * time_scale, 0.0, 0.05)
 	if not ghost.is_empty() and ghost_play:
 		_ghost_i = (_ghost_i + 1) % (ghost.size() + 20)   # (a short hold on the last pose before it loops)
 	fx.update(delta * time_scale)
@@ -710,8 +723,17 @@ func _figure(i: int, r: Array, alpha: float, bare := false) -> void:
 		var mid := hip + Vector2(0, -14)
 		for j: String in Poses.JOINTS:
 			pose[j] = mid + ((pose[j] as Vector2) - mid).rotated(float(_spin[i]))
+	var live := alpha >= 1.0 and not bare
+	if live:   # (06:38 - the head trails fast moves on a spring, and squash and stretch)
+		_spring_step(i, r)
+		var off: Vector2 = (_head.get(i, [Vector2.ZERO, Vector2.ZERO]) as Array)[0]
+		pose["head"] = (pose["head"] as Vector2) + off
+		pose["neck"] = (pose["neck"] as Vector2) + off * 0.35
+		pose = _squash(i, r, pose)
 	var dancer := ch == "dancer"
 	var sc := h * zoom
+	if live:
+		_smear(i, r, pose, base, sc, face, col)
 	var open := 0.0
 	var fans := 0
 	if dancer:   # (21:59 "feel like a dancer. With proper fans": her fans and a sway while she stands - 22:26 "Just go
@@ -724,13 +746,15 @@ func _figure(i: int, r: Array, alpha: float, bare := false) -> void:
 			pose = Poses.blend(pose, Poses.get_pose("idle2"), k * (1.0 if alpha >= 1.0 else 0.0))
 		var pre := Stick._place(pose, w2s(base), sc, face)
 		if fans >= 2 and not bare:   # (an afterimage: just her - its fans would double what it costs to draw)
-			Stick.fan_at(self, pre, "b", face, sc, open, col, alpha >= 1.0, Stick.STEEL if alpha >= 1.0 else col, ink)
+			Stick.fan_at(self, pre, "b", face, sc, open, col, alpha >= 1.0, Stick.STEEL if alpha >= 1.0 else col, ink,
+					_fan_turn(i, "b", pre, live))
 	if ch == "bruiser" and int(r[5]) == 0 and str(r[3]) in ["", "wait"] and float(r[1]) >= -1.0:   # (a boxer bouncing
 		var kb := 0.5 + 0.5 * sin(_time * 5.4 + i * 1.1)                                               # on his toes)
 		pose = Poses.blend(pose, Poses.get_pose("b_idle2"), kb * (1.0 if alpha >= 1.0 else 0.0))
 	var pts := Stick.draw(self, pose, w2s(base), sc, face, col, Stick.limb(sc), head_r, alpha >= 1.0, ink, ch)
 	if dancer and fans >= 1 and not bare:   # (ghosts: their fans in their own faded colour, not bright steel)
-		Stick.fan_at(self, pts, "f", face, sc, open, col, alpha >= 1.0, Stick.STEEL if alpha >= 1.0 else col, ink)
+		Stick.fan_at(self, pts, "f", face, sc, open, col, alpha >= 1.0, Stick.STEEL if alpha >= 1.0 else col, ink,
+				_fan_turn(i, "f", pts, live))
 	if alpha < 1.0:
 		return
 	if alpha >= 1.0 and r.size() > 15 and int(r[15]) > 0 and int(r[5]) != 4:   # (Tempo: shards of her colour orbit her,
@@ -767,6 +791,118 @@ func _grit_aura(pts: Dictionary, sc: float) -> void:
 			var c2 := Color("#ffd27a")
 			c2.a = 0.9 * (1.0 - u)
 			draw_circle(sp, maxf(1.0, 2.2 * sc / 100.0 * 1.6), c2, true, -1.0, true)
+
+
+## 06:38 "Try the rest except 6" - 3 smear frames, 4 squash and stretch, 5 lag:
+const HEAD_LAG := 0.5        ## the head's spring: it trails this much of how fast they move (pose units a tick)...
+const HEAD_MAX := 9.0        ## ...at most this far
+const HEAD_STIFF := 260.0    ## ...pulled back this hard, damped this much (under-damped: it overshoots when they stop)
+const HEAD_DAMP := 16.0
+const FAN_STIFF := 170.0     ## her fans: their spring - they swing on after the arm and settle
+const FAN_DAMP := 11.0
+const FAN_MAX := 0.9
+const SMEAR_PX := 14.0       ## a strike's limb moving this far (screen px) in a tick leaves a smear
+
+
+## The springs, once a frame: the head trailing the body's movement.
+func _spring_step(i: int, r: Array) -> void:
+	if float(_sprung.get(i, -1.0)) == _time:
+		return
+	_sprung[i] = _time
+	var face := float(r[2])
+	var v := Vector2(float(_vx.get(i, 0.0)) * face, float(_vy.get(i, 0.0)))
+	if int(r[5]) == 4 or fx.frozen():
+		v = Vector2.ZERO
+	var target := (-v * HEAD_LAG).limit_length(HEAD_MAX)
+	var st: Array = _head.get(i, [Vector2.ZERO, Vector2.ZERO])
+	var off: Vector2 = st[0]
+	var vel: Vector2 = st[1]
+	vel += ((target - off) * HEAD_STIFF - vel * HEAD_DAMP) * _dt
+	off = (off + vel * _dt).limit_length(HEAD_MAX * 1.4)
+	_head[i] = [off, vel]
+
+
+## Her fan's lag behind the arm (radians, screen space): the arm's angle is where the fan wants to point; the fan follows
+## on a spring, so a fast swing leaves it trailing and it swings on past when the arm stops.
+func _fan_turn(i: int, side: String, pts: Dictionary, live: bool) -> float:
+	if not live:
+		return 0.0
+	var key := "%d:%s" % [i, side]
+	var arm := ((pts["hand_" + side] as Vector2) - (pts["elbow_" + side] as Vector2)).angle()
+	var st: Array = _fans.get(key, [arm, 0.0, -1.0])
+	var ang := float(st[0])
+	var w := float(st[1])
+	if float(st[2]) != _time:   # (one step a frame)
+		w += (wrapf(arm - ang, -PI, PI) * FAN_STIFF - w * FAN_DAMP) * _dt
+		ang += w * _dt
+		var lag := clampf(wrapf(ang - arm, -PI, PI), -FAN_MAX, FAN_MAX)
+		ang = arm + lag
+	_fans[key] = [ang, w, _time]
+	return wrapf(ang - arm, -PI, PI)
+
+
+## Squash and stretch (06:38): long going up, squat landing, squeezed by a blow, stretched along a strike as it lands.
+## Scaled about their feet (x across, y up), so they stay on the floor.
+func _squash(i: int, r: Array, pose: Dictionary) -> Dictionary:
+	var sx := 1.0
+	var sy := 1.0
+	var vy := float(_vy.get(i, 0.0))
+	if int(r[5]) != 4 and float(r[1]) < -2.0:   # (in the air: stretched along the way they're going up or down)
+		var s := clampf(absf(vy) / 22.0, 0.0, 1.0) * (0.16 if vy < 0.0 else 0.09)
+		sy *= 1.0 + s
+		sx *= 1.0 - s * 0.6
+	if int(r[5]) in [0, 3] and _land.has(i):   # (landing: squat, then back up)
+		var k := float(_land[i]) / float(LAND_TICKS)
+		sy *= 1.0 - 0.15 * k
+		sx *= 1.0 + 0.13 * k
+	if int(r[5]) == 1 and r.size() > 19 and int(r[19]) < 4:   # (the blow: squeezed across, a touch taller)
+		var k := 1.0 - float(int(r[19])) / 4.0
+		sx *= 1.0 - 0.16 * k
+		sy *= 1.0 + 0.06 * k
+	if int(r[5]) == 0 and _smearing.get(i, false):   # (a strike landing: stretched along it)
+		sx *= 1.08
+		sy *= 0.96
+	if is_equal_approx(sx, 1.0) and is_equal_approx(sy, 1.0):
+		return pose
+	var out := {}
+	for j: String in Poses.JOINTS:
+		var p: Vector2 = pose[j]
+		out[j] = Vector2(p.x * sx, p.y * sy)
+	return out
+
+
+var _smearing := {}          ## fighter id -> their strike's limb smeared this tick (it stretches them too)
+
+
+## A smear frame (06:38): when a strike's limb whips through, the area it swept since last tick is filled - a stretched,
+## see-through copy of the arm or leg from where it was to where it is (the old cartoon trick for speed).
+func _smear(i: int, r: Array, pose: Dictionary, base: Vector2, sc: float, face: float, col: Color) -> void:
+	_smearing[i] = false
+	if int(r[5]) != 0 or str(r[3]) == "" or i >= _prev.size() or _free(r):
+		return
+	var pr: Array = _prev[i]
+	if str(pr[3]) != str(r[3]) or int(pr[5]) != 0 or int(r[4]) <= int(pr[4]) or int(r[4]) - int(pr[4]) > 3:
+		return
+	var tip := _striking(i, str(r[3]), int(r[4]))
+	if tip == "":
+		return
+	var now := Stick._place(pose, w2s(base), sc, face)
+	var then := Stick._place(Poses.for_record(_char(i), pr), w2s(Vector2(float(pr[0]), float(pr[1]))), sc, float(pr[2]))
+	if (now[tip] as Vector2).distance_to(then[tip]) < SMEAR_PX * zoom:
+		return
+	_smearing[i] = true
+	var mid := "elbow" + tip.trim_prefix("hand") if tip.begins_with("hand") else "knee" + tip.trim_prefix("foot")
+	var root := "neck" if tip.begins_with("hand") else "hip"
+	var c := col.lightened(0.3)
+	c.a = 0.42
+	var tri := PackedVector2Array()
+	var cols := PackedColorArray()
+	for bone: Array in [[root, mid], [mid, tip]]:
+		Stick._quad(tri, cols, then[bone[0]], then[bone[1]], now[bone[1]], now[bone[0]], c)
+	Stick.tris(self, tri, cols)
+	var tc := col.lightened(0.5)   # (the fist or foot, smeared out along the way it came)
+	tc.a = 0.55
+	draw_line(then[tip], now[tip], tc, Stick.limb(sc) * 1.3, true)
 
 
 func _tempo_aura(i: int, pts: Dictionary, beats: int, col: Color, sc: float) -> void:

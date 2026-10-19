@@ -209,11 +209,11 @@ static func fan_open(state: int, kind: String) -> float:
 
 ## A fan held in a hand (side "f" / "b"): pointing on along the forearm, tipped up a little.
 static func fan_at(ci: CanvasItem, pts: Dictionary, side: String, facing: float, scale: float, open: float, col: Color,
-		edge := true, metal := STEEL, ink_col := INK) -> void:
+		edge := true, metal := STEEL, ink_col := INK, turn := 0.0) -> void:
 	var hand: Vector2 = pts["hand_" + side]
 	var elbow: Vector2 = pts["elbow_" + side]
 	var dir := (hand - elbow).normalized() if hand.distance_to(elbow) > 0.5 else Vector2(facing, 0.0)
-	dir = dir.rotated(-0.3 * facing)
+	dir = dir.rotated(-0.3 * facing + turn)   # (turn: lagging behind the arm - StageView's spring, 06:38)
 	fan(ci, hand - dir * 2.0 * scale, dir, FAN_R * scale, open, col.darkened(FAR) if side == "b" else col, edge,
 			metal.darkened(FAR) if side == "b" else metal, ink_col)
 

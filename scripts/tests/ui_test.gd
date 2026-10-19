@@ -720,6 +720,42 @@ func _test_drawer_order() -> void:
 
 
 
+func _test_squash_and_lag() -> void:
+	_section("Squash and stretch, the head and fans lagging (06:38 \"Try the rest except 6\")")
+	var g := _screen()
+	g.start_local(1, "ffa")
+	var st: StageView = g.stage
+	var stand := Poses.get_pose("idle")
+	var rec := [0.0, -80.0, 1, "jump", 3, 0, 100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0]
+	st._vy[0] = -16.0
+	var up := st._squash(0, rec, stand)
+	var hit := [0.0, 0.0, 1, "", 0, 1, 100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0]
+	st._vy[0] = 0.0
+	var blow := st._squash(0, hit, stand)
+	var head_y := func(q: Dictionary) -> float: return (q["head"] as Vector2).y
+	var hand_x := func(q: Dictionary) -> float: return absf((q["hand_f"] as Vector2).x)
+	_check("going up they stretch tall (head %.0f vs %.0f); a blow squeezes them across (hand %.0f vs %.0f)"
+			% [head_y.call(up), head_y.call(stand), hand_x.call(blow), hand_x.call(stand)],
+			head_y.call(up) < head_y.call(stand) - 4.0 and hand_x.call(blow) < hand_x.call(stand) - 1.0)
+	st._vx[0] = 18.0   # (dashing: the head trails behind)
+	st._vy[0] = 0.0
+	for k in 30:
+		st._time += 0.016
+		st._dt = 0.016
+		st._spring_step(0, [0.0, 0.0, 1, "dash", 3, 0])
+	var off: Vector2 = st._head[0][0]
+	var pts := {"hand_f": Vector2(40, 0), "elbow_f": Vector2(0, 0)}
+	st._fan_turn(0, "f", pts, true)
+	for k in 6:   # (the arm whips round; the fan's left behind it)
+		st._time += 0.016
+		pts["hand_f"] = Vector2.from_angle(-0.4 * (k + 1)) * 40.0
+		st._fan_turn(0, "f", pts, true)
+	var lag := absf(st._fan_turn(0, "f", pts, true))
+	_check("dashing, the head trails back (%.1f); a whipped arm leaves the fan lagging (%.2f rad)" % [off.x, lag],
+			off.x < -3.0 and lag > 0.2)
+	g.queue_free()
+
+
 func _test_strike_timeline() -> void:
 	_section("More to every move (06:22 \"Lets try 1 and 2\"): a wind-up pulled back, the strike overshooting, a follow-through")
 	var a := Poses.get_pose("heavy_wind")

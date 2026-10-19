@@ -264,8 +264,12 @@ one stage; each attack aims at a picked target.
   (OVERSHOOT), holds while it's out, follows through past it (FOLLOW) and eases back; Poses.push turns each bone on
   further with lengths kept. (2) hit reactions by how it landed - the sim keeps Fighter.hit_look (head / body / low /
   crush / slide / air, Sim._look) and hit_t; five new poses (doubled over, legs taken, crushed, flung, launched); the
-  reaction snaps past its pose for 3 frames, then eases off toward a reeling guard. Still to try: 3 smear frames, 4
-  squash and stretch, 5 lag / follow-through on fans and head, 6 slow motion on a K.O. and a super.
+  reaction snaps past its pose for 3 frames, then eases off toward a reeling guard.
+- 06:38 "Try the rest except 6" -> 0.32.0 (StageView): (3) smear frames - a strike's limb whipping more than SMEAR_PX
+  in a tick fills the area it swept (two see-through quads + a streak for the fist / foot); (4) squash and stretch -
+  scaled about the feet: long going up, squat landing, squeezed by a blow, stretched along a strike; (5) lag - the head
+  on a spring trailing fast moves (overshoots when they stop), her fans on a spring lagging the arm (Stick.fan_at turn).
+  Not done (his word): 6 slow motion on a K.O. / a super.
 
 ## To tune / later
 - **Match length with 6:** bot matches take 120-270 decision points with 6 fighters (50-90 with 2). At ~10 s a decision
