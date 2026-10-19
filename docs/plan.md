@@ -258,6 +258,14 @@ one stage; each attack aims at a picked target.
   K.O. Punch; supers Bull Rush, Barrage, Clinch Fury; gloves; a fighter picker on the home screen (lobbies carry it,
   bots at random, the training dummy either); the stage 2800 wide; YOMI's blockstun / guard-break rule. The Dancer's
   open questions settled: Encore from range, dash 15, Snap Step gone.
+- 06:14 "they are off the map" -> 0.30.1: the stage view drawn at the match's width in vs-bots / Training (it kept 1600).
+- 06:20 "I still want more from our animations" / 06:22 "Lets try 1 and 2" -> 0.31.0: (1) every strike gets more to it
+  without new art - Poses._strike coils past its wind-up key (COIL), snaps through and lands past the strike pose
+  (OVERSHOOT), holds while it's out, follows through past it (FOLLOW) and eases back; Poses.push turns each bone on
+  further with lengths kept. (2) hit reactions by how it landed - the sim keeps Fighter.hit_look (head / body / low /
+  crush / slide / air, Sim._look) and hit_t; five new poses (doubled over, legs taken, crushed, flung, launched); the
+  reaction snaps past its pose for 3 frames, then eases off toward a reeling guard. Still to try: 3 smear frames, 4
+  squash and stretch, 5 lag / follow-through on fans and head, 6 slow motion on a K.O. and a super.
 
 ## To tune / later
 - **Match length with 6:** bot matches take 120-270 decision points with 6 fighters (50-90 with 2). At ~10 s a decision

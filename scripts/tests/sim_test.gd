@@ -1347,6 +1347,26 @@ func _test_bruiser() -> void:
 			and bl._block(bl.fighters[0], bl.fighters[1], gb, Moves.move("dancer", "block"), 9, false))
 
 
+
+func _test_hit_looks() -> void:
+	_section("Hit reactions by type (06:22 \"Lets try 1 and 2\"): how each hit landed is kept for the screen")
+	var got := {}
+	for mv: String in ["jab", "body", "legkick", "superman", "haymaker", "uppercut"]:
+		var s := _duel("bruiser", "dancer", 120.0 if mv == "superman" else 60.0)
+		s.apply({0: {"move": mv, "x": 1.0, "dist": 0.0}, 1: {"move": "wait"}})
+		for _i in 40:
+			s.step()
+			if s.fighters[1].stun > 0:
+				break
+		got[mv] = s.fighters[1].hit_look
+	_check("a jab snaps the head back, a body blow doubles her over, a leg kick takes her legs, an overhead crushes her, "
+			+ "a fling throws her sliding, an uppercut sends her up (%s)" % [got], got["jab"] == "head"
+			and got["body"] == "body" and got["legkick"] == "low" and got["superman"] == "crush"
+			and got["haymaker"] == "slide" and got["uppercut"] == "air")
+	var r: Array = _duel().record()[0]
+	_check("...and it's in the record the screen plays (the look, then the ticks since)", r.size() == 20)
+
+
 func _test_snapshots() -> void:
 	_section("Snapshots and previews")
 	var s := Sim.create([{"character": "dancer"}, {"character": "dancer"}])

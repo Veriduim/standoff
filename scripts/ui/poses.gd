@@ -191,6 +191,24 @@ const P := {
 	"b_rush": {"head": [26, -74], "neck": [18, -64], "hip": [0, -38], "elbow_f": [30, -56], "hand_f": [34, -72], "elbow_b": [22, -50], "hand_b": [28, -64], "knee_f": [20, -20], "foot_f": [32, 0], "knee_b": [-16, -18], "foot_b": [-34, -4]},
 	"b_stomp_up": {"head": [0, -90], "neck": [0, -78], "hip": [-2, -48], "elbow_f": [14, -80], "hand_f": [20, -96], "elbow_b": [-14, -80], "hand_b": [-20, -96], "knee_f": [16, -72], "foot_f": [12, -50], "knee_b": [-6, -24], "foot_b": [-10, 0]},
 	"b_stomp": {"head": [6, -74], "neck": [4, -63], "hip": [-2, -36], "elbow_f": [18, -50], "hand_f": [26, -38], "elbow_b": [-12, -50], "hand_b": [-20, -38], "knee_f": [16, -18], "foot_f": [22, 0], "knee_b": [-16, -16], "foot_b": [-24, 0]},
+	# hit reactions by how it landed (06:22 "Lets try 1 and 2"): they face whoever hit them (+x toward them). Doubled
+	# over at the body; the front leg taken from under them, pitching forward; crushed down under an overhead, arms over
+	# the head; flung - thrown back, arms and feet trailing; sent up - arched, everything flung out
+	"hurt_body": {"head": [24, -74], "neck": [14, -72], "hip": [-6, -44], "elbow_f": [16, -54], "hand_f": [4, -56],
+		"elbow_b": [12, -54], "hand_b": [0, -52], "knee_f": [6, -22], "foot_f": [12, 0], "knee_b": [-16, -22],
+		"foot_b": [-22, 0]},
+	"hurt_low": {"head": [20, -82], "neck": [14, -71], "hip": [0, -40], "elbow_f": [28, -80], "hand_f": [40, -86],
+		"elbow_b": [0, -82], "hand_b": [-12, -90], "knee_f": [-4, -18], "foot_f": [-22, -8], "knee_b": [12, -20],
+		"foot_b": [16, 0]},
+	"hurt_crush": {"head": [12, -77], "neck": [6, -67], "hip": [0, -34], "elbow_f": [18, -74], "hand_f": [12, -86],
+		"elbow_b": [-6, -74], "hand_b": [2, -86], "knee_f": [16, -20], "foot_f": [24, 0], "knee_b": [-16, -20],
+		"foot_b": [-24, 0]},
+	"hurt_slide": {"head": [-27, -78], "neck": [-19, -69], "hip": [-2, -40], "elbow_f": [-3, -75], "hand_f": [11, -80],
+		"elbow_b": [-7, -81], "hand_b": [5, -90], "knee_f": [14, -24], "foot_f": [30, -12], "knee_b": [8, -18],
+		"foot_b": [24, -4]},
+	"hurt_air": {"head": [-20, -90], "neck": [-10, -82], "hip": [0, -50], "elbow_f": [6, -94], "hand_f": [18, -104],
+		"elbow_b": [-24, -92], "hand_b": [-36, -100], "knee_f": [14, -34], "foot_f": [10, -12], "knee_b": [-10, -30],
+		"foot_b": [-22, -14]},
 	"hurt": {"head": [-24, -82], "neck": [-14, -74], "hip": [-2, -44], "elbow_f": [-2, -90], "hand_f": [6, -104], "elbow_b": [-30, -84], "hand_b": [-40, -96], "knee_f": [10, -22], "foot_f": [16, 0], "knee_b": [-12, -22], "foot_b": [-24, -4]},
 	"down": {"head": [-44, -8], "neck": [-32, -8], "hip": [0, -8], "elbow_f": [-20, -18], "hand_f": [-8, -24],
 		"elbow_b": [-28, -2], "hand_b": [-16, 0], "knee_f": [18, -14], "foot_f": [36, -6], "knee_b": [18, -4],
@@ -226,6 +244,94 @@ const AMP_MAX := 0.45
 const TREE := [["hip", "neck", 0], ["neck", "head", 0], ["neck", "elbow_f", 0], ["elbow_f", "hand_f", 0],
 	["neck", "elbow_b", 0], ["elbow_b", "hand_b", 0], ["hip", "knee_f", 1], ["knee_f", "foot_f", 1], ["hip", "knee_b", 1],
 	["knee_b", "foot_b", 1]]
+
+
+## A pose pushed on past b, away from a: every bone turned on further the way it turned from a to b (k of that turn
+## again, at most PUSH_MAX), the hips moved on the same way, the bones' lengths kept - so push(hit, wind, k) is a wind-up
+## pulled further back, push(wind, hit, k) a strike that overshoots.
+const PUSH_MAX := 0.7
+
+
+static func push(a: Dictionary, b: Dictionary, k: float) -> Dictionary:
+	var out := {}
+	out["hip"] = (b["hip"] as Vector2) + ((b["hip"] as Vector2) - (a["hip"] as Vector2)) * k
+	for bone: Array in TREE:
+		var va: Vector2 = (a[bone[1]] as Vector2) - (a[bone[0]] as Vector2)
+		var vb: Vector2 = (b[bone[1]] as Vector2) - (b[bone[0]] as Vector2)
+		var turn := clampf(wrapf(vb.angle() - va.angle(), -PI, PI) * k, -PUSH_MAX, PUSH_MAX)
+		out[bone[1]] = (out[bone[0]] as Vector2) + Vector2.from_angle(vb.angle() + turn) * vb.length()
+	return out
+
+
+static func _ease(t: float) -> float:
+	t = clampf(t, 0.0, 1.0)
+	return t * t * (3.0 - 2.0 * t)
+
+
+## Hit reactions (06:22): the pose for how the hit landed - snapped past it for the first frames (the blow landing), then
+## easing off toward a reeling guard as the hitstun goes on. In the air: the launch pose, unless they were flung.
+const HURT := {"head": "hurt", "body": "hurt_body", "low": "hurt_low", "crush": "hurt_crush", "slide": "hurt_slide",
+	"air": "hurt_air"}
+const IMPACT := 3        ## frames the reaction snaps past its pose
+const SETTLE := 16       ## ...then this long easing off it
+
+
+static func _hurt_pose(character: String, r: Array, air: bool) -> Dictionary:
+	var look: String = Sim.LOOKS[clampi(int(r[18]), 0, Sim.LOOKS.size() - 1)] if r.size() > 19 else "head"
+	if air and look != "slide":
+		look = "air"
+	var t := int(r[19]) if r.size() > 19 else 99
+	var hit := get_pose(str(HURT[look]))
+	var reel := blend(hit, get_pose("guard"), 0.45)   # (where it eases off to - and what the blow snaps past it from)
+	if t < IMPACT:   # (the blow: past the pose, coming back to it)
+		return push(reel, hit, 0.6 * (1.0 - float(t) / float(IMPACT)))
+	if look == "air":
+		return hit
+	return blend(hit, reel, _ease(float(t - IMPACT) / float(SETTLE)))
+
+
+## A strike's timeline (06:22 "Lets try 1 and 2" - more to every move): from its wind-up key it coils further back, then
+## snaps through to the strike, which overshoots a touch as it lands; it holds while it's out, follows through past it
+## and only then eases back to the next key. Null when the move's keys don't fit that (no key before the strike).
+const COIL := 0.32       ## the wind-up pulled this much further back
+const OVERSHOOT := 0.22  ## the strike landing this much past its pose
+const FOLLOW := 0.14     ## ...and following through this much past it on the way back
+
+
+static func _strike(m: Dictionary, keys: Array, f: int) -> Variant:
+	var act := Moves.startup(m)
+	var hk := -1
+	for i in keys.size():
+		if int(keys[i][0]) <= act:
+			hk = i
+	if hk <= 0 or int(keys[hk][0]) < act - 6:   # (no wind-up key, or the strike's pose came long before it acts)
+		return null
+	var wk := hk - 1
+	var f_w := int(keys[wk][0])
+	var f_h := int(keys[hk][0])
+	var hits: Array = m.get("hits", [])
+	var f_hold := maxi(f_h + 2, int(hits[0]["to"]) if not hits.is_empty() else f_h + 3)
+	var f_n := int(keys[hk + 1][0]) if hk + 1 < keys.size() else f_hold + 8
+	if f < f_w or f > f_n:
+		return null
+	var wind := get_pose(str(keys[wk][1]))
+	var hit := get_pose(str(keys[hk][1]))
+	if f < f_h:   # (coiling back, then the snap through)
+		var coil := push(hit, wind, COIL)
+		var u := float(f - f_w) / float(maxi(1, f_h - f_w))
+		if u < 0.7:
+			return blend(wind, coil, _ease(u / 0.7))
+		return blend(coil, hit, (u - 0.7) / 0.3)
+	if f <= f_h + 1:   # (landing past it)
+		return push(wind, hit, OVERSHOOT * (1.0 if f == f_h else 0.5))
+	if f <= f_hold:
+		return hit
+	var nxt := get_pose(str(keys[hk + 1][1])) if hk + 1 < keys.size() else get_pose("idle")
+	var follow := push(wind, hit, FOLLOW)
+	var v := float(f - f_hold) / float(maxi(1, f_n - f_hold))
+	if v < 0.3:
+		return blend(hit, follow, _ease(v / 0.3))
+	return blend(follow, nxt, _ease((v - 0.3) / 0.7))
 
 
 static func exaggerate(pose: Dictionary) -> Dictionary:
@@ -273,7 +379,7 @@ static func _for_record(character: String, r: Array) -> Dictionary:
 	if state == 4 or state == 5:   # (KO'd, or knocked down)
 		return get_pose("down")
 	if state == 1:
-		return get_pose("hurt")
+		return _hurt_pose(character, r, air)
 	var low := r.size() > 13 and int(r[13]) == 1
 	if state == 2 or (mv == "block" and state == 0):
 		return get_pose("guard_low" if low else "guard")
@@ -284,6 +390,11 @@ static func _for_record(character: String, r: Array) -> Dictionary:
 		return get_pose("fall" if air else ("crouch" if state == 3 else idle_of(character)))
 	var keys: Array = Moves.move(character, mv).get("pose", [[0, "idle"]])
 	var f := int(r[4])
+	var mk := str(Moves.move(character, mv).get("kind", ""))
+	if mk in ["attack", "super", "grab", "special"] and keys.size() >= 2:   # (a strike: wind-up, overshoot, follow-through)
+		var sp: Variant = _strike(Moves.move(character, mv), keys, f)
+		if sp != null:
+			return sp
 	var cur: Array = keys[0]
 	var nxt: Array = []
 	for k: Array in keys:

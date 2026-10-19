@@ -719,6 +719,39 @@ func _test_drawer_order() -> void:
 	g.queue_free()
 
 
+
+func _test_strike_timeline() -> void:
+	_section("More to every move (06:22 \"Lets try 1 and 2\"): a wind-up pulled back, the strike overshooting, a follow-through")
+	var a := Poses.get_pose("heavy_wind")
+	var b := Poses.get_pose("heavy_hit")
+	var p := Poses.push(a, b, 0.3)
+	var kept := true
+	for bone: Array in Poses.TREE:
+		var lb := ((b[bone[1]] as Vector2) - (b[bone[0]] as Vector2)).length()
+		var lp := ((p[bone[1]] as Vector2) - (p[bone[0]] as Vector2)).length()
+		kept = kept and absf(lb - lp) < 0.01
+	_check("a pose pushed on past another keeps every limb's length", kept)
+	var m := Moves.move("bruiser", "haymaker")
+	var keys: Array = m["pose"]
+	var coil: Dictionary = Poses._strike(m, keys, 9)
+	var land: Dictionary = Poses._strike(m, keys, 13)
+	var held: Dictionary = Poses._strike(m, keys, 15)
+	var fist := func(q: Dictionary) -> float: return (q["hand_f"] as Vector2).x
+	var moved := 0.0   # (how far the landing frame is past the held strike, every joint)
+	for j: String in Poses.JOINTS:
+		moved += ((land[j] as Vector2) - (held[j] as Vector2)).length()
+	_check("the Haymaker: its fist pulled back past the wind-up (%.0f vs %.0f), and landing it swings on past the strike "
+			% [fist.call(coil), fist.call(a)] + "(%.0f px over all joints)" % moved, fist.call(coil) < fist.call(a) - 2.0
+			and moved > 15.0)
+	var look := Poses.for_record("dancer", [0.0, 0.0, 1, "", 0, 1, 100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0,
+		Sim.LOOKS.find("body"), 8])
+	var head := Poses.for_record("dancer", [0.0, 0.0, 1, "", 0, 1, 100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0,
+		Sim.LOOKS.find("head"), 8])
+	_check("hit reactions differ: doubled over at the body (head x %.0f), the head snapped back (%.0f)"
+			% [(look["head"] as Vector2).x, (head["head"] as Vector2).x], (look["head"] as Vector2).x
+			> (head["head"] as Vector2).x + 20.0)
+
+
 func _test_pick_fighter() -> void:
 	_section("Two fighters (05:03): pick the Bruiser on the home screen and you play him - his Grit on his card")
 	var g := _screen()

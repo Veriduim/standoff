@@ -148,6 +148,9 @@ const PRESS_PX := 70.0
 const PRESS_DMG := 1.1
 const PRESS_STUN := 2
 const PRESS_PUSH := 0.35
+## How a hit landed (06:22 "Lets try 1 and 2" - hit reactions by type): the head snapped back, doubled over at the body,
+## the legs taken (a low), crushed down (an overhead), flung sliding, sent up into the air. Recorded for the screen.
+const LOOKS := ["head", "body", "low", "crush", "slide", "air"]
 const START_1V1 := 600.0      ## one on one: how far apart they start (the stage itself is wider since 05:27)
 ## A fling (05:27 "his effects of slapping an enemy accross map and being able to rush them down" - the Nakmuay mod,
 ## studied): the one hit slides along the floor on FLING_FRICTION instead of stopping short, for FLING_TICKS
@@ -931,6 +934,8 @@ func _count(f: Fighter) -> void:
 	f.burst = mini(BURST_FULL, f.burst + (BURST_REELING if f.stun > 0 else 1))
 	if f.slide > 0:
 		f.slide -= 1
+	if f.stun > 0:
+		f.hit_t = mini(255, f.hit_t + 1)
 	if f.restand > 0:   # (the restand window: not hit in it - the combo's over)
 		f.restand -= 1
 		if f.restand == 0 and f.stun == 0 and f.splat == 0:
@@ -1417,6 +1422,29 @@ func _reflects(d: Fighter, s: Dictionary) -> bool:
 	return true
 
 
+## How a hit landed on them, for their reaction: flung, sent up, low, an overhead, else by where it met the body -
+## its top third the head, below that the body.
+func _look(a: Fighter, d: Fighter, e: Dictionary) -> String:
+	if e.get("fling", false):
+		return "slide"
+	if d.pos.y < -30.0 or d.vel.y < -9.0:   # (hit up there, or sent well up)
+		return "air"
+	var height := str(e.get("height", "mid"))
+	if height == "low":
+		return "low"
+	if height == "high" or e.get("bounce", false):
+		return "crush"
+	if d.vel.y < -6.0:
+		return "air"
+	var body := hurtbox(d)
+	var y := float(e["at_y"]) if e.has("at_y") else body.get_center().y
+	if e.has("box"):
+		var met := hitbox(a, e).intersection(body)
+		if met.size.y > 0.0:
+			y = met.get_center().y
+	return "head" if body.end.y - y > body.size.y * 0.66 else "body"
+
+
 ## Grit: the Bruiser's gauge, up to GRIT_MAX - a "grit" event the moment it's full (the K.O. Punch is there).
 func _grit(f: Fighter, amount: float) -> void:
 	if f.ko or amount <= 0.0 or not has_xf(f, "grit") or f.grit >= GRIT_MAX:
@@ -1516,7 +1544,7 @@ func _shot_rect(s: Dictionary) -> Rect2:
 func _shot_hit(s: Dictionary, d: Fighter) -> void:
 	var a := get_f(int(s["owner"]))
 	var e := {"dmg": s["dmg"], "stun": s["stun"], "kb": s["kb"], "block": s["block"], "chip": s["chip"],
-		"height": s["height"], "parry": s["parry"], "key": "s%d" % int(s["id"]),
+		"height": s["height"], "parry": s["parry"], "key": "s%d" % int(s["id"]), "at_y": (s["pos"] as Vector2).y,
 		"knockdown": bool(s.get("knockdown", false))}
 	var dm := Moves.move(d.character, d.move) if d.move != "" else {}
 	if _block(a, d, e, dm, d.frame, true):
@@ -1603,6 +1631,8 @@ func _hurt(a: Fighter, d: Fighter, e: Dictionary, type: String, src := "", side_
 	if d.restand > 0:   # (hit as they land from an air combo: back in a ground combo - the count carries on)
 		d.restand = 0
 		_event("restand", a, d)
+	d.hit_look = _look(a, d, e)   # (how it landed - their reaction on screen)
+	d.hit_t = 0
 	if d.pos.y < -10.0 or d.vel.y < -6.0:   # (sent up, or hit up there: an air combo - landing can end it)
 		d.launched = true
 	# combo pushback: the longer the combo, the further the hitter's pushed off (not their speed - their place)
@@ -1668,7 +1698,7 @@ func _grab(a: Fighter, d: Fighter, e: Dictionary, kind: Dictionary, live: Dictio
 
 ## One tick's picture of every fighter, for playback: [x, y, facing, move, frame, state, hp, meter, burst gauge, Free
 ## Cancels, air options left, sad (0, 1 SAD!, 2 SADNESS!), free to act (1 / 0), blocking low (1 / 0), form (0 Flow,
-## 1 Snap, 2 Floor), Tempo beats, fans in hand, Grit (0-GRIT_MAX)].
+## 1 Snap, 2 Floor), Tempo beats, fans in hand, Grit (0-GRIT_MAX), how the last hit landed (LOOKS), ticks since].
 ## state: 0 free / in a move, 1 hit, 2 blocking, 3 locked, 4 KO, 5 lying down. Someone free after a hit cancel is
 ## recorded in the move they landed, on its frame (they hold the strike until they pick - as YOMI draws it).
 func record() -> Array:
@@ -1685,7 +1715,7 @@ func record() -> Array:
 		var low := 1 if (f.move == "block" or f.blockstun > 0) and f.param.y > 0.0 else 0
 		out.append([f.pos.x, f.pos.y, f.facing, mv, fr, state, f.hp, f.meter, f.burst, f.fc,
 			AIR_OPTIONS - f.air_moves, sad, 1 if f.actionable() else 0, low, maxi(0, FORMS.find(f.form)), f.tempo, f.fans,
-			f.grit])
+			f.grit, maxi(0, LOOKS.find(f.hit_look)), f.hit_t])
 	return out
 
 

@@ -62,6 +62,8 @@ var tempo_idle := 0      ## ...ticks since then (a beat fades every Sim.TEMPO_FA
 var form := "flow"       ## Forms: "flow" | "snap" | "floor"
 var grit := 0            ## the Bruiser's Grit (Sim.GRIT_MAX = the K.O. Punch is there)
 var armor_left := 0      ## hits the running move's Super Armor can still take (one, as a rule)
+var hit_look := "head"   ## how the last hit landed on them - their reaction (Sim.LOOKS: head, body, low, crush, slide, air)
+var hit_t := 0           ## ...ticks since it landed (the reaction snaps, then eases off)
 var slide := 0           ## ticks a fling keeps them sliding (Sim.FLING_FRICTION)
 var repeats := 0         ## times in a row they've gone again into a move that repeats (the clinch knee)
 var ko := false
@@ -108,7 +110,7 @@ func to_dict() -> Dictionary:
 		"kd": kd, "sad": sad, "sadness": sadness, "sad_warned": sad_warned, "dist": dist, "parry_at": parry_at, "pushed": pushed, "prorate": prorate, "bounce_due": bounce_due, "bounced": bounced,
 		"splat_due": splat_due, "splats": splats, "splat": splat, "launched": launched, "restand": restand, "stance": stance, "initiative": initiative, "fans": fans, "tempo": tempo,
 		"tempo_key": tempo_key, "tempo_idle": tempo_idle, "form": form, "grit": grit, "armor_left": armor_left,
-		"repeats": repeats, "slide": slide, "ko": ko}
+		"repeats": repeats, "slide": slide, "hit_look": hit_look, "hit_t": hit_t, "ko": ko}
 
 
 static func from_dict(d: Dictionary) -> Fighter:
@@ -173,5 +175,7 @@ static func from_dict(d: Dictionary) -> Fighter:
 	f.armor_left = int(d.get("armor_left", 0))
 	f.repeats = int(d.get("repeats", 0))
 	f.slide = int(d.get("slide", 0))
+	f.hit_look = str(d.get("hit_look", "head"))
+	f.hit_t = int(d.get("hit_t", 0))
 	f.ko = bool(d["ko"])
 	return f
