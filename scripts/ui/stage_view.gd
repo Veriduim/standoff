@@ -52,6 +52,7 @@ var ghost_play := true      ## the ghost loops; false = held on the scrubbed fra
 var show_boxes := false     ## hurt boxes (outlines) and live hit boxes (red) - testing the frames
 var quiet := false          ## no effects (skipping ahead)
 var sfx: Sfx                 ## the sounds (the game screen's) - none if unset
+var _sfx_style := ""         ## the last hit's look, for its sound (a fan's slash, a kick's thump)
 var _swinging := {}          ## fighter id -> true while an attack's arc is out (its swing sound played once)
 var zoom := 0.8
 var _ghost_i := 0
@@ -102,7 +103,8 @@ func show_tick(rec: Array, events: Array = [], flying: Array = []) -> void:
 	for e: Dictionary in events:
 		_effect(e, prev)
 		if sfx != null:
-			sfx.event(e)
+			sfx.event(e, _sfx_style if str(e["type"]) == "hit" else "")
+			_sfx_style = ""
 	if prev.size() == frame.size():
 		_motion_fx(prev)
 	fx.settle_combos(frame)
@@ -199,6 +201,7 @@ func _effect(e: Dictionary, prev: Array) -> void:
 	var reeling := d < prev.size() and int(prev[d][5]) == 1
 	if type == "hit":
 		fx.style = _hit_style(e, a)
+		_sfx_style = fx.style
 	fx.on_event(type, at, face, int(e.get("dmg", 0)), colour_of(a), d, colour_of(d), reeling, n + d,
 			bool(e.get("counter", false)) or bool(e.get("worse", false)), bool(e.get("push", false)))
 	if type == "hit" and int(e.get("spot", 0)) == 1:   # (the fan's edge - a gold glint where it lands)

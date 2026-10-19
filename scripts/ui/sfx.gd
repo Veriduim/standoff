@@ -8,8 +8,8 @@ const SETTINGS := "user://settings.cfg"
 const VOICES := 12
 const GAP := 0.045                ## seconds before the same sound plays again
 const HEAVY := 30                 ## a hit this hard (after scaling) gets the big thump
-const LEVEL := -4.0               ## every sound this much down (the first reel clipped when sounds piled up)
-const NAMES := ["hit_light", "hit_heavy", "hit_counter", "edge", "block", "push", "parry", "clash", "grab",
+const LEVEL := -2.5               ## every sound this much down (the first reel clipped when sounds piled up)
+const NAMES := ["hit_light", "hit_heavy", "hit_counter", "slash", "edge", "block", "push", "parry", "clash", "grab",
 	"fan_throw", "catch", "recall", "sweep", "gust", "blink", "down", "bounce", "wall", "ko", "burst", "super", "sad",
 	"beat", "onbeat", "snap", "countered", "time", "swing", "land", "ui_click", "ui_turn", "ui_tick"]
 
@@ -19,7 +19,8 @@ static var on := true
 var quiet := false                ## (the home screen's demo match plays silently)
 var played: Array[String] = []    ## the last sounds played, newest last (the tests read it)
 var _players: Array[AudioStreamPlayer] = []
-var _streams := {}
+var _streams := {}             ## name -> its variants (03:07 - a repeat doesn't sound stamped)
+var _pick := {}                ## name -> the variant played last
 var _last := {}
 var _next := 0
 var _headless := DisplayServer.get_name() == "headless"
@@ -31,9 +32,13 @@ func _ready() -> void:
 	if cfg.load(SETTINGS) == OK:
 		on = bool(cfg.get_value("audio", "on", true))
 	for n: String in NAMES:
-		var path := "res://assets/sfx/%s.wav" % n
-		if ResourceLoader.exists(path):
-			_streams[n] = load(path)
+		var all: Array = []
+		for k in 4:   # (<name>.wav, <name>_2.wav, ...)
+			var path := "res://assets/sfx/%s.wav" % (n if k == 0 else "%s_%d" % [n, k + 1])
+			if ResourceLoader.exists(path):
+				all.append(load(path))
+		if not all.is_empty():
+			_streams[n] = all
 	if AudioServer.get_bus_effect_count(0) == 0:   # (a limiter on the master bus: piled-up hits never crackle)
 		var lim := AudioEffectHardLimiter.new()
 		lim.ceiling_db = -1.0
@@ -64,8 +69,13 @@ func play(sound: String, db := 0.0, pitch := 1.0) -> void:
 		played.remove_at(0)
 	if _headless:   # (the tests: noted, not played - the dummy audio never finishes a sound)
 		return
+	var all: Array = _streams[sound]
+	var k := randi() % all.size()
+	if all.size() > 1 and k == int(_pick.get(sound, -1)):   # (never the same one twice running)
+		k = (k + 1) % all.size()
+	_pick[sound] = k
 	var p := _voice()
-	p.stream = _streams[sound]
+	p.stream = all[k]
 	p.volume_db = db + LEVEL
 	p.pitch_scale = pitch
 	p.play()
@@ -106,12 +116,18 @@ static func label() -> String:
 
 
 ## One sim event as it's shown -> its sound.
-func event(e: Dictionary) -> void:
+func event(e: Dictionary, style := "") -> void:
 	var vary := randf_range(0.94, 1.06)   # (the same hit twice doesn't sound stamped)
 	match str(e["type"]):
 		"hit", "armor":
 			if bool(e.get("counter", false)) or bool(e.get("worse", false)):
 				play("hit_counter")
+				if style == "slash":
+					play("slash", -2.0, vary)
+			elif style == "slash":   # (her fans cut - 03:07)
+				play("slash", 0.0, vary)
+				if int(e.get("dmg", 0)) >= HEAVY:
+					play("hit_light", -4.0, vary)
 			elif int(e.get("dmg", 0)) >= HEAVY:
 				play("hit_heavy", 0.0, vary)
 			else:

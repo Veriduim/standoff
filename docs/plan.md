@@ -236,6 +236,11 @@ one stage; each attack aims at a picked target.
   super; spectral fans glow (kind "sfan") and the falling ones cast a shadow where they'll land; Gale's ring of wind
   arcs; home: Sound and How to play as two small icons top left, Training and Replays alone at the bottom, the badge
   key a How to play card. The slash shape's repeated tip points (a "triangulation failed") fixed.
+- 03:07 "Also want to work on sound effects. They arent bad but they arent amazing what we have" -> 0.28.0: the second
+  pass of tools/sfx_make.py - stereo, a small room reverb (Schroeder, in numpy), layered impacts (crack, body, smack,
+  tail), variants for the ones heard most (hits x3 / x2, slash x3, block x2, swing x3, fan throw x2 - never the same
+  twice running), a new slash for her fan cuts and a wood-and-steel clack for a block on her fans, bigger supers / KO /
+  Burst; thuds raised so a phone plays them (all 300-8000 Hz share >= 0.8). A before/after board went to him.
 
 ## To tune / later
 - **Match length with 6:** bot matches take 120-270 decision points with 6 fighters (50-90 with 2). At ~10 s a decision

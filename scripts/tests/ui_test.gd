@@ -405,11 +405,13 @@ func _test_sound() -> void:
 	g._process(0.0)
 	g.sfx.event({"type": "hit", "dmg": 12})
 	g.sfx.event({"type": "hit", "dmg": 45})
+	g.sfx.event({"type": "hit", "dmg": 20}, "slash")
+	var cut: bool = g.sfx.played.has("slash") and (g.sfx._streams.get("hit_light", []) as Array).size() == 3
 	g.sfx.event({"type": "block", "push": true})
 	g.sfx.event({"type": "shot", "kind": "fan"})
 	var heard: Array[String] = g.sfx.played.duplicate()
-	_check("a hit, a big hit, a Push Block, a Fan Throw: %s" % [heard], heard.slice(-4) == ["hit_light", "hit_heavy",
-			"push", "fan_throw"])
+	_check("a hit, a big hit, a fan's cut (the slash), a Push Block, a Fan Throw: %s; three variants of a hit" % [heard],
+			heard.slice(-5) == ["hit_light", "hit_heavy", "slash", "push", "fan_throw"] and cut)
 	Sfx.set_on(false)
 	g.sfx.event({"type": "ko"})
 	var muted: bool = not g.sfx.played.has("ko")
