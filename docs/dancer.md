@@ -20,6 +20,15 @@ are study only.
   - Recall turns her fans home - or, with a direction on the pad, flings them that way first (`Sim.FAN_FLING` 16
     ticks, fast, hitting again) before they head home (like Cowboy's bullets taking DI);
   - Fan Step blinks her to a thrown fan.
+- **Control (0.29.0 - 03:32 "rework dancer kit ... really fits the zoner/control space char"; the research and the
+  reasons: docs/dancer_research.md):**
+  - Fan Ward sends a fan out (8 ways, as far as the Distance says) to hang there 5 s as a trap (Recall pulls it home
+    through whoever's between; Fan Step blinks to it; into the floor it sits low as a mine);
+  - Fan Gust is wind - it shoves them off (no damage), blows their shots back and carries her fans on;
+  - Fan Flick, right after landing a Fan Slash, flicks the fan out and knocks them back to her range;
+  - Mirror also turns shots round in its window.
+  - Cut as rushdown: Knee Dash, Flash Kick, One-Two / Spin Finish, Dive Kick, Air Spin, Hip Toss, Spin Throw, the Sway
+    stance (in git at 0.28.0).
 - **Sadness:** as for anyone (00:06-00:09: YOMI's universal rules stay faithful; its zoners, Cowboy and Wizard, live
   with it too). Her fan's edge rewards spacing instead.
 - **Supers, a zoner's** (03:03 "Why are all the supers for Dancer melee supers when she is supposed to be a zoner
@@ -27,7 +36,7 @@ are study only.
   rushers off, untouchable as it starts), Cyclone (2 bars: a whirlwind sent slowly forward, hitting every 10 ticks,
   not stopped by other projectiles), Grand Finale (3 bars: eight fans falling from the sky across the stage in front).
   The spectral fans aren't her two.
-- **Getting out:** Silk Glide (low profile, passes under projectiles), Snap Step, Sway, Dodge.
+- **Getting out:** Fan Gust, Silk Glide (low profile, passes under projectiles), Snap Step, Back Step, Dodge.
 - **Tempo:** beats from landing, being blocked or dodging through a hit. Each beat adds damage and movement speed.
   At four she gets Encore.
 
@@ -42,6 +51,8 @@ are study only.
 
 ## Numbers to tune (Sim)
 `EDGE_AT` 0.55, `EDGE_DMG` 1.25, `EDGE_STUN` 4, `EDGE_BLOCK` 3, `CLOSE_PX` 40, `CLOSE_DMG` 0.8, `CLOSE_STUN` 3,
-`NO_FAN_CHIP` 1.5, `NO_FAN_BLOCK` 3, `FANS_MAX` 2, `TEMPO_DMG` 0.06, `TEMPO_MOVE` 0.08.
+`NO_FAN_CHIP` 1.5, `NO_FAN_BLOCK` 3, `FANS_MAX` 2, `TEMPO_DMG` 0.06, `TEMPO_MOVE` 0.08; Fan Ward `WARD_NEAR` 3 /
+`WARD_FAR` 18 ticks out, `WARD_LIFE` 300; Fan Gust `GUST_PUSH` 9, `GUST_TICKS` 6, `GUST_FAN` 14, `WARD_DRIFT` 7; Mirror
+`REFLECT` 1.2.
 
 The trait is `"trait": "spacer"` on her stats, so a future character can be something else.

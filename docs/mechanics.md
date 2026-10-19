@@ -51,7 +51,7 @@ the rules of play. The names, art, characters and code are not ours to take, and
 | Push Block | Both heights, no chip, a big push on the striker | Push Block (not interruptible, never parries) |
 | Air block | Worse: +2 block advantage | +2 blockstun (`AIR_BLOCK`) |
 | Block advantage | The prediction says how far ahead / behind | "(+N / -N)" on blocks in the info line |
-| Guard Break | Beats Block | The knee dash |
+| Guard Break | Beats Block | The rule is in; none of hers since the zoner rework (0.29.0 - the knee dash was cut) |
 | Proration | A starter's proration adds to the combo count from the 2nd hit; negative = the 2nd hit unscaled | Jab +2, straight / low kick / air kick / air knee +1, sweep -1 |
 | Air hitstun | +1 frame | The same |
 | Combo pushback | Both pushed apart more as scaling grows | The hitter's pushed back a little more each hit (`COMBO_PUSH`) |
@@ -66,23 +66,23 @@ the rules of play. The names, art, characters and code are not ours to take, and
 | Mechanic | The wiki (character pages) | Standoff |
 |---|---|---|
 | Projectiles | Thrown things with their own hitboxes; parried by blocking within 3 frames; some can't be parried; projectiles cancel each other | `Sim.shots`: Fan Throw, Air Fan (down-forward), Ground Ripple (low, can't be parried); a Block started 3 frames or less before parries a parryable one; two meeting clash |
-| Stances | Moves that open their own moveset (Ninja's Back Sway -> Palm Strike) | Sway (dodges early, gives way): Sway Kick (low), Rising Heel, Sway Step |
-| Follow-ups | Actions only available after a specific one | Jab -> One-Two -> Spin Finish (splat + knockdown) |
+| Stances | Moves that open their own moveset (Ninja's Back Sway -> Palm Strike) | The rule is in; the Sway stance was cut in 0.29.0 (a rushdown stance) |
+| Follow-ups | Actions only available after a specific one | Fan Slash -> Fan Flick (back out to range; 0.29.0) |
 | Hit-cancel limits | A landed hit can limit what you can do next | Uppercut / Rising Heel cancel only into jumps (`cancel_into`) - the launch-and-chase |
 | Counter stance | (several characters' counters) | Mirror: struck in frames 3-24 it strikes back at once ("MIRROR!"); grabs beat it |
 | Initiative | Moves get invulnerability, or a faster startup, when the opponent's not already committed | `init_invuln`: the uppercut and Rising Heel (frames 1-6), Silk Glide (2-8); `init_faster`: Side Kick and Fan Throw start 2 frames in (0.19.0) - when the nearest enemy was choosing too; the card says so |
 | Restands | Landing in hitstun without a knockdown: 3 frames unable to act; a grounded hit in the 5 frames as they land puts them back in a ground combo (the 7th-hit launch count carries on) | `Sim.RESTAND_LAG` 3 / `RESTAND` 5 for anyone launched or hit in the air (`Fighter.launched`); a hit in the window shows RESTAND; no hit - the combo's over. Before 0.19.0 a landing kept them reeling, so air combos went on along the ground for free |
-| Command grab / air grab | Grabs with their own rules; same air/ground state | Spin Throw (into the wall), Air Throw (air to air) |
+| Command grab / air grab | Grabs with their own rules; same air/ground state | Air Throw (air to air); her command grabs were cut in 0.29.0 |
 | Supers | 1-3 bars | Flurry (1), Cyclone (2), Grand Finale (3 - a rush and a launch); the super's name splashed over them |
 
 ## Built (0.11.0-0.12.0 - Timmy 23:23 "better movement", 23:34 "moving over any more mechanics we miss")
 | Mechanic | The wiki | Standoff |
 |---|---|---|
 | Momentum | Ninja's Boost and momentum carry into attacks; Beating Backdash | An attack started on the move slides on through its startup (`CARRY`), and its lunge never slows a faster slide |
-| Attack distance | (dash distance) | Distance on the lunging attacks (Straight, Side Kick, Sweep, Knee Dash, Silk Glide) |
+| Attack distance | (dash distance) | Distance on the lunging attacks (Straight, Side Kick, Sweep, Silk Glide; Fan Ward's placement) |
 | Ceiling | Rules: Ceiling Height 800 | Rule "ceiling", 900 by default (in the lobby rules); heads bump off it; a faint line shows it |
 | Air options | Air jump / air dash, 2 a jump; air attacks keep falling | Air Fan no longer hangs - she keeps falling as she throws (23:34 "Air Fan spam!!!", 00:09 "We should fall"); two fans limit it |
-| Land Cancel | Landing ends the move with a little landing lag | Air Kick, Air Knee, Air Spin, Air Throw, Air Fan (Dive Kick already) |
+| Land Cancel | Landing ends the move with a little landing lag | Air Kick, Air Knee, Air Throw, Air Fan |
 | Low Profile | The hurtbox goes low; high hits pass over | Sweep, Silk Glide, Windmill (`low_profile`) |
 | Undo | Single player only: undo a turn | ↶ Undo at the top right against bots (up to 40 turns back) |
 

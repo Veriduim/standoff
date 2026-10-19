@@ -180,6 +180,17 @@ func _effect(e: Dictionary, prev: Array) -> void:
 			face = signf(float(frame[a][0]))
 		fx.on_event(type, at, face, 0, colour_of(a), a, colour_of(a), false, n + a)
 		return
+	if type in ["ward", "reflect"] and e.has("at"):   # (where the fan hangs / the shot was turned)
+		var w: Array = e["at"]
+		fx.on_event(type, Vector2(float(w[0]), float(w[1])), face, 0, colour_of(a), a, colour_of(a), false, n + a)
+		return
+	if type == "gustfwd":   # (Fan Gust: wind off her fans, in front of her)
+		fx.on_event(type, Vector2(float(frame[a][0]) + face * 40.0, -76.0), face, 0, colour_of(a), a, colour_of(a),
+				false, n + a)
+		return
+	if type == "gusted" and d >= 0 and d < frame.size():   # (caught in it: a puff on them)
+		fx.on_event(type, _chest(d), face, 0, colour_of(a), d, colour_of(d), false, n + d)
+		return
 	if type == "shot":   # (a throw: a flash at the hand)
 		fx.on_event(type, _chest(a) + Vector2(face * 34.0, -10.0), face, 0, colour_of(a), -1, colour_of(a), false, n + a)
 		return
@@ -213,7 +224,8 @@ func _effect(e: Dictionary, prev: Array) -> void:
 func _hit_style(e: Dictionary, a: int) -> String:
 	var src := str(e.get("src", ""))
 	if src != "":
-		return "wave" if src == "ripple" else ("slash" if src in ["fan", "airfan", "fanstorm", "finale", "cyclone"]
+		return "wave" if src == "ripple" else ("slash" if src in ["fan", "airfan", "fanstorm", "finale", "cyclone",
+				"fanward", "fanflick"]
 				else "blunt")
 	var mv := str(frame[a][3])
 	if mv == "" or _char(a) != "dancer":
@@ -487,6 +499,15 @@ func _shot(s: Array, alpha: float) -> void:
 			var turn := Vector2.from_angle(spin)
 			Stick.fan(self, at - turn * r * 0.5, turn, r, 0.9, colour_of(int(s[3])) if alpha >= 1.0 else col,
 					alpha >= 1.0)   # (spun round its middle, the way a thrown fan turns)
+		"ward":   # (Fan Ward: her fan hung in the air, open and turning slowly, bobbing - a faint ring where it bites)
+			var r := Stick.FAN_R * float(Moves.stats(_char(int(s[3])))["height"]) / 100.0 * zoom
+			var hang := at + Vector2(0.0, sin(float(s[6]) * 0.12) * 3.0 * zoom)
+			var c := colour_of(int(s[3])) if alpha >= 1.0 else col
+			var ring := col
+			ring.a = (0.3 + 0.15 * sin(float(s[6]) * 0.2)) * minf(alpha, 1.0)
+			draw_arc(hang, r * 1.3, 0.0, TAU, 32, ring, maxf(1.5, 2.5 * zoom), true)
+			var turn := Vector2.from_angle(-PI / 2.0 + sin(float(s[6]) * 0.05) * 0.6)
+			Stick.fan(self, hang - turn * r * 0.45, turn, r, 1.0, c, alpha >= 1.0)
 		"sfan":   # (a super's spectral fan: glowing, see-through, white-edged - and falling from the sky, its shadow on
 			var r := Stick.FAN_R * float(Moves.stats(_char(int(s[3])))["height"]) / 100.0 * zoom   # the floor first)
 			var ghostly := colour_of(int(s[3])).lightened(0.45)

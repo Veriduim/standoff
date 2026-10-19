@@ -107,6 +107,14 @@ const FAN_BACK := 13.0        ## ...coming back this fast (Recall: FAN_RECALL)
 const FAN_RECALL := 20.0
 const FAN_LIFE := 240         ## ...and is back in hand after this long whatever happens
 const FAN_FLING := 16         ## ...Recall with a direction flings them that way this long before they head home
+const WARD_NEAR := 3          ## Fan Ward: the fan flies out this many ticks at Distance 0...
+const WARD_FAR := 18          ## ...this many at 100 - then it stops and hangs there
+const WARD_LIFE := 300        ## ...this long, then heads home
+const GUST_PUSH := 9.0        ## Fan Gust: the wind shoves them this hard (Push Block's shove)...
+const GUST_TICKS := 6         ## ...and their own move can't carry them on through it for this long
+const GUST_FAN := 14.0        ## ...her own fans in it carried on at least this fast
+const WARD_DRIFT := 7.0       ## ...a hanging one blown on this far a tick
+const REFLECT := 1.2          ## Mirror: a shot turned round flies back this much faster
 const TEMPO_MAX := 4          ## Tempo: beats; Encore at four
 const TEMPO_DMG := 0.06       ## ...each beat: this much more damage
 const TEMPO_FADE := 300       ## ...a beat fades after this long without a new one
@@ -1157,6 +1165,8 @@ func _spawn(f: Fighter) -> void:
 	for sp: Dictionary in Moves.spawns(m):   # (one, or a super's volley - each on its own frame)
 		if not sp.is_empty() and int(sp["at"]) == f.frame:
 			_spawn_one(f, m, sp)
+	if m.has("gust"):   # (Fan Gust: the wind, on its frames)
+		_gust(f, m)
 
 
 ## One projectile off a move: its own place and direction (or the one picked), and how it hits.
@@ -1181,7 +1191,47 @@ func _spawn_one(f: Fighter, m: Dictionary, sp: Dictionary) -> void:
 	if xf.has("fans") and int(m.get("fans", 0)) > 0:   # (Fans: one out of her hand - it comes back)
 		f.fans -= 1
 		shots[-1].merge({"ret": true, "leg": 0, "out": FAN_OUT, "hits": [], "life": FAN_LIFE}, true)
+		if bool(sp.get("ward", false)):   # (Fan Ward: out as far as the Distance says, then it hangs there)
+			shots[-1]["ward"] = true
+			shots[-1]["out"] = int(round(lerpf(float(WARD_NEAR), float(WARD_FAR), f.dist)))
 	_event("shot", f, null, 0, {"kind": str(sp["kind"])})
+
+
+## Fan Gust (YOMI's Wizard has a Gust - wind that moves fighters and projectiles alike; ours is our own): on its frames
+## the wind in front of her shoves enemies away (no damage), blows their shots back the way they came (a returning fan
+## of theirs is sent home; a heavy one - the Cyclone - holds) and carries her own fans further out; a hanging one drifts.
+func _gust(f: Fighter, m: Dictionary) -> void:
+	var g: Array = m["gust"]
+	if f.frame < int(g[0]) or f.frame > int(g[1]):
+		return
+	var area := hitbox(f, {"box": g[2]})
+	var way := float(f.facing)
+	for d in fighters:
+		if d.ko or not enemies(f, d) or invulnerable(d) or not area.intersects(hurtbox(d)):
+			continue
+		d.vel.x = way * GUST_PUSH / float(Moves.stats(d.character)["weight"])
+		d.pushed = GUST_TICKS
+		if f.frame == int(g[0]):
+			_event("gusted", f, d)
+	for s: Dictionary in shots:
+		if not area.has_point(s["pos"]):
+			continue
+		var v: Vector2 = s["vel"]
+		if int(s["team"]) != f.team:
+			if bool(s.get("heavy", false)):
+				continue
+			if bool(s.get("ret", false)):
+				s["leg"] = 1
+			else:
+				s["vel"] = Vector2(way * maxf(absf(v.x), 7.0), v.y * 0.3)
+		elif int(s["owner"]) == f.id and bool(s.get("ret", false)):
+			if int(s["leg"]) == 2:
+				var p: Vector2 = s["pos"]
+				s["pos"] = Vector2(clampf(p.x + way * WARD_DRIFT, -half + 10.0, half - 10.0), p.y)
+			else:
+				s["leg"] = 0
+				s["out"] = maxi(int(s["out"]), 4)
+				s["vel"] = Vector2(way * maxf(absf(v.x), GUST_FAN), v.y * 0.5)
 
 
 ## Fans: Recall - every fan of hers in the air turns for home at once, fast, and may hit anyone again on the way.
@@ -1208,7 +1258,16 @@ func _fan_fly(s: Dictionary) -> bool:
 	if int(s["leg"]) == 0:
 		s["out"] = int(s["out"]) - 1
 		if int(s["out"]) <= 0:
+			if bool(s.get("ward", false)):
+				_plant(s)
+			else:
+				s["leg"] = 1
+		return true
+	if int(s["leg"]) == 2:   # (Fan Ward: hanging where it stopped, until its time's up)
+		s["vel"] = Vector2.ZERO
+		if int(s["life"]) <= 1:
 			s["leg"] = 1
+			s["life"] = FAN_LIFE
 		return true
 	var to := o.pos + Vector2(0.0, -70.0) - (s["pos"] as Vector2)
 	if to.length() < 34.0:
@@ -1216,6 +1275,44 @@ func _fan_fly(s: Dictionary) -> bool:
 		_event("catch", o, null)
 		return false
 	s["vel"] = to.normalized() * float(s.get("spd", FAN_BACK))
+	return true
+
+
+## Fan Ward: the fan stops and hangs where it is - a trap - until it bites, it's called home or its time's up.
+func _plant(s: Dictionary) -> void:
+	s["leg"] = 2
+	s["vel"] = Vector2.ZERO
+	s["life"] = WARD_LIFE
+	var p: Vector2 = s["pos"]
+	_event("ward", get_f(int(s["owner"])), null, 0, {"at": [p.x, p.y]})
+
+
+## Mirror, in its window, turns a shot round: back it flies, faster, as hers. A returning fan is sent home instead (it
+## isn't hers to keep); a heavy one (the Cyclone) goes through. True = turned.
+func _reflects(d: Fighter, s: Dictionary) -> bool:
+	if d.move == "" or d.stun > 0 or d.blockstun > 0 or d.lock > 0 or bool(s.get("heavy", false)):
+		return false
+	var ret := bool(s.get("ret", false))
+	if ret and (s["hits"] as Array).has(d.id):
+		return false
+	var m := Moves.move(d.character, d.move)
+	var w: Array = m.get("window", [])
+	if not bool(m.get("reflect", false)) or w.is_empty() or d.frame < int(w[0]) or d.frame > int(w[1]):
+		return false
+	var a := get_f(int(s["owner"]))
+	var p: Vector2 = s["pos"]
+	if ret:
+		s["leg"] = 1
+		(s["hits"] as Array).append(d.id)
+	else:
+		s["owner"] = d.id
+		s["team"] = d.team
+		s["vel"] = -(s["vel"] as Vector2) * REFLECT
+		s["life"] = maxi(int(s["life"]), 60)
+		if s.has("hits"):
+			s["hits"] = []
+	_gain(d, PARRY_METER / 2.0)
+	_event("reflect", d, a, 0, {"at": [p.x, p.y]})
 	return true
 
 
@@ -1269,12 +1366,18 @@ func _shots_step(touched: Dictionary) -> void:
 				var o := get_f(int(s["owner"]))
 				o.fans = mini(FANS_MAX, o.fans + 1)
 				continue
-			s["leg"] = 1   # (off the edge or into the floor: it turns for home)
-			s["pos"] = Vector2(clampf(p.x, -half - 30.0, half + 30.0), minf(p.y, 0.0))
+			if bool(s.get("ward", false)) and int(s["leg"]) == 0:   # (a ward sent into the floor or the edge hangs there)
+				s["pos"] = Vector2(clampf(p.x, -half + 10.0, half - 10.0), minf(p.y, -22.0))
+				_plant(s)
+			else:
+				s["leg"] = 1   # (off the edge or into the floor: it turns for home)
+				s["pos"] = Vector2(clampf(p.x, -half - 30.0, half + 30.0), minf(p.y, 0.0))
 		var landed := false
 		for d in fighters:
 			if d.ko or d.team == int(s["team"]) or not _shot_rect(s).intersects(hurtbox(d)):
 				continue
+			if _reflects(d, s):   # (Mirror: turned round - it's hers now)
+				break
 			if invulnerable(d) or _shot_proof(d):
 				if d.down == 0:
 					_beat(d, "d%d" % d.instance)
@@ -1317,7 +1420,7 @@ func record_shots() -> Array:
 	for s: Dictionary in shots:
 		var p: Vector2 = s["pos"]
 		var v: Vector2 = s["vel"]
-		out.append([p.x, p.y, s["kind"], s["owner"], v.x, v.y, s["life"]])
+		out.append([p.x, p.y, "ward" if int(s.get("leg", 0)) == 2 else s["kind"], s["owner"], v.x, v.y, s["life"]])
 	return out
 
 

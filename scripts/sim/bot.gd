@@ -6,18 +6,21 @@ extends RefCounted
 ## forward against a few likely answers from the enemy - the same sim the ghost preview runs, the two of them alone -
 ## and plays the one that went best. Seeded, so a test match plays the same every time.
 
-const GROUND_HITS := ["jab", "straight", "lowkick", "sidekick", "uppercut", "spin", "sweep", "axekick", "kneedash",
-	"flashkick", "onetwo", "spinfinish", "swaykick", "risingheel", "stomp", "fanslash", "pop", "snapkick", "windmill",
-	"kipup", "updraft", "glide"]
-const FROM_AFAR := ["fan", "ripple", "fan", "sway", "recall", "glide"]
+const GROUND_HITS := ["jab", "straight", "lowkick", "sidekick", "uppercut", "spin", "sweep", "axekick", "stomp",
+	"fanslash", "fanflick", "pop", "snapkick", "windmill", "kipup", "updraft", "glide"]
+const FROM_AFAR := ["fan", "ripple", "fan", "fanward", "recall", "glide", "fanward"]
 const FLOOR := ["windmill", "kipup", "sweep", "lowkick", "floorslide", "flowform", "snapform", "block", "roll", "ripple"]
 const FORM_SWITCH := ["snapform", "floorform", "flowform"]
-const AIR := ["divekick", "airkick", "airknee", "airspin", "airdash", "fastfall", "block", "wait", "airfan",
-	"airthrow", "airjump"]
-const GRABS := ["grab", "hiptoss", "spinthrow"]
+const AIR := ["airkick", "airknee", "airdash", "fastfall", "block", "wait", "airfan", "airthrow", "airjump",
+	"fanward"]
+const GRABS := ["grab"]
 const SUPERS := ["fanstorm", "gale", "cyclone", "finale"]
-const CLOSE_IN := ["walk", "dash", "roll", "kneedash", "floorslide", "snapstep", "fanstep"]
+const CLOSE_IN := ["walk", "dash", "roll", "floorslide", "snapstep", "fanstep"]
 const BACK_OFF := ["backstep", "walk", "dash"]
+## A spacer (the Dancer - 03:32 "the zoner/control space char") plays her range: point blank she makes room...
+const KEEP_OUT := ["fangust", "backstep", "updraft", "uppercut", "fanslash", "fangust"]
+## ...and at her range she pokes, throws, sets a ward or blows them off.
+const MID := ["fanslash", "sidekick", "ripple", "fan", "fanward", "fangust", "straight", "sweep"]
 
 const LOOK := 28        ## (thinking) frames each try is played forward
 ## By level (Timmy 02:10 "Lets do difficulty please"): 0 Easy - the quick bot; 1 Normal; 2 Hard.
@@ -164,8 +167,11 @@ func _play(base: Dictionary, mine: Dictionary, theirs: Dictionary) -> float:
 	elif t.actionable() and not f.actionable():
 		v -= 4.0
 	var gap := absf(t.pos.x - f.pos.x)
-	if f.character == "dancer" and gap > 80.0 and gap < 240.0:   # (a spacer: her fan's distance is hers)
-		v += 2.0
+	if str(Moves.stats(f.character).get("trait", "")) == "spacer":   # (a spacer: her fan's distance is hers - 03:32
+		if gap > 90.0 and gap < 260.0:                                 # the zoner rework: room is worth something,
+			v += 5.0                                                   # point blank costs her)
+		elif gap < 60.0:
+			v -= 4.0
 	return v
 
 
@@ -202,8 +208,9 @@ func _quick(sim: Sim, id: int) -> Dictionary:
 	var c := {"x": toward, "y": 0.0}
 	if not f.grounded():
 		c["move"] = pick.call(AIR)
-		c["y"] = 0.8 if c["move"] == "divekick" else rng.randf_range(-0.6, 0.6)
+		c["y"] = 0.8 if c["move"] == "airfan" else rng.randf_range(-0.6, 0.6)
 		return c
+	var spacer := str(Moves.stats(f.character).get("trait", "")) == "spacer"
 	if dist > 170.0:
 		var r0 := rng.randf()
 		if r0 < 0.18:
@@ -212,8 +219,11 @@ func _quick(sim: Sim, id: int) -> Dictionary:
 			c["y"] = -1.0
 		elif r0 < 0.22:
 			c["move"] = pick.call(["taunt", "wait"])
-		elif r0 < 0.45:   # (from afar: a fan, a ripple, now and then the Sway)
+		elif r0 < (0.7 if spacer else 0.45):   # (from afar: a fan, a ripple, a ward - a spacer keeps them out there)
 			c["move"] = pick.call(FROM_AFAR)
+			if c["move"] == "fanward" and rng.randf() < 0.4:   # (now and then hung up high, over a jump)
+				c["y"] = -0.7
+			c["dist"] = rng.randf_range(40.0, 100.0)
 		else:
 			c["move"] = pick.call(CLOSE_IN)
 		return c
@@ -238,6 +248,10 @@ func _quick(sim: Sim, id: int) -> Dictionary:
 		return c
 	if legal.has("burstcancel") and rng.randf() < 0.15:
 		return {"move": "burstcancel"}
+	if spacer and rng.randf() < 0.32:   # (a spacer: room when they're on top of her, her own tools at her range)
+		c["move"] = pick.call(KEEP_OUT if dist < 80.0 else MID)
+		c["dist"] = rng.randf_range(40.0, 100.0)
+		return c
 	var r := rng.randf()
 	if f.meter >= Sim.BAR and r < 0.04:   # (supers now and then - meter comes quickly the wiki's way)
 		c["move"] = pick.call(SUPERS)

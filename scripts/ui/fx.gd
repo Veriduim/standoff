@@ -144,6 +144,23 @@ func on_event(type: String, at: Vector2, face: float, dmg: int, by: Color, victi
 			_add("shock", at, Vector2.ZERO, 0.3, Color("#ff7ab6"), 70.0)
 			_add("text", at + Vector2(0, -80), Vector2(0, -40), 0.9, Color("#ff7ab6"), 24.0)
 			parts[-1]["txt"] = "ON BEAT!"
+		"ward":   # (Fan Ward: the fan stops and hangs - a small ring of her colour where it waits)
+			_add("ring", at, Vector2.ZERO, 0.3, by.lightened(0.3), 30.0)
+			_add("glint", at, Vector2.ZERO, 0.22, by.lightened(0.6), 22.0)
+		"reflect":   # (Mirror turns a shot round: a quick glint and a small word - no big circle)
+			_add("glint", at, Vector2.ZERO, 0.26, Color.WHITE, 40.0)
+			_add("shock", at, Vector2.ZERO, 0.22, by.lightened(0.4), 46.0)
+			_add("text", at + Vector2(0, -50), Vector2(0, -40), 0.55, Color.WHITE, 18.0)
+			parts[-1]["txt"] = "REFLECT"
+		"gustfwd":   # (Fan Gust: wind off her fans, rushing out along the way she faces)
+			for k in 12:
+				var off := Vector2(face * _rng.randf_range(0.0, 50.0), _rng.randf_range(-80.0, 50.0))
+				_add("hwind", at + off, Vector2(face * _rng.randf_range(700.0, 1000.0), _rng.randf_range(-30.0, 30.0)),
+						_rng.randf_range(0.3, 0.45), Color("#dff3ff"), _rng.randf_range(30.0, 56.0))
+		"gusted":   # (caught in the gust: a few streaks past them)
+			for k in 4:
+				var off := Vector2(0.0, _rng.randf_range(-40.0, 40.0))
+				_add("hwind", at + off, Vector2(face * _rng.randf_range(500.0, 800.0), 0.0), 0.3, Color("#dff3ff"), 34.0)
 		"catch", "recall":   # (Fans: one back in hand / called home - a gold ring)
 			_add("shock", at, Vector2.ZERO, 0.18, Color("#ffd23f"), 34.0 if type == "catch" else 64.0)
 		"form_snap", "form_floor", "form_flow":   # (Forms: into one - its name)
@@ -661,6 +678,11 @@ func draw_parts(st: StageView) -> void:
 			"chip":
 				c.a = 1.0 - t * t
 				st.draw_rect(Rect2(at - Vector2(s, s) / 2.0, Vector2(s, s)), c)
+			"hwind":   # (Fan Gust's wind: a streak rushing out the way she faces, thinning)
+				c.a = 0.85 * (1.0 - t)
+				var back := Vector2(-signf((p["v"] as Vector2).x), 0.0)
+				st.draw_line(at, at + back * s * (1.0 - 0.5 * t) + Vector2(0.0, sin(float(p["r"])) * 4.0 * z), c,
+						maxf(1.5, 3.0 * z), true)
 			"wind":   # (a streak of wind, rushing up and thinning)
 				c.a = 0.85 * (1.0 - t)
 				st.draw_line(at, at + Vector2(sin(float(p["r"])) * 5.0 * z, s * (1.0 - 0.5 * t)), c, maxf(1.5, 3.0 * z), true)

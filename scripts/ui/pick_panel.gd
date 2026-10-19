@@ -435,6 +435,8 @@ static func frame_data(m: Dictionary) -> String:
 		parts.append("%d meter" % int(m["cost"]))
 	if int(m.get("meter_gain", 0)) > 0:
 		parts.append("+%d meter" % int(m["meter_gain"]))
+	if m.has("note"):   # (what the numbers can't say - a trap, wind, a reflect)
+		parts.append(str(m["note"]))
 	return " · ".join(parts)
 
 

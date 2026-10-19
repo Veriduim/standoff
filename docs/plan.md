@@ -242,6 +242,13 @@ one stage; each attack aims at a picked target.
   twice running), a new slash for her fan cuts and a wood-and-steel clack for a block on her fans, bigger supers / KO /
   Burst; thuds raised so a phone plays them (all 300-8000 Hz share >= 0.8). A before/after board went to him.
 
+- 03:32 "rework dancer kit. Make sure she really fits the zoner/control space char ... research othrr fighting games
+  ... Smash Bros, MK, Street Fighter and then see how these would Translate to Hustle with the help of its wiki and 5
+  base chars" -> 0.29.0 (docs/dancer_research.md): the rushdown moves cut (Knee Dash, Flash Kick, One-Two / Spin
+  Finish, Dive Kick, Air Spin, Hip Toss, Spin Throw, the Sway stance); **Fan Ward** (a fan hung at the Distance as a
+  trap - Recall's pincer, Fan Step to it, a floor mine), **Fan Gust** (wind: shoves them, blows shots back, carries her
+  fans), **Fan Flick** (Fan Slash's follow-up, back out to range), **Mirror reflects** shots; bots play her range.
+
 ## To tune / later
 - **Match length with 6:** bot matches take 120-270 decision points with 6 fighters (50-90 with 2). At ~10 s a decision
   that's far too long - lower HP or more damage with more players (a lobby setting), and a turn timer.

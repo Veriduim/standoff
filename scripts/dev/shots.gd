@@ -61,6 +61,8 @@ func run(game: Control, out: String) -> void:
 			game.finish_playback()
 		elif game.phase == "pick" and not game.sim.fighters[game.me].actionable():
 			game._commit({"move": "hold"})
+		elif game.phase == "pick" and not game.sim.fighters[game.me].grounded():   # (the drawers on the ground)
+			game._commit({"move": "fastfall" if game.sim.legal_moves(game.me).has("fastfall") else "wait"})
 		else:
 			break
 	if game.phase == "pick":
@@ -68,6 +70,9 @@ func run(game: Control, out: String) -> void:
 		p._tab("attack")
 		await _wait(20)
 		await _snap(out.path_join("2_drawer.png"))
+		p._tab("special")
+		await _wait(10)
+		await _snap(out.path_join("2a_drawer_special.png"))
 		p._tab("move")
 		await _wait(10)
 		await _snap(out.path_join("2b_drawer_move.png"))

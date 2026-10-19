@@ -152,6 +152,13 @@ func event(e: Dictionary, style := "") -> void:
 			play("gust", 2.0)
 		"catch":
 			play("catch", -2.0)
+		"ward":   # (a fan left hanging)
+			play("catch", -5.0, 0.85)
+		"reflect":
+			play("parry")
+			play("slash", -4.0, vary)
+		"gustfwd":
+			play("gust", 1.0, 0.9)
 		"recall":
 			play("recall")
 		"sweep", "sweep_up":

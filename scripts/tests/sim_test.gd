@@ -48,10 +48,10 @@ func _test_turns() -> void:
 			% [seg["frames"].size(), s.deciders()], seg["frames"].size() == 10 and s.deciders() == [0, 1, 2]
 			and s.legal_moves(1).has("hold") and s.legal_moves(1).has("jab") and not s.legal_moves(0).has("hold"))
 	var fresh := Sim.create([{"character": "dancer"}, {"character": "dancer"}])
-	_check("ground and air menus differ: a jump on the ground, a dive kick only in the air",
-			fresh.legal_moves(1).has("jump") and not fresh.legal_moves(1).has("divekick"))
+	_check("ground and air menus differ: a jump on the ground, an air kick only in the air",
+			fresh.legal_moves(1).has("jump") and not fresh.legal_moves(1).has("airkick"))
 	fresh.fighters[1].pos.y = -100.0
-	_check("...in the air: the dive kick, no jump", fresh.legal_moves(1).has("divekick")
+	_check("...in the air: the air kick, no jump", fresh.legal_moves(1).has("airkick")
 			and not fresh.legal_moves(1).has("jump"))
 	fresh.fighters[1].pos.y = 0.0
 	_check("a super needs meter", not fresh.legal_moves(1).has("fanstorm"))
@@ -104,10 +104,16 @@ func _test_rules() -> void:
 	evs = _play(s, {0: {"move": "straight"}, 1: {"move": "pushblock"}})
 	_check("a Push Block: no chip, and the striker's shoved back (hp %d, x %.0f -> %.0f)" % [s.fighters[1].hp, x0,
 			s.fighters[0].pos.x], _types(evs).has("block") and s.fighters[1].hp == 450 and s.fighters[0].pos.x < x0 - 20.0)
-	s = _duel("dancer", "dancer", 90.0)
-	evs = _play(s, {0: {"move": "kneedash"}, 1: {"move": "block"}})
-	_check("a Guard Break (the knee dash) goes straight through a Block (%s)" % [_types(evs)], _types(evs).has("hit")
-			and not _types(evs).has("block"))
+	s = _duel("dancer", "dancer", 90.0)   # (the rule stays - the zoner has no guard break of her own since 03:32)
+	s.apply({0: {"move": "wait"}, 1: {"move": "block"}})
+	s.step()
+	var bm := Moves.move("dancer", "block")
+	var plain := {"dmg": 30, "stun": 10, "kb": [1.0, 0.0], "block": 8, "chip": 1}
+	var held := s._block(s.fighters[0], s.fighters[1], plain, bm, 4, false)
+	plain["guardbreak"] = true
+	_check("a Guard Break goes straight through a Block (blocked plain: %s, with guard break: %s)" % [held,
+			s._block(s.fighters[0], s.fighters[1], plain, bm, 4, false)], held
+			and not s._block(s.fighters[0], s.fighters[1], plain, bm, 4, false))
 	s = _duel("dancer", "dancer", 80.0)
 	evs = _play(s, {0: {"move": "roll", "x": 1.0}, 1: {"move": "jab"}})
 	_check("a roll's invulnerable frames let the jab pass through (%s, hp %d)" % [_types(evs), s.fighters[0].hp],
@@ -227,15 +233,16 @@ func _test_escaping_combos() -> void:
 	_check("a combo goes on, but the same move used again in it stuns for less (jab %d, then again %d)"
 			% [first_stun, s.fighters[1].stun], s.fighters[1].combo == 3 and s.fighters[1].stun < first_stun - 2)
 	s = _duel("dancer", "dancer", 60.0)
-	s.apply({0: {"move": "flashkick", "x": 1.0}, 1: {"move": "wait"}})
+	s.fighters[0].tempo = Sim.TEMPO_MAX
+	s.apply({0: {"move": "encore", "x": 1.0}, 1: {"move": "wait"}})
 	var landed := false
 	for _i in 30:   # (to the tick it lands)
 		s.step()
 		if _types(s.events).has("hit"):
 			landed = true
 			break
-	_check("...not every move frees you on a hit: the Flash Kick doesn't (still in it as it lands)",
-			landed and s.fighters[0].move == "flashkick")
+	_check("...not every move frees you on a hit: Encore doesn't (still in it as its first hit lands)",
+			landed and s.fighters[0].move == "encore")
 	s = _duel()
 	s.apply({0: {"move": "jab"}, 1: {"move": "sidekick"}})
 	evs = _play(s, {})
@@ -443,25 +450,22 @@ func _test_cooler_moves() -> void:
 			s.step()
 		_check("a %s met by a Block just started: %s (%s)" % [kind[0], kind[2], _types(s.events)],
 				_types(s.events).has(str(kind[2])) and (str(kind[2]) == "parry" or not _types(s.events).has("parry")))
-	s = _duel("dancer", "dancer", 300.0)
-	_check("the Sway's moves aren't there outside it", not s.legal_moves(0).has("swaykick"))
-	s.apply({0: {"move": "sway"}, 1: {"move": "wait"}})
-	s.run_segment()
-	_check("...in the Sway: Sway Kick, Rising Heel, Sway Step (%s)" % [s.legal_moves(0).filter(func(m: String) -> bool:
-			return m.begins_with("sway") or m == "risingheel")], s.legal_moves(0).has("swaykick")
-			and s.legal_moves(0).has("risingheel") and s.legal_moves(0).has("swaystep"))
-	s = _duel()
+	s = _duel("dancer", "dancer", 70.0)
 	s.fighters[1].burst = 0
-	_check("One-Two only after landing a jab", not s.legal_moves(0).has("onetwo"))
-	s.apply({0: {"move": "jab"}, 1: {"move": "wait"}})
+	_check("Fan Flick only right after landing a Fan Slash", not s.legal_moves(0).has("fanflick"))
+	s.apply({0: {"move": "fanslash"}, 1: {"move": "wait"}})
 	s.run_segment()
-	_check("...landed: One-Two is there, Spin Finish not yet", s.legal_moves(0).has("onetwo")
-			and not s.legal_moves(0).has("spinfinish"))
-	s.fighters[0].pos.x = s.fighters[1].pos.x - 60.0
-	s.fighters[1].vel = Vector2.ZERO
-	s.apply({0: {"move": "onetwo"}, 1: {"move": "hold"}})
-	s.run_segment()
-	_check("...and after the One-Two, Spin Finish", s.legal_moves(0).has("spinfinish"))
+	var gap0 := s.fighters[1].pos.x - s.fighters[0].pos.x
+	_check("...landed: Fan Flick is there (gap %.0f)" % gap0, s.legal_moves(0).has("fanflick"))
+	s.events.clear()
+	s.apply({0: {"move": "fanflick"}, 1: {"move": "hold"}})
+	var flicked := Sim.FANS_MAX
+	for _i in 14:
+		s.step()
+		flicked = mini(flicked, s.fighters[0].fans)
+	_check("...the flick: the fan leaves her hand, hits and knocks them back out to her range (gap %.0f -> %.0f, %s)"
+			% [gap0, s.fighters[1].pos.x - s.fighters[0].pos.x, _types(s.events)], _types(s.events).has("hit")
+			and s.fighters[1].pos.x - s.fighters[0].pos.x > gap0 + 40.0 and flicked == 1)
 	s = _duel()
 	evs = _play(s, {0: {"move": "jab"}, 1: {"move": "mirror"}})
 	_check("Mirror catches a jab in its window and strikes back (%s, the jabber's hp %d)" % [_types(evs),
@@ -478,15 +482,13 @@ func _test_cooler_moves() -> void:
 	_check("an Air Throw takes them out of the air (%s)" % [_types(s.events)], _types(s.events).has("throw"))
 	s = _duel("dancer", "dancer", 50.0)
 	s.fighters[1].burst = 0
-	s.apply({0: {"move": "sway"}, 1: {"move": "wait"}})
-	s.run_segment()
-	s.apply({0: {"move": "risingheel"}, 1: {"move": "hold"}})
+	s.apply({0: {"move": "uppercut"}, 1: {"move": "wait"}})
 	for _i in 6:
 		s.run_segment()
 		if s.fighters[0].actionable():
 			break
 		s.apply({1: {"move": "hold"}})
-	_check("Rising Heel launches and cancels only into jumps (%s)" % [s.legal_moves(0)], s.fighters[1].stun > 0
+	_check("Uppercut launches and cancels only into jumps (%s)" % [s.legal_moves(0)], s.fighters[1].stun > 0
 			and s.legal_moves(0).has("superjump") and not s.legal_moves(0).has("jab"))
 	s = _duel()
 	evs = _play(s, {0: {"move": "uppercut"}, 1: {"move": "jab"}})
@@ -619,7 +621,7 @@ func _test_wiki_mechanics_2() -> void:
 	s = _duel("dancer", "dancer", 600.0)
 	s.fighters[0].pos.y = -20.0
 	s.fighters[0].vel.y = 4.0
-	s.apply({0: {"move": "airspin", "x": 1.0}, 1: {"move": "wait"}})
+	s.apply({0: {"move": "airknee", "x": 1.0}, 1: {"move": "wait"}})
 	for _i in 8:
 		s.step()
 	_check("Land Cancel: an air attack ends as she lands, a little landing lag instead (move '%s', lock %d)"
@@ -778,6 +780,139 @@ func _test_thinking_bot() -> void:
 			hits += 1
 	_check("it lands a punish %d times in 4 (it's not reading their pick - only the state anyone can see)" % hits,
 			hits >= 3)
+
+
+func _test_zoner_kit() -> void:
+	_section("The zoner's kit (03:32): Fan Ward hangs a trap, Recall's pincer, Fan Gust's wind, Mirror turns shots, "
+			+ "the rushdown moves gone")
+	var kit := Moves.of("dancer")
+	var gone := ["kneedash", "flashkick", "onetwo", "spinfinish", "divekick", "airspin", "hiptoss", "spinthrow", "sway",
+		"swaykick", "risingheel", "swaystep"]
+	_check("the rushdown moves are gone (Knee Dash, Flash Kick, the jab chain, Dive Kick, Air Spin, the command grabs, "
+			+ "the Sway); in their place Fan Ward, Fan Gust, Fan Flick", gone.all(func(m: String) -> bool:
+				return not kit.has(m)) and kit.has("fanward") and kit.has("fangust") and kit.has("fanflick"))
+	# Fan Ward: out as far as the Distance says, then it hangs there
+	var spots := []
+	for dist: float in [0.0, 100.0]:
+		var w := _duel("dancer", "dancer", 700.0)
+		w.apply({0: {"move": "fanward", "x": 1.0, "dist": dist}, 1: {"move": "wait"}})
+		for _i in 40:
+			w.step()
+		var hung: Array = w.shots.filter(func(x: Dictionary) -> bool: return int(x.get("leg", 0)) == 2)
+		spots.append((hung[0]["pos"] as Vector2).x - w.fighters[0].pos.x if hung.size() == 1 else -1.0)
+	_check("Fan Ward: the fan stops where the Distance says and hangs there (Distance 0: %.0f px out, 100: %.0f px)"
+			% spots, float(spots[0]) > 30.0 and float(spots[1]) > float(spots[0]) + 120.0)
+	var s := _duel("dancer", "dancer", 500.0)
+	s.fighters[1].burst = 0
+	s.apply({0: {"move": "fanward", "x": 1.0, "dist": 60.0}, 1: {"move": "wait"}})
+	for _i in 30:
+		s.step()
+	var ward: Dictionary = s.shots[0] if s.shots.size() == 1 else {}
+	var at: Vector2 = ward.get("pos", Vector2.ZERO)
+	for _i in 120:
+		s.step()
+	var shown: Array = s.record_shots()
+	_check("...still hanging 2 s later, in the replay as a ward; one fan in hand (%s, fans %d)" % [shown,
+			s.fighters[0].fans], s.shots.size() == 1 and (s.shots[0]["pos"] as Vector2).is_equal_approx(at)
+			and str(shown[0][2]) == "ward" and s.fighters[0].fans == 1)
+	s.events.clear()
+	s.fighters[1].pos.x = at.x + 20.0
+	for _i in 4:
+		s.step()
+	_check("...whoever walks into it is hit, and it heads home (%s, hp %d)" % [_types(s.events), s.fighters[1].hp],
+			_types(s.events).has("hit") and s.fighters[1].hp < 450 and int(s.shots[0]["leg"]) == 1)
+	s = _duel("dancer", "dancer", 500.0)
+	s.fighters[1].burst = 0
+	s.apply({0: {"move": "fanward", "x": 1.0, "dist": 100.0}, 1: {"move": "wait"}})
+	for _i in 40:
+		s.step()
+	s.fighters[1].pos.x = s.fighters[0].pos.x + 110.0   # (between her and her ward)
+	s.events.clear()
+	s.apply({0: {"move": "recall"}, 1: {"move": "wait"}})
+	for _i in 30:
+		s.step()
+	_check("...Recall pulls it home through whoever's between - a pincer (%s, hp %d, fans %d)" % [_types(s.events),
+			s.fighters[1].hp, s.fighters[0].fans], _types(s.events).has("hit") and s.fighters[1].hp < 450)
+	s = _duel("dancer", "dancer", 600.0)
+	s.apply({0: {"move": "fanward", "x": 1.0, "y": -1.0, "dist": 100.0}, 1: {"move": "wait"}})
+	for _i in 40:
+		s.step()
+	var high: Vector2 = s.shots[0]["pos"] if s.shots.size() == 1 else Vector2.ZERO
+	s.apply({0: {"move": "fanstep"}, 1: {"move": "wait"}})
+	for _i in 8:
+		s.step()
+	_check("...sent up and forward it hangs in the air (%.0f, %.0f); Fan Step blinks her to it (her x %.0f)" % [high.x,
+			high.y, s.fighters[0].pos.x], high.y < -150.0 and absf(s.fighters[0].pos.x - high.x) < 30.0
+			and s.fighters[0].fans == 2)
+	s = _duel("dancer", "dancer", 700.0)
+	s.fighters[1].pos.y = 0.0
+	s.apply({0: {"move": "fanward", "x": 1.0, "y": 1.0, "dist": 100.0}, 1: {"move": "wait"}})
+	for _i in 40:
+		s.step()
+	_check("...sent down into the floor it hangs low there - a mine (y %.0f)" % (float((s.shots[0]["pos"] as Vector2).y)
+			if s.shots.size() == 1 else 0.0), s.shots.size() == 1 and int(s.shots[0]["leg"]) == 2
+			and (s.shots[0]["pos"] as Vector2).y > -40.0)
+	# Fan Gust: wind - shoves them off, no damage; their shots blown back
+	s = _duel("dancer", "dancer", 110.0)
+	var gap0 := s.fighters[1].pos.x - s.fighters[0].pos.x
+	var evs := _play(s, {0: {"move": "fangust"}, 1: {"move": "wait"}})
+	_check("Fan Gust shoves them off, no damage (gap %.0f -> %.0f, hp %d, %s)" % [gap0, s.fighters[1].pos.x
+			- s.fighters[0].pos.x, s.fighters[1].hp, _types(evs)], s.fighters[1].pos.x - s.fighters[0].pos.x > gap0 + 70.0
+			and s.fighters[1].hp == 450 and _types(evs).has("gusted"))
+	s = _duel("dancer", "dancer", 400.0)
+	s.apply({0: {"move": "wait"}, 1: {"move": "ripple"}})
+	var gusted := false
+	var away := false
+	for _i in 90:
+		s.step()
+		if not gusted and not s.shots.is_empty() and s.fighters[0].actionable() \
+				and (s.shots[0]["pos"] as Vector2).x - s.fighters[0].pos.x < 160.0:
+			s.apply({0: {"move": "fangust"}})
+			gusted = true
+		if gusted and not s.shots.is_empty() and float((s.shots[0]["vel"] as Vector2).x) > 0.0:
+			away = true
+	_check("...and blows their shot back the way it came (a Ground Ripple - blown back: %s, her hp %d)" % [away,
+			s.fighters[0].hp], gusted and away and s.fighters[0].hp == 450)
+	s = _duel("dancer", "dancer", 700.0)
+	s.apply({0: {"move": "fanward", "x": 1.0, "dist": 40.0}, 1: {"move": "wait"}})
+	for _i in 30:
+		s.step()
+	var x0 := float((s.shots[0]["pos"] as Vector2).x)
+	s.apply({0: {"move": "fangust"}, 1: {"move": "wait"}})
+	for _i in 30:
+		s.step()
+	_check("...and carries her own on: a hanging ward drifts toward them (x %.0f -> %.0f)" % [x0,
+			float((s.shots[0]["pos"] as Vector2).x)], float((s.shots[0]["pos"] as Vector2).x) > x0 + 30.0)
+	# Mirror: a shot turned round
+	s = _duel("dancer", "dancer", 300.0)
+	s.fighters[0].burst = 0
+	s.apply({0: {"move": "ripple"}, 1: {"move": "wait"}})
+	var mirrored := false
+	for _i in 120:
+		s.step()
+		if not mirrored and not s.shots.is_empty() and s.fighters[1].actionable() \
+				and s.fighters[1].pos.x - (s.shots[0]["pos"] as Vector2).x < 90.0:
+			s.apply({1: {"move": "mirror"}})
+			mirrored = true
+	_check("Mirror turns a shot round: the Ground Ripple goes back and hits its thrower (%s, hp %d / %d)"
+			% [_types(s.events).filter(func(t: String) -> bool: return t in ["reflect", "hit"]), s.fighters[0].hp,
+			s.fighters[1].hp], _types(s.events).has("reflect") and s.fighters[0].hp < 450 and s.fighters[1].hp == 450)
+	s = _duel("dancer", "dancer", 300.0)
+	s.apply({0: {"move": "fan", "x": 1.0}, 1: {"move": "wait"}})
+	mirrored = false
+	for _i in 160:
+		s.step()
+		if not mirrored and not s.shots.is_empty() and s.fighters[1].actionable() \
+				and s.fighters[1].pos.x - (s.shots[0]["pos"] as Vector2).x < 90.0:
+			s.apply({1: {"move": "mirror"}})
+			mirrored = true
+	_check("...a thrown fan is sent home instead - it's hers to keep (%s, hp %d, her fans %d, the Mirror's %d)"
+			% [_types(s.events).filter(func(t: String) -> bool: return t in ["reflect", "hit", "catch"]),
+			s.fighters[1].hp, s.fighters[0].fans, s.fighters[1].fans], _types(s.events).has("reflect")
+			and s.fighters[1].hp == 450 and s.fighters[0].fans == 2 and s.fighters[1].fans == 2)
+	var bot_moves: Array = Bot.GROUND_HITS + Bot.FROM_AFAR + Bot.AIR + Bot.GRABS + Bot.CLOSE_IN + Bot.KEEP_OUT + Bot.MID
+	var known := func(m: String) -> bool: return kit.has(m)
+	_check("the bots only reach for moves she still has", bot_moves.all(known))
 
 
 func _test_zoner_supers() -> void:

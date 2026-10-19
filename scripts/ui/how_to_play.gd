@@ -23,9 +23,9 @@ const PAGES := [
 		"takes a turn back.", "taunt"],
 	["Getting hit", "Stuck in a combo? Pick Hold and tap an arrow to lean away. When your Burst bar is full, BURST " +
 		"throws everyone off you. Block: ↑ high, ↓ low.", "burst"],
-	["The Dancer", "Two war fans. Thrown, they fly back to her hand - Recall calls them home, or flings them with an " +
-		"arrow. Hits at the fan's edge hurt most; point blank she's weaker. Her Tempo builds as she dances: at four " +
-		"beats, Encore.", "encore"],
+	["The Dancer", "A zoner with two war fans. Thrown, they fly back to her hand; Fan Ward leaves one hanging as a " +
+		"trap, and Recall pulls them home through anyone in the way. Fan Gust blows rushers and shots off her. Hits " +
+		"at the fan's edge hurt most; point blank she's weaker - keep them out there.", "fanward"],
 ]
 
 static var auto := true            ## open by itself on the first launch (off for the tests and the dev tools)
