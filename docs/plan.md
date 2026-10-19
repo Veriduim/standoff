@@ -207,6 +207,11 @@ one stage; each attack aims at a picked target.
     uppercut cancels into Jump or Super Jump on hit; the card now says so);
   - the camera frames the ghost's whole path - it was following the looping ghost frame, zooming out and in with the
     uppercut's ghost on every loop.
+- 02:28 "Lets get your 1, 2 and 3 done and then yeah there is a lot of lobby fixes" -> 0.23.1: **Training** (home:
+  Training; you and a Dummy - Stand / Block / Jump / Attack / Fight, Reset, both topped up once a combo's over, your
+  meter full, an endless round, Undo; not kept as a replay). 02:34 "Cant see myself anymore" (a screenshot: a ghost
+  going high had the camera so high the floor was under the bar - from 0.23.0's whole-path framing) -> the camera
+  always keeps the floor on screen. The home buttons sized by their words (they overlapped).
 
 ## To tune / later
 - **Match length with 6:** bot matches take 120-270 decision points with 6 fighters (50-90 with 2). At ~10 s a decision

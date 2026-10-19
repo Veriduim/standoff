@@ -18,6 +18,8 @@ var speed := 1.0
 var setup_count := 3       ## opponents
 var setup_mode := "ffa"
 var setup_colour := 0      ## your colour (StageView.COLOURS) - the bots take the others
+var training := false        ## training mode: you and a Dummy (02:28)
+var train_bar: HBoxContainer ## (training) the dummy's setting and Reset, top right
 var auto_me := false       ## a bot plays you too (the tests; a demo)
 
 var stage: StageView
@@ -138,6 +140,8 @@ func _ready() -> void:
 	replay_list.name = "ReplayList"
 	add_child(replay_list)
 	home.replays.connect(func() -> void: replay_list.open())
+	home.training.connect(func(c: int) -> void: start_local(1, "ffa", c, true))
+	_build_train_bar()
 	replay_list.picked.connect(watch_saved)
 	get_viewport().size_changed.connect(_layout)
 	_layout()
@@ -148,6 +152,8 @@ func _ready() -> void:
 
 func _layout() -> void:
 	var vp := get_viewport_rect().size
+	if train_bar != null:
+		train_bar.position = Vector2(vp.x - 540.0, Ui.CARD_H + 44)
 	banner.position = Vector2(152, Ui.CARD_H + 16)
 	banner.size = Vector2(vp.x - 152.0 - PickPanel.TAB_W - 20.0, 30)
 	fast_btn.position = Vector2(70, Ui.CARD_H + 8)
@@ -217,6 +223,9 @@ func _build_over() -> void:
 func _show_start() -> void:
 	phase = "menu"
 	home.visible = true
+	training = false
+	if train_bar != null:
+		train_bar.visible = false
 	_menu_shown(false)
 	if menu_btn != null:
 		menu_btn.visible = false
@@ -287,14 +296,15 @@ func _demo_step(delta: float) -> void:
 
 ## You plus `opponents` bots, everyone the Dancer; teams = two sides (you on the first), else everyone for themselves.
 ## You wear `colour`; the bots take the others in order.
-func start_local(opponents: int, mode: String, colour := 0) -> void:
+func start_local(opponents: int, mode: String, colour := 0, train := false) -> void:
 	setup_count = opponents
 	setup_mode = mode
 	setup_colour = colour
+	training = train
 	_demo = null
 	var players := [{"name": "You", "character": "dancer", "team": 0}]
 	for i in opponents:
-		players.append({"name": "Bot %d" % (i + 1), "character": "dancer", "team": (i + 1) % 2})
+		players.append({"name": "Dummy" if train else "Bot %d" % (i + 1), "character": "dancer", "team": (i + 1) % 2})
 	if mode == "teams" and opponents < 2:
 		mode = "ffa"
 	sim = Sim.create(players, mode)   # (the Dancer as she is: Fans + Tempo - 23:31)
@@ -306,6 +316,14 @@ func start_local(opponents: int, mode: String, colour := 0) -> void:
 	bots.clear()
 	for i in range(1, players.size()):
 		bots[i] = Bot.new(i * 7 + 3, Bot.chosen)   # (the level picked on the home screen - 02:10)
+	if train:   # (training: the dummy, a round that never runs out)
+		var d := Dummy.new(11)
+		if train_bar != null:
+			d.mode = str(train_bar.get_meta("mode", "Stand"))
+		bots[1] = d
+		sim.round_len = 1 << 30
+	if train_bar != null:
+		train_bar.visible = train
 	me = 0
 	stage.setup(sim.fighters.map(func(f: Fighter) -> String: return f.character),
 			sim.fighters.map(func(f: Fighter) -> String: return f.name))
@@ -701,6 +719,8 @@ func _leave_match() -> void:
 
 ## The next turn: bots pick at once; if you're free you pick; then it plays. (Online: the host collects the picks.)
 func _next() -> void:
+	if training:
+		_refill()
 	if sim.over():
 		_finish()
 		return
@@ -800,7 +820,7 @@ func _menu_pick(id: String) -> void:
 		"Help":   # (the match waits while the cards are up)
 			how.open()
 		"Restart":
-			start_local(setup_count, setup_mode, setup_colour)
+			start_local(setup_count, setup_mode, setup_colour, training)
 		"Quit":
 			_leave_match()
 
@@ -868,8 +888,62 @@ func _end_replay() -> void:
 	_layout()
 
 
+## Training (02:28): the dummy's setting (cycles) and Reset, top right beside Undo.
+func _build_train_bar() -> void:
+	train_bar = HBoxContainer.new()
+	train_bar.name = "TrainBar"
+	train_bar.add_theme_constant_override("separation", 8)
+	train_bar.visible = false
+	train_bar.set_meta("mode", "Stand")
+	add_child(train_bar)
+	var mode_btn := Ui.button("Dummy: Stand", func() -> void: _cycle_dummy(), 18)
+	mode_btn.name = "DummyMode"
+	mode_btn.custom_minimum_size = Vector2(190, 44)
+	train_bar.add_child(mode_btn)
+	var reset := Ui.button("Reset", func() -> void: reset_training(), 18)
+	reset.name = "Reset"
+	reset.custom_minimum_size = Vector2(100, 44)
+	train_bar.add_child(reset)
+
+
+func _cycle_dummy() -> void:
+	var i := (Dummy.MODES.find(str(train_bar.get_meta("mode", "Stand"))) + 1) % Dummy.MODES.size()
+	set_dummy(str(Dummy.MODES[i]))
+
+
+## What the dummy does from its next pick.
+func set_dummy(mode: String) -> void:
+	train_bar.set_meta("mode", mode)
+	(train_bar.get_node("DummyMode") as Button).text = "Dummy: " + mode
+	if bots.has(1) and bots[1] is Dummy:
+		(bots[1] as Dummy).mode = mode
+
+
+## Back where you both started (the dummy's setting kept).
+func reset_training() -> void:
+	if training and phase in ["pick", "wait"]:
+		start_local(1, "ffa", setup_colour, true)
+
+
+## Training: once a combo's over, both of you are back to full health; your meter stays full; the dummy only bursts
+## when it's fighting.
+func _refill() -> void:
+	for f in sim.fighters:
+		if f.stun == 0 and f.blockstun == 0 and f.down == 0 and f.splat == 0 and f.restand == 0 and f.hp < f.max_hp:
+			f.hp = f.max_hp
+			f.combo_over()
+	sim.fighters[me].meter = Sim.METER_MAX
+	if bots.has(1) and bots[1] is Dummy and (bots[1] as Dummy).mode != "Fight":
+		sim.fighters[1].burst = 0
+	_lag.clear()
+	_update_cards()
+
+
 ## Recording the match to save (02:15): its start now, each turn's picks, a jump to the host's state online.
 func _rec_begin() -> void:
+	if training:   # (training isn't kept as a replay)
+		_rec = {}
+		return
 	_rec = {"v": Version.TAG, "when": int(Time.get_unix_time_from_system()), "me": me, "mode": sim.mode,
 		"names": sim.fighters.map(func(f: Fighter) -> String: return f.name),
 		"colours": sim.fighters.map(func(f: Fighter) -> String: return stage.colour_of(f.id).to_html(false)),
@@ -1003,7 +1077,7 @@ func _process(delta: float) -> void:
 	clock.visible = phase != "menu" and sim != null
 	if clock.visible:
 		var left := maxi(0, sim.round_len - (_first_tick + maxi(_shown, 0) if phase == "play" else sim.tick))
-		clock.text = "⏱ %d" % ceili(left / 60.0)
+		clock.text = "⏱ ∞" if training else "⏱ %d" % ceili(left / 60.0)   # (training: no round to run out)
 		clock.modulate = Color("#ff6b6b") if left < 600 else Color.WHITE
 	if phase == "menu":
 		_demo_step(delta)

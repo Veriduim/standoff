@@ -31,6 +31,12 @@ func run(game: Control, out: String) -> void:
 	await _wait(4)
 	await _snap(out.path_join("1r_replays.png"))
 	game.replay_list.visible = false
+	game.start_local(1, "ffa", 0, true)   # (training - 02:28)
+	game.set_dummy("Block")
+	await _wait(30)
+	await _snap(out.path_join("1t_training.png"))
+	game._show_start()
+	await _wait(10)
 	# a few turns played by a bot for you, to get everyone moving
 	game.auto_me = true
 	game.start_local(5, "ffa", 0)

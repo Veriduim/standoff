@@ -8,6 +8,7 @@ signal fight(opponents: int, mode: String, colour: int)
 signal online(colour: int)   ## the online lobbies (YOMI's Steam lobbies - Timmy 20:19)
 signal help                  ## How to play (19 Oct 01:32)
 signal replays               ## the saved replays (02:15 "When can I save replays??")
+signal training(colour: int) ## training mode against a dummy (02:28)
 
 const VERSION := "v" + Version.TAG
 
@@ -131,8 +132,19 @@ func _ready() -> void:
 	for s in ["normal", "hover", "focus"]:
 		rep.add_theme_stylebox_override(s, Ui.box(Color("#1e2029e8"), 12))
 	add_child(rep)
-	for b: Button in [snd, how, rep]:   # (four along the bottom - narrow enough to clear the card on 16:9)
-		b.custom_minimum_size = Vector2(132, 46)
+	var train := Ui.button("Training", func() -> void: training.emit(colour), 18)
+	train.name = "Training"
+	for s in ["normal", "hover", "focus"]:
+		train.add_theme_stylebox_override(s, Ui.box(Color("#2b6e4a"), 12))
+	add_child(train)
+	for b: Button in [snd, how, rep, train]:   # (four along the bottom - narrow enough to clear the card on 16:9)
+		b.custom_minimum_size = Vector2(0, 46)
+		b.add_theme_constant_override("h_separation", 0)
+		for look in ["normal", "hover", "focus", "pressed"]:
+			var box := b.get_theme_stylebox(look)
+			if box is StyleBoxFlat:
+				(box as StyleBoxFlat).content_margin_left = 14
+				(box as StyleBoxFlat).content_margin_right = 14
 	var ver := Ui.label(VERSION + "  ·  the Dancer: her war fans and her Tempo", 15, Color("#6b6b78"))
 	ver.name = "Version"
 	add_child(ver)
@@ -213,9 +225,11 @@ func _layout() -> void:
 	ver.position = Vector2(24, vp.y - 36)
 	var snd := get_node("Sound") as Button
 	var x := 24.0
-	for n: String in ["Sound", "HowToPlay", "Replays"]:
-		(get_node(n) as Button).position = Vector2(x, vp.y - 92)
-		x += 140.0
+	for n: String in ["Sound", "HowToPlay", "Replays", "Training"]:   # (side by side, each as wide as its words)
+		var b := get_node(n) as Button
+		b.reset_size()
+		b.position = Vector2(x, vp.y - 92)
+		x += b.size.x + 8.0
 
 
 

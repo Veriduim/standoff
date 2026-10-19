@@ -352,6 +352,10 @@ func _follow(delta: float) -> void:
 	var tall := absf(top) + 260.0
 	var want_zoom := clampf(minf((view_right - view_left) / span, (view_bottom - view_top) / tall), ZOOM_MIN, ZOOM_MAX)
 	var want := Vector2((lo + hi) / 2.0, top * 0.5 - 70.0)
+	# the floor always on screen (02:34 "Cant see myself anymore" - a ghost going high had the camera up so far the floor
+	# and everyone on it slid under the bar): anything higher can go off the top instead
+	var floor_room := view_bottom - 34.0 - _anchor().y
+	want.y = maxf(want.y, -floor_room / want_zoom)
 	var k := 1.0 - pow(0.02, delta)
 	cam = cam.lerp(want, k)
 	zoom = lerpf(zoom, want_zoom * (1.0 + fx.punch), k)   # (a big hit pushes the camera in a touch)

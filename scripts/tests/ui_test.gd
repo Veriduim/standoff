@@ -578,3 +578,62 @@ func _test_replay_to_device() -> void:
 	DirAccess.remove_absolute(tmp)
 	DirAccess.remove_absolute(src)
 	Replays.device_dir = ""
+
+
+func _test_training() -> void:
+	_section("Training (02:28): you and a Dummy - it does what it's set to, takes combos, and you're both topped up")
+	var g := _screen()
+	g.home.training.emit(0)
+	var dummy: Bot = g.bots.get(1)
+	_check("from the home screen: one on one against a Dummy, the bar up, the round endless",
+			g.training and dummy is Dummy and g.sim.fighters[1].name == "Dummy" and g.train_bar.visible
+			and g.sim.round_len > 100000)
+	g.set_dummy("Block")
+	_check("set to Block, it blocks", (dummy as Dummy).choose(g.sim, 1)["move"] == "block")
+	g.sim.fighters[0].pos.x = -30.0
+	g.sim.fighters[1].pos.x = 30.0
+	g.set_dummy("Stand")
+	g._commit({"move": "straight", "x": 1.0})
+	var d: Fighter = g.sim.fighters[1]
+	var hurt := false
+	for _turn in 8:   # (the hit, then standing about until the combo's over)
+		var guard := 0
+		while g.phase == "play" and guard < 200:
+			g.finish_playback()
+			guard += 1
+		hurt = hurt or d.hp < d.max_hp or d.stun > 0
+		if d.stun == 0 and d.restand == 0 and d.hp == d.max_hp:
+			break
+		g._commit({"move": "wait"})
+	_check("hit and the combo over: back to full health, your meter full (hp %d/%d, meter %d)" % [d.hp, d.max_hp,
+			g.sim.fighters[0].meter], hurt and d.hp == d.max_hp and g.sim.fighters[0].meter == Sim.METER_MAX)
+	g.reset_training()
+	_check("Reset: back where you started, the setting kept", is_equal_approx(g.sim.fighters[1].pos.x,
+			Sim.create([{"character": "dancer"}, {"character": "dancer"}]).fighters[1].pos.x)
+			and (g.bots[1] as Dummy).mode == "Stand")
+	g._menu_pick("Quit")
+	_check("Quit: home, the bar gone", g.phase == "menu" and not g.train_bar.visible and not g.training)
+	g.queue_free()
+
+
+func _test_floor_on_screen() -> void:
+	_section("The camera keeps the floor on screen (02:34 \"Cant see myself anymore\") - even with a ghost going high")
+	var g := _screen()
+	g.start_local(3, "ffa")
+	var high: Array = []
+	for i in 40:   # (a ghost that goes way up - a super jump's, an air throw's)
+		var rows: Array = []
+		for f in g.sim.fighters:
+			var r: Array = f.record() if f.has_method("record") else g.sim.record()[f.id]
+			r = r.duplicate()
+			r[1] = -float(i) * 22.0
+			rows.append(r)
+		high.append(rows)
+	g.stage.ghost = high
+	for _i in 120:
+		g.stage._follow(0.05)
+	var floor_y: float = g.stage.w2s(Vector2(0, 0)).y
+	_check("the floor stays above the bar (floor at %.0f, the stage's bottom %.0f)" % [floor_y, g.stage.view_bottom],
+			floor_y <= g.stage.view_bottom - 20.0)
+	g.stage.ghost = []
+	g.queue_free()
