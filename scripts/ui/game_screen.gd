@@ -120,6 +120,9 @@ func _ready() -> void:
 	lobby.play.connect(start_online)
 	lobby.closed.connect(func() -> void: _show_start())
 	lobby.rejoined.connect(_on_lobby_back)
+	lobby.invited_away.connect(func() -> void:   # (a rematch invite while on a finished match's result: to it)
+		if net_match != null and phase == "over":
+			_leave_match())
 	lobby.net.status.connect(_on_line)
 	menu_btn = Ui.button("☰", func() -> void: toggle_menu(), 26)
 	menu_btn.name = "MenuButton"
@@ -205,7 +208,7 @@ func _build_over() -> void:
 	l.name = "Result"
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(l)
-	var again := Ui.button("Rematch", func() -> void: start_local(setup_count, setup_mode, setup_colour), 22)
+	var again := Ui.button("Rematch", func() -> void: rematch(), 22)
 	again.name = "Rematch"
 	for k in ["normal", "hover", "focus"]:
 		again.add_theme_stylebox_override(k, Ui.box(Color("#d63d3d"), 12))
@@ -605,6 +608,34 @@ func start_online(nm: NetMatch) -> void:
 	_next()
 
 
+## Rematch: against bots, the same again; online (02:28 "2"), the same players challenged again - the same bots, the
+## same mode - and this phone back in the lobby waiting for their answers.
+func rematch() -> void:
+	if net_match == null:
+		start_local(setup_count, setup_mode, setup_colour, training)
+		return
+	var ids := _rematch_ids()
+	var bots_n := 0
+	for s: Dictionary in net_match.seats:
+		if int(s["peer"]) == 0 and not bool(s.get("left", false)):
+			bots_n += 1
+	var mode := net_match.mode
+	_leave_match()
+	lobby.challenge(ids, bots_n, mode)
+
+
+## The other players of this online match still in the lobby.
+func _rematch_ids() -> Array:
+	var out: Array = []
+	if net_match == null:
+		return out
+	for s: Dictionary in net_match.seats:
+		var peer := int(s["peer"])
+		if peer != 0 and peer != lobby.net.id and lobby.net.members.has(peer):
+			out.append(peer)
+	return out
+
+
 ## Back after the line dropped (01:32 "3 makes sense"): the host's state as it is now, and on from there.
 func _on_resync(snap: Dictionary) -> void:
 	if net_match == null or phase == "over":
@@ -687,7 +718,8 @@ func _on_net_end(reason: String) -> void:
 	pick.close()
 	(over_panel.find_child("Result", true, false) as Label).text = reason if reason != "" else "The match ended"
 	_rec_save(reason if reason != "" else "The match ended")
-	(over_panel.find_child("Rematch", true, false) as Button).visible = false
+	(over_panel.find_child("Rematch", true, false) as Button).visible = net_match != null and me >= 0 \
+			and not _rematch_ids().is_empty()   # (a match the host ended: Rematch if anyone's still about)
 	(over_panel.find_child("Menu", true, false) as Button).text = "Back to lobby"
 	over_panel.visible = true
 	_layout()
@@ -1177,7 +1209,7 @@ func _finish() -> void:
 		text = "Time! " + text
 	(over_panel.find_child("Result", true, false) as Label).text = text
 	_rec_save(text)
-	(over_panel.find_child("Rematch", true, false) as Button).visible = net_match == null
+	(over_panel.find_child("Rematch", true, false) as Button).visible = net_match == null or me >= 0   # (online too)
 	menu_btn.visible = false
 	_menu_shown(false)
 	(over_panel.find_child("Menu", true, false) as Button).text = "Back to lobby" if net_match != null else "Menu"

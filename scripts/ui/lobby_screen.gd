@@ -12,6 +12,7 @@ extends Control
 signal play(nm: NetMatch)    ## a match to show - playing in it or watching it
 signal closed                ## back to the home screen
 signal rejoined              ## back in the lobby after the line dropped, while in a match (the game asks for its seat)
+signal invited_away          ## an invite while the lobby's hidden (a rematch on a result screen - the game comes here)
 
 const SETTINGS := "user://settings.cfg"
 ## The rules the owner can set: [key, label, min, max, step, shown as].
@@ -844,11 +845,12 @@ func _on_direct(from: int, msg: Dictionary) -> void:
 			if not _in.is_empty() or not _out.is_empty() or _waiting != null:
 				net.to(from, {"k": "answer", "ch": msg["ch"], "yes": false})
 				return
-			_in = msg.duplicate()
-			_in["from"] = from
-			if not visible:   # (an invite while on the home screen: the lobby comes up with it)
+			if not visible:   # (from a match's result, or the home screen: the lobby comes up with it)
+				invited_away.emit()
 				visible = true
 				_show("room")
+			_in = msg.duplicate()
+			_in["from"] = from
 			_modal(func(b: VBoxContainer) -> void:
 				var who := str(net.members.get(from, {}).get("name", msg.get("name", "?")))
 				b.add_child(Ui.label("%s invites you to a %d-player %s" % [who, int(msg["size"]),

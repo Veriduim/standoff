@@ -301,3 +301,44 @@ func _test_match_rejoin() -> void:
 	for g: Control in [a, b]:
 		g.queue_free()
 	LobbyNet.use_loop = false
+
+
+func _test_rematch_online() -> void:
+	_section("Rematch online (02:28): the same players challenged again; their phone goes from the result to the invite")
+	LobbyNet.use_loop = true
+	LoopLobby.reset()
+	var a := _screen()
+	var b := _screen()
+	a.lobby.open(0)
+	a.lobby.create_lobby()
+	_poll([a, b])
+	b.lobby.open(1)
+	b.lobby.join(str(LoopLobby.list()[0]["code"]))
+	_poll([a, b])
+	a.lobby.challenge([b.lobby.net.id], 1, "ffa")
+	_poll([a, b])
+	b.lobby.answer(true)
+	_poll([a, b], 6)
+	a.auto_me = true
+	b.auto_me = true
+	a._next()
+	b._next()
+	var steps := 0
+	while steps < 3000 and not (a.phase == "over" and b.phase == "over"):
+		_poll([a, b], 2)
+		for g: Control in [a, b]:
+			g.finish_playback()
+		steps += 1
+	var offered: bool = (b.over_panel.find_child("Rematch", true, false) as Button).visible
+	b.rematch()
+	_poll([a, b], 4)
+	_check("both see Rematch; pressed, the other phone leaves its result for the invite (%s)" % [a.lobby._in],
+			offered and a.lobby.visible and not a.lobby._in.is_empty() and a.net_match == null
+			and int(a.lobby._in.get("bots", -1)) == 1)
+	a.lobby.answer(true)
+	_poll([a, b], 6)
+	_check("accepted: a new match, the same three", a.net_match != null and b.net_match != null
+			and a.sim.fighters.size() == 3 and b.net_match.is_host())
+	for g: Control in [a, b]:
+		g.queue_free()
+	LobbyNet.use_loop = false
