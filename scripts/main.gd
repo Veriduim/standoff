@@ -6,6 +6,8 @@ const SUITES := ["res://scripts/tests/sim_test.gd", "res://scripts/tests/ui_test
 
 
 func _ready() -> void:
+	if not OS.get_cmdline_user_args().is_empty():   # (the tests and the dev tools: no How to play popping up)
+		HowToPlay.auto = false
 	if "--test" in OS.get_cmdline_user_args():
 		var code := await _run_tests()
 		get_tree().quit(code)

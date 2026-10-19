@@ -455,3 +455,27 @@ func _test_pad_neutral() -> void:
 	s.apply({0: {"move": "straight", "x": 0.0, "y": 0.0}, 1: {"move": "wait"}})
 	_check("neutral in the sim: she turns to the nearest enemy (facing %d)" % s.fighters[0].facing,
 			s.fighters[0].facing == -1)
+
+
+func _test_how_to_play() -> void:
+	_section("How to play (01:32): cards from the home screen and the ☰ menu; the match waits while they're up")
+	var g := _screen()
+	var shut: bool = not g.how.visible   # (the tests: it doesn't pop up by itself)
+	g.home.help.emit()
+	var first: String = g.how._title.text
+	for _i in HowToPlay.PAGES.size() - 1:
+		g.how.next()
+	var last: String = g.how._next.text
+	g.how.next()
+	_check("from home: %d cards (\"%s\" ... \"%s\"), then closed and remembered" % [HowToPlay.PAGES.size(), first,
+			last], shut and first == "Everyone moves at once" and last == "Let's go" and not g.how.visible
+			and HowToPlay.seen())
+	g.start_local(1, "ffa")
+	g.toggle_menu()
+	g._menu_pick("Help")
+	var t0: float = g._turn_left
+	g._process(1.0)
+	_check("from the ☰ menu: up over the match, and the turn clock waits", g.how.visible
+			and is_equal_approx(g._turn_left, t0))
+	g.how.close()
+	g.queue_free()

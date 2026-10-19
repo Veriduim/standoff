@@ -53,6 +53,7 @@ var _replay_i := -1
 var replay_btn: Button
 var menu_btn: Button         ## ☰ - the match menu (00:28 "How do I quit a game with bots?")
 var menu_panel: PanelContainer
+var how: HowToPlay           ## How to play (01:32) - over everything
 var _history: Array = []     ## against bots: the match as it was at each of your picks (Undo - YOMI's single player)
 var _demo: Sim               ## the bot match behind the home screen
 var _demo_bots: Array = []
@@ -124,9 +125,15 @@ func _ready() -> void:
 	leave_btn = Ui.button("Leave", func() -> void: _leave_match(), 16)
 	leave_btn.visible = false
 	add_child(leave_btn)
+	how = HowToPlay.new()
+	how.name = "HowToPlay"
+	add_child(how)
+	home.help.connect(func() -> void: how.open())
 	get_viewport().size_changed.connect(_layout)
 	_layout()
 	_show_start()
+	if HowToPlay.auto and not HowToPlay.seen():   # (the first launch: the cards once, by themselves)
+		how.open()
 
 
 func _layout() -> void:
@@ -623,7 +630,8 @@ func _build_menu() -> void:
 	t.name = "MenuTitle"
 	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(t)
-	for b: Array in [["Resume", "Resume"], ["Restart", "Restart"], ["Sound", Sfx.label()], ["Quit", "Quit to menu"]]:
+	for b: Array in [["Resume", "Resume"], ["Restart", "Restart"], ["Help", "How to play"], ["Sound", Sfx.label()],
+			["Quit", "Quit to menu"]]:
 		var id: String = b[0]
 		var btn := Ui.button(str(b[1]), func() -> void: _menu_pick(id), 22)
 		btn.name = "Menu" + id
@@ -656,6 +664,8 @@ func _menu_pick(id: String) -> void:
 		return
 	_menu_shown(false)
 	match id:
+		"Help":   # (the match waits while the cards are up)
+			how.open()
 		"Restart":
 			start_local(setup_count, setup_mode, setup_colour)
 		"Quit":
@@ -666,7 +676,9 @@ func _menu_pick(id: String) -> void:
 func _notification(what: int) -> void:
 	if what != NOTIFICATION_WM_GO_BACK_REQUEST:
 		return
-	if lobby != null and lobby.visible:
+	if how != null and how.visible:
+		how.close()
+	elif lobby != null and lobby.visible:
 		lobby._close()
 	elif phase == "over":
 		_leave_match()
@@ -794,7 +806,7 @@ func _process(delta: float) -> void:
 	if phase == "menu":
 		_demo_step(delta)
 		return
-	if menu_panel.visible:   # (the match menu's open: everything waits)
+	if menu_panel.visible or how.visible:   # (the match menu or How to play is up: everything waits)
 		return
 	_drain(delta)
 	if phase == "wait":

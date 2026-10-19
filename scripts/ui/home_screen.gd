@@ -6,6 +6,7 @@ extends Control
 
 signal fight(opponents: int, mode: String, colour: int)
 signal online(colour: int)   ## the online lobbies (YOMI's Steam lobbies - Timmy 20:19)
+signal help                  ## How to play (19 Oct 01:32)
 
 const VERSION := "v" + Version.TAG
 
@@ -120,6 +121,12 @@ func _ready() -> void:
 	for s in ["normal", "hover", "focus"]:
 		snd.add_theme_stylebox_override(s, Ui.box(Color("#1e2029e8"), 12))
 	add_child(snd)
+	var how := Ui.button("How to play", func() -> void: help.emit(), 18)
+	how.name = "HowToPlay"
+	how.custom_minimum_size = Vector2(150, 46)
+	for s in ["normal", "hover", "focus"]:
+		how.add_theme_stylebox_override(s, Ui.box(Color("#1e2029e8"), 12))
+	add_child(how)
 	var ver := Ui.label(VERSION + "  ·  the Dancer: her war fans and her Tempo", 15, Color("#6b6b78"))
 	ver.name = "Version"
 	add_child(ver)
@@ -200,6 +207,7 @@ func _layout() -> void:
 	ver.position = Vector2(24, vp.y - 36)
 	var snd := get_node("Sound") as Button
 	snd.position = Vector2(24, vp.y - 92)
+	(get_node("HowToPlay") as Button).position = Vector2(184, vp.y - 92)
 
 
 

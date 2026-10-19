@@ -19,6 +19,14 @@ func run(game: Control, out: String) -> void:
 	DirAccess.make_dir_recursive_absolute(out)
 	await _wait(150)   # (the match behind the home screen gets going)
 	await _snap(out.path_join("1_home.png"))
+	for i in HowToPlay.PAGES.size():   # (How to play, every card - 01:32)
+		if i == 0:
+			game.how.open()
+		else:
+			game.how.next()
+		await _wait(4)
+		await _snap(out.path_join("1h%d_help.png" % (i + 1)))
+	game.how.visible = false
 	# a few turns played by a bot for you, to get everyone moving
 	game.auto_me = true
 	game.start_local(5, "ffa", 0)
