@@ -51,6 +51,21 @@ That was for study only: the screens here are our own layout, built from the sam
   - played to the end, and all three must end the same;
   - first run 20:59: everything passed, the match took 30.6 s.
 
+## Back into a match after a drop (0.18.0)
+Timmy 01:32 ("3 makes sense"). The phone already gets back into its lobby by itself (00:11). Now, if it was in a match:
+- **While it's away:** the host gives its seat to a bot. If a turn is open, the bot picks for it at once (before, it
+  waited for the clock). The away phone's banner says "Connection lost - getting back in...".
+- **Back in the lobby:** the lobby screen puts its status back ("in a match", not idle) and tells the game. The game
+  sends the host `reclaim {f, name}`.
+  - The host hands the seat back when the seat was left by someone of that name, and sends `state` (its sim now).
+  - The phone takes that state and carries on (`NetMatch.resync`). A watcher just asks to watch again.
+  - If it's refused, or the phone never gets back into the lobby, the match ends on that phone with why.
+- **Found on the way:** a pick that reached the host before the host had opened that turn was thrown away. That
+  happened when the player's phone finished playing the last turn first, and they got Hold when the clock ran out. The
+  host now keeps early picks for their turn (`NetMatch._early`).
+- **Test:** `online_test` `_test_match_rejoin`. Two phones; one drops mid-match, its bot plays on, it comes back, gets
+  the seat, and the match ends the same on both.
+
 ## Nearby: the same Wi-Fi or a phone's hotspot (0.16.0)
 Timmy, 19 Oct 00:38: "Whats local multiplayer over Bluetooth or the likes?". The options I gave him:
 1. hotspot / same Wi-Fi;
@@ -87,4 +102,4 @@ Timmy, 19 Oct 00:38: "Whats local multiplayer over Bluetooth or the likes?". The
 - Character select (there is one character).
 - Rating / ranked.
 - A friends list.
-- Reconnecting to a match after dropping out.
+- A host who drops can't get back into their match (it ends for everyone, as before).

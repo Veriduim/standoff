@@ -238,3 +238,60 @@ func _test_nearby() -> void:
 	a.queue_free()
 	b.queue_free()
 
+
+
+func _test_match_rejoin() -> void:
+	_section("Back into a match after a drop (01:32 \"3 makes sense\"): the bot hands the seat back, and on it goes")
+	LobbyNet.use_loop = true
+	LoopLobby.reset()
+	var a := _screen()
+	var b := _screen()
+	a.lobby.open(0)
+	a.lobby.create_lobby()
+	_poll([a, b])
+	b.lobby.open(1)
+	b.lobby.join(str(LoopLobby.list()[0]["code"]))
+	_poll([a, b])
+	a.lobby.challenge([b.lobby.net.id], 0, "ffa")
+	_poll([a, b])
+	b.lobby.answer(true)
+	_poll([a, b], 6)
+	a.auto_me = true
+	b.auto_me = true
+	a._next()
+	b._next()
+	for _i in 60:   # (a few turns in)
+		_poll([a, b], 2)
+		for g: Control in [a, b]:
+			g.finish_playback()
+		if a.sim.tick > 120:
+			break
+	_drop(b)
+	_poll([a, b], 3)
+	var bot_seat: bool = int(a.net_match.seats[1]["peer"]) == 0 and bool(a.net_match.seats[1].get("left", false))
+	var said: String = b.banner.text
+	for _i in 30:   # (the match goes on without them meanwhile - their bot plays)
+		_poll([a, b], 2)
+		a.finish_playback()
+	var went_on: int = a.sim.tick
+	for _i in 4:
+		_poll([a, b])
+		await get_tree().create_timer(0.35).timeout
+	_poll([a, b], 6)
+	_check("dropped mid-match: the host's bot takes the seat; their screen says so (\"%s\")" % said, bot_seat
+			and said.begins_with("Connection lost"))
+	_check("back in the lobby, they get the seat back and the host's state (host tick %d, theirs %d)" % [a.sim.tick,
+			b.sim.tick], b.lobby.net.in_lobby() and int(a.net_match.seats[1]["peer"]) == b.lobby.net.id
+			and not b.net_match._reclaiming and b.net_match.live and b.sim.tick >= went_on)
+	var steps := 0
+	while steps < 3000 and not (a.phase == "over" and b.phase == "over"):
+		_poll([a, b], 2)
+		for g: Control in [a, b]:
+			g.finish_playback()
+		steps += 1
+	_check("...and the match plays out to the same end on both (%s / %s, tick %d / %d)" % [a.phase, b.phase,
+			a.sim.tick, b.sim.tick], a.phase == "over" and b.phase == "over" and a.sim.tick == b.sim.tick
+			and a.sim.winners() == b.sim.winners())
+	for g: Control in [a, b]:
+		g.queue_free()
+	LobbyNet.use_loop = false

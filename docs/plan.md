@@ -178,6 +178,11 @@ one stage; each attack aims at a picked target.
 - 01:24 "Do we need the IP for hot-spot? If not I say we remove all that? Also I say we drop the chess timer stuff for
   nkw was well please. I think round and turn timers are better" -> 0.17.1: Nearby has no addresses (the list finds
   the hosts by itself); the Chess Timer and its Ranked preset are gone.
+- 01:29 my list of what's left; 01:32 his calls: yes to How to play, rejoining a match, step 4 effects per move, smarter
+  bots, the rest of YOMI's missing rules (restands, initiative, parry lock-out); less HP with more players banked;
+  no pass-and-play; Super Armor is for the Bruiser, who comes back later as the rushdown character.
+- 0.18.0: **How to play** (six cards: first launch, home, ☰); **back into a match after a drop** (docs/lobby.md); early
+  picks kept by the host (they were being dropped).
 
 ## To tune / later
 - **Match length with 6:** bot matches take 120-270 decision points with 6 fighters (50-90 with 2). At ~10 s a decision

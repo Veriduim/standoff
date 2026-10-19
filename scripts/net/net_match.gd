@@ -6,10 +6,12 @@ extends Node
 ## sent as JSON), so the copies match. Picks go to the host alone (they're secret until the turn plays).
 ##   on the match's channel:  start {seats, mode, rules, snap} · seg {t, picks, snap} · end {reason}
 ##   direct:                   pick {ch, t, f, c} (to the host) · hello {ch} (a spectator) -> state {ch, seats, ..., snap}
+##                             reclaim {ch, f, name} (a player back after a drop) -> state, or refused
 
 signal begun                                                ## seats and start_snap are ready
 signal turn(t: int, picks: Dictionary, snap: Dictionary)    ## play these picks from the current state; then it's snap
 signal ended(reason: String)
+signal resync(snap: Dictionary)                             ## back after a drop: carry on from the host's state now
 
 const GRACE := 5.0           ## seconds past the turn clock the host waits before a missing pick becomes Hold
 
@@ -28,6 +30,8 @@ var turn_t := -1
 var picks := {}
 var bots := {}               ## fighter -> Bot (empty seats, and anyone who left)
 var _wait := 0.0
+var _reclaiming := false
+var _early := {}             ## (the host) fighter -> [t, pick] that came before the host opened turn t     ## asked for my seat back (or, watching, for the state) after the line dropped
 
 
 ## JSON there and back - what every phone gets (full precision, numbers as floats, keys as strings).
@@ -116,9 +120,13 @@ func _on_direct(from: int, msg: Dictionary) -> void:
 	match str(msg.get("k", "")):
 		"pick":   # (the host: a player's pick for this turn - only for their own fighter)
 			var f := int(msg["f"])
-			if is_host() and int(msg["t"]) == turn_t and f < seats.size() and int(seats[f]["peer"]) == from:
+			if not is_host() or f >= seats.size() or int(seats[f]["peer"]) != from:
+				return
+			if int(msg["t"]) == turn_t:
 				picks[f] = msg["c"]
 				_check()
+			elif turn_t < 0 or int(msg["t"]) > turn_t:   # (before the host opened that turn: kept for it)
+				_early[f] = [int(msg["t"]), msg["c"]]
 		"hello":   # (the host: someone wants to watch - where it is now)
 			if is_host() and sim != null:
 				net.to(from, {"k": "state", "ch": ch, "seats": seats, "mode": mode, "rules": rules,
@@ -126,6 +134,30 @@ func _on_direct(from: int, msg: Dictionary) -> void:
 		"state":
 			if not live:
 				_take_start(msg)
+			elif _reclaiming:   # (back after a drop: from here)
+				_reclaiming = false
+				resync.emit(msg["snap"])
+		"reclaim":   # (the host: a player back after a drop wants their seat - the bot holding it hands it back)
+			if not is_host() or sim == null:
+				return
+			var f := int(msg.get("f", -1))
+			if f < 0 or f >= seats.size() or not bool(seats[f].get("left", false)) \
+					or str(seats[f]["name"]) != str(msg.get("name", "")):
+				net.to(from, {"k": "refused", "ch": ch})
+				return
+			seats[f]["peer"] = from
+			seats[f].erase("left")
+			bots.erase(f)
+			if turn_t >= 0:   # (mid-turn: their own pick this turn, with the time to make it)
+				picks.erase(f)
+				_wait = maxf(_wait, float(rules.get("turn", Sim.RULES["turn"])))
+			net.to(from, {"k": "state", "ch": ch, "seats": seats, "mode": mode, "rules": rules,
+				"snap": wire(sim.to_dict())})
+		"refused":
+			if _reclaiming:
+				_reclaiming = false
+				live = false
+				ended.emit("Couldn't get back into the match")
 
 
 ## Someone left the lobby: their fighter becomes a bot (the host); the host gone ends it (everyone else).
@@ -140,9 +172,25 @@ func _on_left(id: int) -> void:
 		for i in seats.size():
 			if int(seats[i]["peer"]) == id:
 				seats[i]["peer"] = 0
+				seats[i]["left"] = true   # (theirs to take back if they return - reclaim)
 				bots[i] = Bot.new(i * 7 + 3)
+				if turn_t >= 0 and sim != null and sim.deciders().has(i) and not picks.has(i):
+					picks[i] = (bots[i] as Bot).choose(sim, i)   # (the bot picks for them now, not at the clock)
 		if turn_t >= 0:
 			_check()
+
+
+## Back in the lobby after the line dropped: listening again, and asking the host for this phone's seat (or, watching,
+## for where it is) - `resync` when it answers.
+func reclaim(my_name: String) -> void:
+	if not live or is_host():
+		return
+	_reclaiming = true
+	net.sub(ch)   # (the lobby forgot it with the old connection)
+	if mine >= 0:
+		net.to(host, {"k": "reclaim", "ch": ch, "f": mine, "name": my_name})
+	else:
+		net.to(host, {"k": "hello", "ch": ch})
 
 
 ## The host: a new turn from this state - the bots pick now, the others' picks are awaited.
@@ -154,6 +202,12 @@ func open_turn(s: Sim) -> void:
 	for f in s.deciders():
 		if bots.has(f):
 			picks[f] = (bots[f] as Bot).choose(s, f)
+	for f: int in _early.keys():   # (picks that came early for this turn)
+		var e: Array = _early[f]
+		if int(e[0]) == turn_t and s.deciders().has(f) and not bots.has(f):
+			picks[f] = e[1]
+		if int(e[0]) <= turn_t:
+			_early.erase(f)
 	_check()
 
 

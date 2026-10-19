@@ -11,6 +11,7 @@ extends Control
 
 signal play(nm: NetMatch)    ## a match to show - playing in it or watching it
 signal closed                ## back to the home screen
+signal rejoined              ## back in the lobby after the line dropped, while in a match (the game asks for its seat)
 
 const SETTINGS := "user://settings.cfg"
 ## The rules the owner can set: [key, label, min, max, step, shown as].
@@ -57,7 +58,8 @@ var nearby := false           ## the Nearby tab: lobbies on this Wi-Fi / hotspot
 var finder: LanFinder         ## (Nearby) the lobbies around
 var host: LanHost             ## (Nearby) the lobby this phone hosts
 var _list_t := 0.0
-var _tries := 0               ## reconnect tries since the line dropped        ## accepted - waiting for the host to start
+var _tries := 0               ## reconnect tries since the line dropped
+var in_match := {}            ## this phone's member status while it's in a match (put back after a drop)        ## accepted - waiting for the host to start
 
 
 func _ready() -> void:
@@ -360,7 +362,11 @@ func _on_status(state: String, detail: String) -> void:
 		"open":
 			note.text = ""
 			_tries = 0
-			net.set_member({"status": "idle", "colour": my_colour, "match": ""})
+			if in_match.is_empty():
+				net.set_member({"status": "idle", "colour": my_colour, "match": ""})
+			else:   # (back after a drop, mid-match: still in it - the game asks the host for its seat)
+				net.set_member(in_match.merged({"colour": my_colour}))
+				rejoined.emit()
 			_show("room")
 		"ended":   # (the nearby host closed it: off the list, and why)
 			finder.found.erase(net.last_code)
@@ -824,8 +830,9 @@ func start_match() -> void:
 			net.to(int(id), {"k": "cancel", "ch": ch})
 	_out = {}
 	modal.visible = false
-	net.set_member({"status": "in a match", "match": ch, "host": net.id,
-		"bots": seats.filter(func(s: Dictionary) -> bool: return int(s["peer"]) == 0).size()})
+	in_match = {"status": "in a match", "match": ch, "host": net.id,
+		"bots": seats.filter(func(s: Dictionary) -> bool: return int(s["peer"]) == 0).size()}
+	net.set_member(in_match)
 	nm.host_start(net, ch, seats, mode, rules_now())
 	visible = false
 	play.emit(nm)
@@ -886,7 +893,8 @@ func answer(yes: bool) -> void:
 		add_child(_waiting)
 		_waiting.begun.connect(_on_begun)
 		_waiting.join_start(net, ch, host)
-		net.set_member({"status": "in a match", "match": ch, "host": host})
+		in_match = {"status": "in a match", "match": ch, "host": host}
+		net.set_member(in_match)
 	net.to(host, {"k": "answer", "ch": ch, "yes": yes})
 
 
@@ -914,6 +922,7 @@ func spectate(ch: String, host: int) -> void:
 
 ## Back from a match (played or watched): idle again.
 func back_from_match() -> void:
+	in_match = {}
 	net.set_member({"status": "idle", "match": "", "host": 0, "bots": 0})
 	visible = true
 	_show("room" if net.in_lobby() else "list")

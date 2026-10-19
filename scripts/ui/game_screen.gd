@@ -114,6 +114,8 @@ func _ready() -> void:
 	add_child(lobby)
 	lobby.play.connect(start_online)
 	lobby.closed.connect(func() -> void: _show_start())
+	lobby.rejoined.connect(_on_lobby_back)
+	lobby.net.status.connect(_on_line)
 	menu_btn = Ui.button("☰", func() -> void: toggle_menu(), 26)
 	menu_btn.name = "MenuButton"
 	menu_btn.visible = false
@@ -470,6 +472,7 @@ func start_online(nm: NetMatch) -> void:
 		add_child(nm)
 	nm.turn.connect(_on_net_turn)
 	nm.ended.connect(_on_net_end)
+	nm.resync.connect(_on_resync)
 	_demo = null
 	bots.clear()
 	sim = Sim.from_dict(nm.start_snap)
@@ -492,6 +495,42 @@ func start_online(nm: NetMatch) -> void:
 	over_panel.visible = false
 	_build_cards()
 	_next()
+
+
+## Back after the line dropped (01:32 "3 makes sense"): the host's state as it is now, and on from there.
+func _on_resync(snap: Dictionary) -> void:
+	if net_match == null or phase == "over":
+		return
+	_net_queue.clear()
+	pick.close()
+	sim = Sim.from_dict(snap)
+	stage.fx.clear()
+	stage.show_tick(sim.record(), [], sim.record_shots())
+	_update_cards()
+	_stage_band()
+	banner.text = ""
+	_next()
+
+
+## The lobby line, during an online match: dropped - say so; back in - ask for the seat; gone for good - it's over here.
+func _on_line(state: String, _detail: String) -> void:
+	if net_match == null or not net_match.live or phase == "over":
+		return
+	match state:
+		"closed", "reconnecting":
+			if lobby.net.want_back:
+				banner.text = "Connection lost - getting back in..."
+			else:
+				_on_net_end("Lost the connection")
+		"error":
+			if not lobby.net.want_back:
+				_on_net_end("Lost the connection")
+
+
+func _on_lobby_back() -> void:
+	if net_match != null and net_match.live and phase != "over":
+		banner.text = "Back - catching up..."
+		net_match.reclaim(lobby.my_name)
 
 
 ## The host's turn, played here: the same picks from the same state; then the host's state is the truth.
