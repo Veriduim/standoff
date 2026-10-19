@@ -734,6 +734,8 @@ func _test_pick_fighter() -> void:
 	for c in g.cards.get_children():
 		for l in c.find_children("*", "RichTextLabel", true, false):
 			shown += (l as RichTextLabel).text
+	_check("the stage is drawn as wide as the match's (06:14 \"they are off the map\"): %.0f / %.0f" % [g.stage.half,
+			g.sim.half], is_equal_approx(g.stage.half, g.sim.half))
 	_check("...the match has you as him, and his card shows his Grit (%s)" % ("grit pips" if shown.contains("#ff9a3c")
 			else "no grit"), me.character == "bruiser" and shown.contains("#ff9a3c") and not g.pick.menu_moves().has("fan"))
 	home.set_fighter("dancer")

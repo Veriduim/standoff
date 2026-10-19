@@ -261,6 +261,7 @@ func _demo_start() -> void:
 	for i in 4:   # (both of them, mixed - 05:03 the Bruiser)
 		players.append({"name": "", "character": Moves.ORDER[i % Moves.ORDER.size()]})
 	_demo = Sim.create(players, "ffa")
+	stage.half = _demo.half   # (the stage as wide as the match's - 06:14 "they are off the map")
 	_demo_bots.clear()
 	for i in 4:
 		_demo_bots.append(Bot.new(randi() % 9999 + i))
@@ -331,6 +332,7 @@ func start_local(opponents: int, mode: String, colour := 0, train := false) -> v
 	_history.clear()
 	_replay_log.clear()
 	stage.ceiling = sim.ceiling
+	stage.half = sim.half   # (06:14 "they are off the map": the floor drawn the old width, 1600, on a 2800 stage)
 	bots.clear()
 	for i in range(1, players.size()):
 		bots[i] = Bot.new(i * 7 + 3, Bot.chosen)   # (the level picked on the home screen - 02:10)
