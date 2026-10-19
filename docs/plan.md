@@ -183,6 +183,8 @@ one stage; each attack aims at a picked target.
   no pass-and-play; Super Armor is for the Bruiser, who comes back later as the rushdown character.
 - 0.18.0: **How to play** (six cards: first launch, home, ☰); **back into a match after a drop** (docs/lobby.md); early
   picks kept by the host (they were being dropped).
+- 0.19.0: **restands** and **initiative** on more moves (the wiki; docs/mechanics.md). 01:46 the Bruiser, later: "a mix
+  of the Nakmuay and Super Smash bros little mac".
 
 ## To tune / later
 - **Match length with 6:** bot matches take 120-270 decision points with 6 fighters (50-90 with 2). At ~10 s a decision

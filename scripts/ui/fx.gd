@@ -106,6 +106,9 @@ func on_event(type: String, at: Vector2, face: float, dmg: int, by: Color, victi
 			splash(0.4, at)
 			freeze(0.12, victim)
 			kick(6.0)
+		"restand":   # (hit as they land from an air combo: back in a ground combo)
+			_add("text", at + Vector2(0, -64), Vector2(0, -40), 0.6, Color("#8fd6ff"), 18.0)
+			parts[-1]["txt"] = "RESTAND"
 		"ic":   # (an Instant Cancel: a purple snap)
 			_add("shock", at, Vector2.ZERO, 0.18, Color("#c58bff"), 50.0)
 			_add("text", at + Vector2(0, -64), Vector2(0, -40), 0.5, Color("#c58bff"), 18.0)

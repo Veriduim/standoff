@@ -70,7 +70,8 @@ the rules of play. The names, art, characters and code are not ours to take, and
 | Follow-ups | Actions only available after a specific one | Jab -> One-Two -> Spin Finish (splat + knockdown) |
 | Hit-cancel limits | A landed hit can limit what you can do next | Uppercut / Rising Heel cancel only into jumps (`cancel_into`) - the launch-and-chase |
 | Counter stance | (several characters' counters) | Mirror: struck in frames 3-24 it strikes back at once ("MIRROR!"); grabs beat it |
-| Initiative | Moves get invulnerability when the opponent's not already committed | `init_invuln`: the uppercut and Rising Heel (frames 1-6) when the nearest enemy was choosing too |
+| Initiative | Moves get invulnerability, or a faster startup, when the opponent's not already committed | `init_invuln`: the uppercut and Rising Heel (frames 1-6), Silk Glide (2-8); `init_faster`: Side Kick and Fan Throw start 2 frames in (0.19.0) - when the nearest enemy was choosing too; the card says so |
+| Restands | Landing in hitstun without a knockdown: 3 frames unable to act; a grounded hit in the 5 frames as they land puts them back in a ground combo (the 7th-hit launch count carries on) | `Sim.RESTAND_LAG` 3 / `RESTAND` 5 for anyone launched or hit in the air (`Fighter.launched`); a hit in the window shows RESTAND; no hit - the combo's over. Before 0.19.0 a landing kept them reeling, so air combos went on along the ground for free |
 | Command grab / air grab | Grabs with their own rules; same air/ground state | Spin Throw (into the wall), Air Throw (air to air) |
 | Supers | 1-3 bars | Flurry (1), Cyclone (2), Grand Finale (3 - a rush and a launch); the super's name splashed over them |
 
@@ -88,9 +89,8 @@ the rules of play. The names, art, characters and code are not ours to take, and
 ## Later
 - **Chess Timer**: built 0.17.0, dropped 0.17.1 (Timmy 01:24 "I think round and turn timers are better"). It's in git
   (commit 9c2fc68) if it's ever wanted.
-- **Super Armor** on a move (it tanks one hit).
-- **Initiative** on more moves (faster startup with it, as some of the wiki's do).
-- **Restands** (a hit as they land from an air combo puts them back in a grounded combo).
-- **Burst Cancel's** slower Burst refill for the rest of the combo; parry lock-out after a missed block.
+- **Burst Cancel's** slower Burst refill for the rest of the combo.
+- **Super Armor** and a **parry lock-out** are for the Bruiser (Timmy 01:32 / 01:46), not the Dancer. The lock-out
+  isn't universal anyway: it's Mutant's own rule (a failed parry costs his jukes).
 - Step 3 - much cooler moves (projectiles, a stance with its own moves, rekka chains, a command grab, a launcher route,
   a counter stance, supers with their own animation); step 4 - effects per move; sound; replays; lobby rules.

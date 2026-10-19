@@ -89,6 +89,8 @@ const REUSE_DECAY := 0.25     ## a move used again in the same combo stuns this 
 const REUSE_FLOOR := 0.3      ## ...down to this share
 const LEAN_PUSH := 2.5        ## a lean adds this much to the knockback (more as the combo grows)
 const LAUNCH_HIT := 7         ## the combo hit that always launches someone on the ground
+const RESTAND_LAG := 3        ## launched and landing in hitstun (no knockdown): out of the stun, this long unable to act
+const RESTAND := 5            ## ...and this long a grounded hit puts them back in a ground combo (a restand - the wiki)
 const KB_SCALE := 1.35        ## every hit's knockback (22:40 "We dont do things big enough" - launches that fly)
 const WALL_BOUNCE := 0.6      ## how much of their speed someone launched into a wall keeps bouncing off it
 const WALL_STUN := 3          ## ...and the stun it adds
@@ -546,7 +548,7 @@ func _start(f: Fighter, c: Dictionary) -> void:
 			f.meter -= BAR
 			f.freed = true
 	f.move = mid
-	f.frame = 0
+	f.frame = int(m.get("init_faster", 0)) if f.initiative else 0   # (initiative: some moves start sooner - the wiki)
 	f.instance += 1
 	f.hit_done.clear()
 	f.cancelled = ""
@@ -741,6 +743,11 @@ func _physics(f: Fighter) -> void:
 				_bounce(f)
 			elif f.stun > 0 and f.kd:   # (a knockdown hit: floored on landing)
 				_floor(f)
+			elif f.stun > 0 and f.launched:   # (an air combo lands: out of it - unless they're hit again right now)
+				f.stun = 0
+				f.lock = RESTAND_LAG
+				f.restand = RESTAND
+				f.launched = false
 			f.kd = false
 			if f.move != "" and bool(Moves.move(f.character, f.move).get("land_ends", false)):
 				f.lock = int(Moves.move(f.character, f.move).get("landing", 6))
@@ -852,6 +859,10 @@ func _count(f: Fighter) -> void:
 	if f.ko:
 		return
 	f.burst = mini(BURST_FULL, f.burst + (BURST_REELING if f.stun > 0 else 1))
+	if f.restand > 0:   # (the restand window: not hit in it - the combo's over)
+		f.restand -= 1
+		if f.restand == 0 and f.stun == 0 and f.splat == 0:
+			f.combo_over()
 	if f.stun > 0:
 		f.stun -= 1
 		if f.stun == 0 and f.splat == 0:
@@ -1353,6 +1364,11 @@ func _hurt(a: Fighter, d: Fighter, e: Dictionary, type: String, src := "", side_
 		d.vel += lean * LEAN_PUSH * (1.0 + 0.1 * d.combo)
 	if d.combo == LAUNCH_HIT and d.pos.y >= 0.0 and d.vel.y > -4.0:   # (the 7th hit on the ground always launches)
 		d.vel.y = -11.5
+	if d.restand > 0:   # (hit as they land from an air combo: back in a ground combo - the count carries on)
+		d.restand = 0
+		_event("restand", a, d)
+	if d.pos.y < -10.0 or d.vel.y < -6.0:   # (sent up, or hit up there: an air combo - landing can end it)
+		d.launched = true
 	# combo pushback: the longer the combo, the further the hitter's pushed off (not their speed - their place)
 	if src == "":   # (combo pushback - on the hitter, when it's their own body that hit)
 		a.pos.x -= side * minf(COMBO_PUSH * float(d.combo), COMBO_PUSH_MAX) * 0.5

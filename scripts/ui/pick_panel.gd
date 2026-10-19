@@ -411,6 +411,10 @@ static func frame_data(m: Dictionary) -> String:
 		parts.append("armour f%d-%d" % [int(m["armor"][0]), int(m["armor"][1])])
 	if m.has("invuln"):
 		parts.append("dodges f%d-%d" % [int(m["invuln"][0]), int(m["invuln"][1])])
+	if m.has("init_faster"):   # (initiative: the enemy was choosing too, not already committed)
+		parts.append("%df sooner with initiative" % int(m["init_faster"]))
+	if m.has("init_invuln"):
+		parts.append("dodges f%d-%d with initiative" % [int(m["init_invuln"][0]), int(m["init_invuln"][1])])
 	if int(m.get("cost", 0)) > 0:
 		parts.append("%d meter" % int(m["cost"]))
 	if int(m.get("meter_gain", 0)) > 0:

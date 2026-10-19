@@ -25,6 +25,7 @@ extends RefCounted
 ##   after     [move ids] - a follow-up: there only right after landing one of those
 ##   cancel_into [move ids] - landing this only frees them into these (the wiki's hit-cancel limits)
 ##   init_invuln [from, to] - invulnerable on these frames too, with initiative (the nearest enemy was choosing too)
+##   init_faster N - with initiative it starts N frames in: a faster startup (the wiki: "some moves have reduced startup")
 ##   window / counter_hit / counter_move - a counter stance: struck in the window, counter_hit lands on the striker
 ##   air_grab  true = a grab that takes them out of the air; hidden true = never in the menu (a counter's follow-up)
 ##   proration the combo scaling a combo starting with this move starts at (the wiki: +2 = starts 2 hits in)
@@ -122,7 +123,7 @@ const DANCER := {
 			"hits": [{"from": 5, "to": 6, "box": [6, -30, 58, 24], "dmg": 22, "stun": 14, "kb": [2.0, 0.0],
 				"block": 8, "chip": 1, "group": 0, "height": "low"}],
 			"pose": [[0, "crouch"], [5, "low_kick"], [10, "idle"]]},
-		"sidekick": {"name": "Side Kick", "tab": "attack", "kind": "attack", "frames": 24, "where": "ground",
+		"sidekick": {"name": "Side Kick", "tab": "attack", "kind": "attack", "frames": 24, "where": "ground", "init_faster": 2,
 			"aim": "facing", "motion": [[2, 9, 6.0, 0.0]], "dist": [24, 24, 0.0],
 			"hits": [{"from": 8, "to": 10, "box": [12, -66, 78, 22], "dmg": 40, "stun": 18, "kb": [9.0, -2.0],
 				"block": 12, "chip": 3, "group": 0, "splat": true}],
@@ -185,6 +186,7 @@ const DANCER := {
 			"pose": [[0, "crouch"], [6, "spin2"], [16, "idle"]], "icon": "spin2"},
 		# ---- specials: projectiles, the Sway stance, a counter
 		"fan": {"name": "Fan Throw", "tab": "special", "kind": "special", "fans": 1, "frames": 24, "where": "ground",
+			"init_faster": 2,
 			"aim": "dir8",
 			"spawn": {"at": 8, "kind": "fan", "speed": 11.0, "from": [30, -74], "box": [26, 20], "dmg": 20, "stun": 14,
 				"kb": [4.0, -2.0], "block": 8, "chip": 2, "life": 70},
@@ -307,6 +309,7 @@ const DANCER := {
 			"pose": [[0, "fan_low"], [8, "fan_up"], [20, "idle"]], "icon": "fan_up"},
 		"glide": {"name": "Silk Glide", "tab": "special", "kind": "attack", "frames": 30, "where": "ground",
 			"aim": "facing", "shot_invuln": [2, 18], "motion": [[3, 18, 15.0, 0.0]], "dist": [30, 30, 0.2],
+			"init_invuln": [2, 8],
 			"low_profile": [3, 20],
 			"hits": [{"from": 6, "to": 18, "box": [12, -54, 54, 44], "dmg": 30, "stun": 22, "kb": [8.0, -6.0],
 				"block": 8, "chip": 3, "group": 0, "height": "low"}],

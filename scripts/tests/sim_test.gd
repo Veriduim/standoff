@@ -649,15 +649,21 @@ func _test_spacer() -> void:
 			and not hn.is_empty() and int(hf[0].get("spot", 0)) == 1 and int(hn[0].get("spot", 0)) == -1
 			and int(hf[0]["dmg"]) > int(hn[0]["dmg"]))
 	var t := _duel("dancer", "dancer", 600.0)
-	var thrown := 0
-	for _i in 4:
+	var most := 0          # (the most fans of hers out at once)
+	var empty_throw := false
+	for _i in 6:
 		if t.legal_moves(0).has("fan"):
+			empty_throw = empty_throw or t.fighters[0].fans == 0
 			t.apply({0: {"move": "fan", "x": 1.0}, 1: {"move": "wait"}})
-			thrown += 1
-		for _k in 26:
+		for _k in 10:
 			t.step()
-	_check("two fans, so two throws before one's back (thrown %d before the first came home)" % thrown, thrown <= 3
-			and Sim.FANS_MAX == 2)
+			var out := 0
+			for sh: Dictionary in t.shots:
+				if int(sh["owner"]) == 0 and str(sh["kind"]) == "fan":
+					out += 1
+			most = maxi(most, out)
+	_check("two fans: never more than two out at once (%d), never a throw with none in hand" % most, most == 2
+			and not empty_throw and Sim.FANS_MAX == 2)
 	var b1 := _duel("dancer", "dancer", 60.0)
 	var b2 := _duel("dancer", "dancer", 60.0)
 	b2.fighters[1].fans = 0
@@ -701,6 +707,61 @@ func _test_steer_fans() -> void:
 	var w: Vector2 = t.shots[0]["vel"] if not t.shots.is_empty() else Vector2.ZERO
 	_check("flung up it flies up (%s); with no direction it heads home (%s)" % [v, w], v.y < -5.0 and absf(v.x) < 1.0
 			and w.x < -5.0)
+
+
+## Someone launched and coming down, in hitstun, this far up: (sim, the one falling).
+func _falling(s: Sim) -> Fighter:
+	var d: Fighter = s.fighters[1]
+	d.pos.y = -30.0
+	d.vel = Vector2(0.0, 6.0)
+	d.stun = 40
+	d.combo = 3
+	d.launched = true
+	return d
+
+
+func _test_restand() -> void:
+	_section("Restands (the wiki): an air combo landing ends it - unless they're hit in the 5 frames as they land")
+	var s := _duel("dancer", "dancer", 300.0)
+	var d := _falling(s)
+	for _i in 12:
+		if d.pos.y >= 0.0:
+			break
+		s.step()
+	var landed: bool = d.stun == 0 and d.lock == Sim.RESTAND_LAG - 0 or d.lock == Sim.RESTAND_LAG - 1
+	var kept: int = d.combo
+	for _i in Sim.RESTAND + 1:
+		s.step()
+	_check("launched, landing without a knockdown: out of the stun (lock %d), then the combo's over (%d -> %d)"
+			% [d.lock, kept, d.combo], landed and kept == 3 and d.combo == 0 and d.actionable())
+	var t := _duel("dancer", "dancer", 60.0)
+	var e := _falling(t)
+	for _i in 12:
+		if e.pos.y >= 0.0:
+			break
+		t.step()
+	var a: Fighter = t.fighters[0]
+	t._start(a, {"move": "jab", "x": 1.0})
+	a.frame = 2   # (its hit comes out on the next frame - inside the window)
+	var events: Array = []
+	for _i in 3:
+		t.step()
+		events.append_array(t.events.map(func(ev: Dictionary) -> String: return str(ev["type"])))
+	_check("hit as they land: RESTAND - back in a ground combo, the count carrying on (%s, combo %d)" % [events,
+			e.combo], events.has("restand") and e.combo == 4 and e.stun > 0)
+
+
+func _test_initiative_faster() -> void:
+	_section("Initiative (the wiki): Side Kick starts 2 frames sooner when the enemy was choosing too")
+	var s := _duel("dancer", "dancer", 300.0)
+	s.apply({0: {"move": "sidekick", "x": 1.0}, 1: {"move": "wait"}})
+	var with: int = s.fighters[0].frame
+	var t := _duel("dancer", "dancer", 300.0)
+	t._start(t.fighters[1], {"move": "spin", "x": -1.0})   # (already committed to a move)
+	t.apply({0: {"move": "sidekick", "x": 1.0}})
+	var without: int = t.fighters[0].frame
+	_check("with initiative it starts at frame %d; against someone already committed, at %d" % [with, without],
+			with == 2 and without == 0)
 
 
 ## Two Dancers with these x-factors on (Sim RULES "xf"), gap apart, facing each other.

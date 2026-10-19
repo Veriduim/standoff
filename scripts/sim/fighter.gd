@@ -50,6 +50,8 @@ var bounced := false     ## ...used up for this combo
 var splat_due := false   ## the hit on them sticks them to the wall if they reach it
 var splats := 0          ## wall splats this combo (3 at most)
 var splat := 0           ## ticks left stuck to the wall
+var launched := false    ## the combo on them is in the air (sent up, or hit up there) - landing ends it (Sim.RESTAND)
+var restand := 0         ## ticks left in which a hit as they land keeps the combo going
 var stance := ""         ## the stance they're in ("" = none) - its moves are open while it lasts
 var initiative := false  ## started their move while the nearest enemy was choosing too (some moves get more for it)
 ## the x-factors on trial (Sim.xf)
@@ -76,6 +78,8 @@ func combo_over() -> void:
 	bounced = false
 	splat_due = false
 	splats = 0
+	launched = false
+	restand = 0
 
 
 func actionable() -> bool:
