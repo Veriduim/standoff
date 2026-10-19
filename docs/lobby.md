@@ -60,7 +60,8 @@ Timmy, 19 Oct 00:38: "Whats local multiplayer over Bluetooth or the likes?". The
 00:43: "1 sounds like a pretty good soultion to me! I didnt know that worked".
 - **The lobby screen** has two tabs: **Online** (the server above) and **Nearby (Wi-Fi / hotspot)**.
   - In Nearby, **Create lobby** makes this phone the server: `LanHost` (`scripts/net/lan_host.gd`).
-  - Its lobby line shows its address(es) and a **Copy address** button: "keep Standoff open".
+  - Its lobby line says "you're hosting - keep Standoff open". There are no codes or addresses: the others' Nearby
+    lists find it (01:24 "Do we need the IP for hot-spot? If not I say we remove all that" - 0.17.1).
 - **The host phone** runs the online server's rules in-process (`LoopLobby`).
   - It uses WebSockets on port **47270**, with the same URLs and messages, so every `LobbyNet` works unchanged. The host
     phone's own one connects through 127.0.0.1.
@@ -70,17 +71,18 @@ Timmy, 19 Oct 00:38: "Whats local multiplayer over Bluetooth or the likes?". The
 - **Finding it** (`LanFinder`, `scripts/net/lan_finder.gd`):
   - the host tells the network about itself every second (UDP broadcast to port 47272 — on the general address and
     each network's own `.255`, as a hotspot isn't the phone's default route);
-  - finders also ask "standoff?" on port 47271 every 1.5 s, and the host answers them directly;
-  - a typed address is asked directly. That's the fallback when broadcasts don't get through (some phones filter
-    them).
+  - finders also ask "standoff?" on port 47271 every 1.5 s (a broadcast), and the host answers them directly - two
+    ways, in case one phone filters broadcasts.
+  - The typed-address fallback was taken out in 0.17.1. If a phone's list never shows a host, that's the thing to bring
+    back (`git show v0.17.0:scripts/ui/lobby_screen.gd`, `join_typed`).
 - **No internet needed.** The phones only need to be on one network: a router's Wi-Fi, or everyone joining the host
   phone's hotspot.
 - **Test:** `online_test` `_test_nearby`, on real sockets bound to 127.0.0.1 (`LanHost.bind_to`, so the PC's firewall
-  isn't asked). A phone hosts, another joins by address, chat, a full match that ends the same on both, then the host
-  leaves. `--lobbyshots` adds `L5_nearby_list` / `L6_nearby_host`.
+  isn't asked; `LanHost.broadcasts()` is then just 127.0.0.1). A phone hosts, the other's Nearby list finds it by
+  itself and joins, chat, a full match that ends the same on both, then the host leaves. `--lobbyshots` adds `L5_nearby_list` / `L6_nearby_host`.
 
 ## Not done yet
-- Everyone's Chess Timer bank on screen (each phone keeps and shows its own).
+- YOMI's Chess Timer: built in 0.17.0 and taken out in 0.17.1 (01:24 "I think round and turn timers are better").
 - Saving your own rule presets by name.
 - Character select (there is one character).
 - Rating / ranked.

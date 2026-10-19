@@ -1,14 +1,13 @@
 class_name LanFinder
 extends Node
-## Nearby lobbies (LanHost): it hears hosts telling the network about themselves, and asks "standoff?" every couple of
-## seconds - out to everyone and to any address typed in - for the ones whose telling doesn't get through.
+## Nearby lobbies (LanHost): it hears hosts telling the network about themselves, and asks "standoff?" out to everyone
+## every couple of seconds - the hosts answer it directly, for when their telling doesn't get through.
 
 const FORGET_MS := 5000
 
 var found := {}                   ## code -> {code, name, players, max, version, ip, port, seen}
 var hear := PacketPeerUDP.new()   ## hosts telling (LanHost.TELL_PORT)
 var ask := PacketPeerUDP.new()    ## our questions out, their answers back
-var also: Array[String] = []      ## addresses typed in - asked directly too
 var _t := 0.0
 
 
@@ -27,13 +26,6 @@ func stop() -> void:
 	found.clear()
 
 
-## Ask this address now (typed in by hand).
-func ask_at(ip: String) -> void:
-	if not also.has(ip):
-		also.append(ip)
-	_ask(ip)
-
-
 func _ask(ip: String) -> void:
 	if ask.is_bound():
 		ask.set_dest_address(ip, LanHost.ASK_PORT)
@@ -50,7 +42,7 @@ func poll(delta := 0.0) -> void:
 	_t -= delta
 	if _t <= 0.0:
 		_t = 1.5
-		for a in LanHost.broadcasts() + also:
+		for a in LanHost.broadcasts():
 			_ask(a)
 	for s: PacketPeerUDP in [hear, ask]:
 		while s.is_bound() and s.get_available_packet_count() > 0:

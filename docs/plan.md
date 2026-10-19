@@ -175,6 +175,9 @@ one stage; each attack aims at a picked target.
   YomiRanked / Starlight rules); 01:15 "make the direction arrows a little bigger ... select the same arrow again to
   have no direction/netural" -> the pad 56x38 (the bar 144 tall), and the lit arrow tapped again = neutral for every
   move: at the nearest enemy (a jump straight up, a block high).
+- 01:24 "Do we need the IP for hot-spot? If not I say we remove all that? Also I say we drop the chess timer stuff for
+  nkw was well please. I think round and turn timers are better" -> 0.17.1: Nearby has no addresses (the list finds
+  the hosts by itself); the Chess Timer and its Ranked preset are gone.
 
 ## To tune / later
 - **Match length with 6:** bot matches take 120-270 decision points with 6 fighters (50-90 with 2). At ~10 s a decision

@@ -97,8 +97,7 @@ const DEFAULT := {"move": "wait"}   ## a pick that never came (a turn timer ran 
 ## The match's rules (a lobby's owner sets them - YOMI's lobby rules panel; defaults = the game as it is). "xf": the
 ## Dancer's x-factors on trial, e.g. "fans,tempo" (Timmy 21:14 / 21:17 - one of them, or two together).
 const RULES := {"turn": 30, "round": 3600, "start": 0, "width": 1600, "damage": 1.0, "hitstun": 1.0, "meter": 0.0,
-	"xf": "fans,tempo", "ceiling": 900,   # (23:31: the Dancer is Fans + Tempo; the wiki's Ceiling Height)
-	"chess": 0, "bank": 10, "min_turn": 15}   # (YOMI's Chess Timer: a bank of minutes each, then the minimum a turn)
+	"xf": "fans,tempo", "ceiling": 900}   # (23:31: the Dancer is Fans + Tempo; the wiki's Ceiling Height)
 const XF := ["fans", "tempo", "forms"]
 const FANS_MAX := 2           ## Fans: in hand to start
 const FAN_OUT := 24           ## ...a thrown one flies out this long, then turns for home

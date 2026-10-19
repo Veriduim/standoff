@@ -158,7 +158,7 @@ func _admit(ws: WebSocketPeer) -> void:
 		ws.close(1000, "refused")
 
 
-## This phone's addresses on a local network (Wi-Fi, a hotspot) - what the others can type to find it.
+## This phone's addresses on a local network (Wi-Fi, a hotspot) - where to tell the others it's here.
 static func addresses() -> Array[String]:
 	var out: Array[String] = []
 	for a in IP.get_local_addresses():
@@ -176,6 +176,8 @@ static func addresses() -> Array[String]:
 ## Where "everyone on the network" is: each network's own broadcast address (a hotspot's isn't the phone's default
 ## route) and the general one.
 static func broadcasts() -> Array[String]:
+	if bind_to.begins_with("127."):   # (the tests: everyone is this PC)
+		return ["127.0.0.1"]
 	var out: Array[String] = ["255.255.255.255"]
 	for a in addresses():
 		var p := a.split(".")

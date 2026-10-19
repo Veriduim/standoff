@@ -14,15 +14,12 @@ signal closed                ## back to the home screen
 
 const SETTINGS := "user://settings.cfg"
 ## The rules the owner can set: [key, label, min, max, step, shown as].
-const RULE_ROWS := [["chess", "Chess timer", 0, 1, 1, "onoff"], ["turn", "Turn clock", 10, 120, 5, "%d s"],
-	["bank", "Time bank (each)", 1, 30, 1, "%d min"], ["min_turn", "Then each turn", 5, 60, 5, "%d s"],
-	["round", "Round", 20, 120, 10, "%d s"],
+const RULE_ROWS := [["turn", "Turn clock", 10, 120, 5, "%d s"], ["round", "Round", 20, 120, 10, "%d s"],
 	["start", "Start distance (1v1)", 0, 600, 50, "%d"], ["width", "Stage width", 1200, 3200, 200, "%d"],
 	["damage", "Damage", 0.5, 2.0, 0.25, "x%.2f"], ["hitstun", "Hitstun", 0.5, 2.0, 0.25, "x%.2f"],
 	["meter", "Starting meter", 0.0, 3.0, 0.5, "%.1f bars"], ["ceiling", "Ceiling", 400, 2000, 100, "%d"]]
 const PRESETS := {"Default": {}, "Quick": {"round": 2400, "damage": 1.25}, "Thinking": {"turn": 90},
-	"Big stage": {"width": 2800}, "Ranked": {"chess": 1, "bank": 15, "min_turn": 15, "round": 3000, "meter": 1.5, "width": 1200, "ceiling": 600}}
-## ("Ranked" = the wiki's YomiRanked / Starlight rules: 15 min banks, 15 s after, 1.5 bars, a smaller stage)
+	"Big stage": {"width": 2800}}
 const LIST_COLS := [440, 200, 120]   ## the list's columns: lobby name, version, players
 const MAIN := Color("#2b4f8a")       ## the main action's blue (as on the home screen)
 
@@ -59,7 +56,6 @@ var _waiting: NetMatch
 var nearby := false           ## the Nearby tab: lobbies on this Wi-Fi / hotspot, hosted by a phone (00:43)
 var finder: LanFinder         ## (Nearby) the lobbies around
 var host: LanHost             ## (Nearby) the lobby this phone hosts
-var _want_ip := ""            ## (Nearby) an address typed in: into its lobby as soon as it answers
 var _list_t := 0.0
 var _tries := 0               ## reconnect tries since the line dropped        ## accepted - waiting for the host to start
 
@@ -180,7 +176,7 @@ func _build_list() -> void:
 	code_edit = _edit("", 110)
 	code_edit.placeholder_text = "lobby code"
 	top.add_child(code_edit)
-	var join_code := _main(Ui.button("Join", func() -> void: join_typed(code_edit.text), 18))
+	var join_code := _main(Ui.button("Join", func() -> void: join(code_edit.text), 18))
 	join_code.name = "JoinCode"
 	top.add_child(join_code)
 	var head := HBoxContainer.new()
@@ -256,8 +252,8 @@ func set_nearby(on: bool) -> void:
 	else:
 		finder.start()
 	finder.set_process(on)
-	code_edit.placeholder_text = "host's address" if on else "lobby code"
-	code_edit.custom_minimum_size.x = 180.0 if on else 110.0
+	code_edit.visible = not on   # (Nearby: nothing to type - the list finds them)
+	(list_view.find_child("JoinCode", true, false) as Button).visible = not on
 	public_btn.visible = not on
 	(list_view.find_child("ModeNearby", true, false) as Button).set_pressed_no_signal(on)
 	(list_view.find_child("ModeOnline", true, false) as Button).set_pressed_no_signal(not on)
@@ -273,12 +269,6 @@ func _process(delta: float) -> void:
 		_list_t = 1.0
 		lobbies = finder.list()
 		_fill_list()
-	if _want_ip != "":
-		for l: Dictionary in finder.list():
-			if str(l["ip"]) == _want_ip:
-				_want_ip = ""
-				join_lobby(l)
-				break
 
 
 func refresh() -> void:
@@ -321,8 +311,8 @@ func _fill_list() -> void:
 		list_box.add_child(row)
 		shown += 1
 	if nearby:
-		note.text = "" if shown > 0 else ("No lobbies nearby yet. Create one (your phone hosts it), or type the host's "
-				+ "address - it shows in their lobby. Everyone on the same Wi-Fi, or on the host's hotspot.")
+		note.text = "" if shown > 0 else ("No lobbies nearby yet - create one (your phone hosts it). Everyone on the "
+				+ "same Wi-Fi, or on the host's hotspot.")
 		return
 	note.text = "" if shown > 0 else ("No lobbies yet - create one" if net.reached else "Can't reach the lobby server")
 
@@ -356,24 +346,6 @@ func join_lobby(l: Dictionary) -> void:
 	if nearby:
 		LobbyNet.url = "ws://%s:%d" % [str(l["ip"]), int(l.get("port", LanHost.WS_PORT))]
 	join(str(l["code"]))
-
-
-## The box by Join: online a lobby code; nearby the host's address (or a code from the list).
-func join_typed(text: String) -> void:
-	text = text.strip_edges()
-	if not nearby or text == "":
-		join(text)
-		return
-	if text.contains("."):   # (an address - ask it, in when it answers)
-		_want_ip = text
-		finder.ask_at(text)
-		note.text = "Looking for a lobby at %s..." % text
-		return
-	for l: Dictionary in finder.list():
-		if str(l["code"]) == text:
-			join_lobby(l)
-			return
-	note.text = "No lobby %s nearby - type the host's address (it shows in their lobby)" % text
 
 
 func join(code: String) -> void:
@@ -509,8 +481,6 @@ func _scroll_list(parent: Control) -> VBoxContainer:
 
 func _copy_code() -> void:
 	var code := str(net.lobby.get("code", ""))
-	if host != null and not LanHost.addresses().is_empty():   # (hosting nearby: the address is what they need)
-		code = LanHost.addresses()[0]
 	if code == "":
 		return
 	DisplayServer.clipboard_set(code)
@@ -520,7 +490,7 @@ func _copy_code() -> void:
 
 
 func _copy_label() -> void:
-	(room_view.find_child("CopyCode", true, false) as Button).text = "Copy address" if host != null else "Copy code"
+	(room_view.find_child("CopyCode", true, false) as Button).text = "Copy code"
 
 
 func _send_chat() -> void:
@@ -541,14 +511,11 @@ func _refresh_room() -> void:
 	title.text = str(net.lobby.get("name", ""))
 	code_label.text = "Lobby code %s  ·  %s  ·  %d / %d" % [str(net.lobby.get("code", "")),
 		"public" if net.lobby.get("public", true) else "private", net.members.size(), int(net.lobby.get("max", 8))]
-	if host != null:   # (hosting nearby: the address anyone can type if their list doesn't find it)
-		code_label.text = "Nearby lobby  ·  your address %s  ·  %d / %d  ·  keep Standoff open" % [
-			" / ".join(LanHost.addresses()) if not LanHost.addresses().is_empty() else "(no Wi-Fi?)",
-			net.members.size(), int(net.lobby.get("max", 8))]
-	elif nearby:
-		code_label.text = "Nearby lobby  ·  %d / %d" % [net.members.size(), int(net.lobby.get("max", 8))]
+	if nearby:   # (no code to share: the others see it in their Nearby list)
+		code_label.text = "Nearby lobby  ·  %d / %d%s" % [net.members.size(), int(net.lobby.get("max", 8)),
+			"  ·  you're hosting - keep Standoff open" if host != null else ""]
 	var copy := room_view.find_child("CopyCode", true, false) as Button
-	copy.visible = not nearby or host != null
+	copy.visible = not nearby
 	if not copy.text.begins_with("Copied"):
 		_copy_label()
 	for c in members_box.get_children():
@@ -630,9 +597,8 @@ func _fill_rules() -> void:
 		c.queue_free()
 	var rules := rules_now()
 	var owner := net.is_owner()
-	var chess := int(rules.get("chess", 0)) == 1
 	if owner:   # (the presets first - the rules below scroll on a short screen)
-		var pre := HFlowContainer.new()   # (five presets: they wrap on a narrow column)
+		var pre := HFlowContainer.new()   # (the presets wrap on a narrow column)
 		pre.add_theme_constant_override("h_separation", 6)
 		pre.add_theme_constant_override("v_separation", 4)
 		pre.add_child(Ui.label("Presets", 15, Color("#8a8a9c")))
@@ -646,16 +612,13 @@ func _fill_rules() -> void:
 		rules_box.add_child(Ui.label("(the lobby's owner sets these)", 13, Color("#6b6b78")))
 	for r: Array in RULE_ROWS:
 		var key := str(r[0])
-		if (key == "turn" and chess) or (key in ["bank", "min_turn"] and not chess):   # (the Chess Timer's own two)
-			continue
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 4)
 		var l := Ui.label(str(r[1]), 15, Color("#c9c9d6"))
 		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(l)
 		var val: float = float(rules[key]) / (60.0 if key == "round" else 1.0)
-		var shown := ("on" if val > 0.5 else "off") if str(r[5]) == "onoff" \
-				else str(r[5]) % (int(val) if str(r[5]).contains("%d") else val)
+		var shown := str(r[5]) % (int(val) if str(r[5]).contains("%d") else val)
 		if key == "start" and val == 0.0:
 			shown = "spread out"
 		if owner:
