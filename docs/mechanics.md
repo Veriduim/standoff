@@ -93,4 +93,8 @@ the rules of play. The names, art, characters and code are not ours to take, and
 - **Super Armor** and a **parry lock-out** are for the Bruiser (Timmy 01:32 / 01:46), not the Dancer. The lock-out
   isn't universal anyway: it's Mutant's own rule (a failed parry costs his jukes).
 - Step 3 - much cooler moves (projectiles, a stance with its own moves, rekka chains, a command grab, a launcher route,
-  a counter stance, supers with their own animation); step 4 - effects per move; sound; replays; lobby rules.
+  a counter stance, supers with their own animation); ~~step 4 - effects per move~~ (0.20.0: a hit looks like what
+  made it - `StageView._hit_style`: her fans cut (Fx "slash"), kicks and knees thump (the spark on the dark starburst),
+  the ground wave throws up dust, grabs close a dark sphere; a super gets a cut-in band, `Fx.draw_cutin`); ~~sound~~
+  (0.15.0); ~~replays~~ (0.13.0); ~~lobby rules~~ (0.8.0). Still open from step 4: YOMI's customisation (outline
+  colour, a particle trail).

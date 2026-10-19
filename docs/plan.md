@@ -185,6 +185,7 @@ one stage; each attack aims at a picked target.
   picks kept by the host (they were being dropped).
 - 0.19.0: **restands** and **initiative** on more moves (the wiki; docs/mechanics.md). 01:46 the Bruiser, later: "a mix
   of the Nakmuay and Super Smash bros little mac".
+- 0.20.0: **step 4 - effects per move**: fan cuts, kick thumps, the ripple's dust, a super cut-in (docs/mechanics.md).
 
 ## To tune / later
 - **Match length with 6:** bot matches take 120-270 decision points with 6 fighters (50-90 with 2). At ~10 s a decision

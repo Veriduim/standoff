@@ -116,7 +116,8 @@ func _motion_fx(prev: Array) -> void:
 		var mv := str(r[3])
 		var kind := str(Moves.move(_char(i), mv).get("kind", "")) if mv != "" else ""
 		if kind == "super" and int(r[4]) <= 1 and (str(p[3]) != mv or int(p[4]) > int(r[4])):
-			fx.super_start(i, _chest(i), colour_of(i), _tick_n * 13 + i, str(Moves.move(_char(i), mv)["name"]))
+			fx.super_start(i, _chest(i), colour_of(i), _tick_n * 13 + i, str(Moves.move(_char(i), mv)["name"]),
+					Moves.icon_pose(Moves.move(_char(i), mv)), float(r[2]))
 			if sfx != null:
 				sfx.play("super")
 		var speed := maxf(absf(float(r[0]) - float(p[0])), absf(float(r[1]) - float(p[1])) * 0.8)
@@ -191,10 +192,25 @@ func _effect(e: Dictionary, prev: Array) -> void:
 		return
 	var at := _contact(a, d) if type in ["hit", "throw", "armor", "block"] else (_chest(a) + _chest(d)) / 2.0
 	var reeling := d < prev.size() and int(prev[d][5]) == 1
+	if type == "hit":
+		fx.style = _hit_style(e, a)
 	fx.on_event(type, at, face, int(e.get("dmg", 0)), colour_of(a), d, colour_of(d), reeling, n + d,
 			bool(e.get("counter", false)) or bool(e.get("worse", false)), bool(e.get("push", false)))
 	if type == "hit" and int(e.get("spot", 0)) == 1:   # (the fan's edge - a gold glint where it lands)
 		fx.on_event("edge", at, face, 0, colour_of(a), d, colour_of(d), false, n + d)
+
+
+## Step 4: what a hit looks like by what made it - "slash" her fans (her hand strikes, a thrown fan), "wave" the
+## ground ripple, "blunt" anything else (kicks, knees).
+func _hit_style(e: Dictionary, a: int) -> String:
+	var src := str(e.get("src", ""))
+	if src != "":
+		return "wave" if src == "ripple" else ("slash" if src in ["fan", "airfan"] else "blunt")
+	var mv := str(frame[a][3])
+	if mv == "" or _char(a) != "dancer":
+		return "blunt"
+	var tip := _striking(a, mv, int(frame[a][4]))
+	return "slash" if tip.begins_with("hand") else "blunt"
 
 
 func _char(i: int) -> String:
@@ -435,6 +451,7 @@ func _draw() -> void:
 	fx.draw_parts(self)
 	fx.draw_combos(self, frame)
 	_advantage_labels()
+	fx.draw_cutin(self)   # (a super's cut-in, over everything)
 
 
 ## A projectile: [x, y, kind, owner, vx, vy, life]. A fan: three blades spinning, a fading trail; a ripple: a low wave

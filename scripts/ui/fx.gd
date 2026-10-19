@@ -43,6 +43,8 @@ var dim_id := -1
 var split := 0.0             ## the colour split (0-1, fading) - the screens' post shader reads it
 var punch := 0.0             ## the camera's push-in on a big hit (a share of the zoom, fading)
 var split_at := Vector2.ZERO ## (world) where it splits from
+var style := ""              ## the next hit's look (StageView sets it): "slash" her fans, "wave" the ripple, else blunt
+var cutin := {}              ## a super's cut-in: {id, col, title, pose, face, age, life} (screen space - draw_cutin)
 var _rng := RandomNumberGenerator.new()
 static var _bold: FontVariation
 
@@ -168,7 +170,22 @@ func on_event(type: String, at: Vector2, face: float, dmg: int, by: Color, victi
 			# (23:05 "This is an example of the normal hit effect": a dark jagged starburst behind it, longest along
 			# the hit - the YOMI mods' look; low contrast, so the fighters and sparks read on top)
 			_add("ink", at, Vector2.ZERO, 0.42, INK, 60.0 + 26.0 * s, face)
-			_burst(at, face, s, by, victim_col)
+			var look := style
+			style = ""
+			if look == "slash" and type == "hit":   # (step 4: a fan's cut - two thin crescents across it, no star)
+				_add("slash", at, Vector2.ZERO, 0.24, by.lightened(0.3), 62.0 + 18.0 * s, face)
+				parts[-1]["w"] = 0.0
+				_add("slash", at + Vector2(0, 6), Vector2.ZERO, 0.2, by.lightened(0.55), 44.0 + 12.0 * s, -face * 0.5)
+				parts[-1]["w"] = 0.0
+			elif look == "wave" and type == "hit":   # (the ground ripple: dust thrown up round their feet)
+				var feet := Vector2(at.x, maxf(at.y, -20.0))
+				for i in 10:
+					var side := 1.0 if i % 2 == 0 else -1.0
+					_add("chip", feet, Vector2(side * _rng.randf_range(60.0, 220.0), -_rng.randf_range(260.0, 520.0)),
+							_rng.randf_range(0.3, 0.5), Color("#a9acb8"), _rng.randf_range(3.0, 6.0))
+				_add("star", at, Vector2.ZERO, 0.14, YELLOW, 20.0 * s)
+			else:   # (blunt: a kick, a knee - the spark on the dark starburst)
+				_burst(at, face, s, by, victim_col)
 			if counter:   # (they were mid-attack: a red COUNTER and a harder flash)
 				_add("text", at + Vector2(0, -40), Vector2(0, -50), 0.42, Color("#ff5d5d"), 17.0)   # (small - they're common)
 				parts[-1]["txt"] = "COUNTER"
@@ -241,11 +258,9 @@ func burst_out(id: int, at: Vector2, col: Color, seed_n: int) -> void:
 
 
 ## Someone starts a super: the stage dims round them, rays and rings burst out, it all holds a moment and splits.
-func super_start(id: int, at: Vector2, col: Color, seed_n: int, title := "") -> void:
+func super_start(id: int, at: Vector2, col: Color, seed_n: int, title := "", pose := "idle", face := 1.0) -> void:
 	_rng.seed = seed_n
-	if title != "":   # (its name, big, over them)
-		_add("text", at + Vector2(0, -150), Vector2(0, -24), 0.95, col.lightened(0.55), 46.0)
-		parts[-1]["txt"] = title.to_upper()
+	cutin = {"id": id, "col": col, "title": title.to_upper(), "pose": pose, "face": face, "age": 0.0, "life": 0.75}
 	dim = 0.62
 	dim_id = id
 	_add("rays", at, Vector2.ZERO, 0.4, col.lightened(0.45), 190.0)
@@ -378,6 +393,10 @@ func trail_end(id: int) -> void:
 
 func update(delta: float) -> void:
 	hitstop = maxf(0.0, hitstop - delta)
+	if not cutin.is_empty():
+		cutin["age"] = float(cutin["age"]) + delta
+		if float(cutin["age"]) >= float(cutin["life"]):
+			cutin = {}
 	if hitstop <= 0.0:
 		jitter.clear()
 	for p: Dictionary in parts:
@@ -571,6 +590,27 @@ func draw_parts(st: StageView) -> void:
 				for i in n + 1:
 					rim.append(at + dirs[i] * reach)
 				st.draw_polyline(rim, rimc, maxf(2.0, 4.0 * z * (1.0 - t)), true)
+			"slash":   # (a fan's cut across the hit: a thin crescent drawn out fast, white at its core; x = the way)
+				var e := 1.0 - pow(1.0 - minf(1.0, t / 0.3), 2.0)
+				var fade := 1.0 - maxf(0.0, (t - 0.35) / 0.65)
+				var way := 1.0 if float(p["x"]) >= 0.0 else -1.0
+				var dir := Vector2.from_angle(-0.55 * absf(float(p["x"])) * way) * way
+				var nrm := Vector2(-dir.y, dir.x)
+				var half := s * (0.3 + 0.7 * e)
+				for layer in 2:   # (the colour, then the white core)
+					var w := s * (0.13 if layer == 0 else 0.05) * fade
+					var top := PackedVector2Array()
+					var bot := PackedVector2Array()
+					for k in 11:
+						var u := -1.0 + 2.0 * float(k) / 10.0
+						var bend := 1.0 - u * u
+						var mid := at + dir * half * u + nrm * s * 0.16 * bend
+						top.append(mid + nrm * w * bend)
+						bot.append(mid - nrm * w * bend)
+					bot.reverse()
+					var cc := c if layer == 0 else Color(1, 1, 1, 1)
+					cc.a = (0.95 if layer == 0 else 1.0) * fade
+					st.draw_colored_polygon(top + bot, cc)
 			"star":   # (near full size the moment it lands - the freeze shows it - then it shrinks away)
 				var grow := (0.75 + 0.25 * minf(1.0, t / 0.2)) * (1.0 - maxf(0.0, (t - 0.5) / 0.5))
 				_star(st, at, s * grow, float(p["r"]), p["sp"], c)
@@ -652,6 +692,53 @@ func draw_parts(st: StageView) -> void:
 				var side := Vector2(-dir.y, dir.x) * s * 0.28
 				st.draw_colored_polygon(PackedVector2Array([at + dir * s, at - dir * s * 0.4 + side,
 						at - dir * s * 0.4 - side]), c)
+
+
+## A super's cut-in (step 4): a dark slanted band across the screen, edged in their colour, speed lines running
+## through it, them big in the move's pose sliding in, and the move's name - over everything, in screen space.
+func draw_cutin(st: StageView) -> void:
+	if cutin.is_empty():
+		return
+	var t := float(cutin["age"]) / float(cutin["life"])
+	var vp := st.get_viewport_rect().size
+	var col: Color = cutin["col"]
+	var slide := 1.0 - pow(1.0 - minf(1.0, t / 0.16), 3.0)   # (in fast)
+	var out := maxf(0.0, (t - 0.82) / 0.18)                  # (and out)
+	var h := vp.y * 0.3
+	var cy := vp.y * 0.44
+	var tilt := h * 0.35
+	var x0 := -vp.x * (1.0 - slide) + vp.x * out * 1.2
+	var band := PackedVector2Array([Vector2(x0, cy - h / 2.0 + tilt * 0.5), Vector2(x0 + vp.x, cy - h / 2.0 - tilt * 0.5),
+		Vector2(x0 + vp.x, cy + h / 2.0 - tilt * 0.5), Vector2(x0, cy + h / 2.0 + tilt * 0.5)])
+	var fill := col.darkened(0.72)   # (her colour, deep - the band reads against the dark stage)
+	fill.a = 0.95
+	st.draw_colored_polygon(band, fill)
+	var edge := col.lightened(0.25)
+	st.draw_line(band[0], band[1], edge, 6.0, true)
+	st.draw_line(band[3], band[2], edge, 6.0, true)
+	var lines := col.lightened(0.5)
+	for k in 9:   # (speed lines racing through the band)
+		var yy := cy - h * 0.38 + h * 0.76 * float(k) / 8.0
+		var run := fmod(float(k) * 173.0 + t * vp.x * 2.6, vp.x * 1.4) - vp.x * 0.2
+		lines.a = 0.22
+		st.draw_line(Vector2(x0 + run, yy), Vector2(x0 + run + vp.x * 0.25, yy - tilt * 0.12), lines, 3.0, true)
+	var sc := h * 0.78 / 100.0   # (her whole figure inside the band)
+	var face := float(cutin["face"])
+	var origin := Vector2(x0 + vp.x * 0.28, cy + h * 0.36)
+	var pose := Poses.get_pose(str(cutin["pose"]))
+	Stick.fan_at(st, Stick._place(pose, origin, sc, face), "b", face, sc, 1.0, col)
+	var pts := Stick.draw(st, pose, origin, sc, face, col, Stick.limb(sc), Stick.head(sc))
+	Stick.fan_at(st, pts, "f", face, sc, 1.0, col)
+	var title := str(cutin["title"])
+	if title != "":
+		if _bold == null:
+			_bold = FontVariation.new()
+			_bold.base_font = ThemeDB.fallback_font
+			_bold.variation_embolden = 1.1
+		var size := int(h * 0.3)
+		var at := Vector2(x0 + vp.x * 0.5, cy + size * 0.35)
+		st.draw_string_outline(_bold, at, title, HORIZONTAL_ALIGNMENT_LEFT, -1, size, 10, Color(0.02, 0.02, 0.03))
+		st.draw_string(_bold, at, title, HORIZONTAL_ALIGNMENT_LEFT, -1, size, col.lightened(0.6))
 
 
 func _star(st: StageView, at: Vector2, s: float, rot: float, sp: Array, c: Color) -> void:

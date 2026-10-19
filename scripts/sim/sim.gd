@@ -1395,6 +1395,8 @@ func _hurt(a: Fighter, d: Fighter, e: Dictionary, type: String, src := "", side_
 			and not bool(Moves.move(a.character, a.move).get("no_cancel", false)):
 		_cancels[a.id] = true
 	var extra := {"counter": true} if counter else {}
+	if src != "":   # (a projectile's hit: the move that threw it - the screen draws it as that)
+		extra["src"] = src
 	if int(e.get("spot", 0)) != 0:
 		extra["spot"] = int(e["spot"])
 	_event(type, a, d, dmg, extra)

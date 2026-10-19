@@ -123,8 +123,9 @@ func _watch(g: Control, mine: Dictionary) -> Dictionary:
 		seen["froze"] = seen["froze"] or g.stage.fx.frozen()
 		seen["arc"] = seen["arc"] or not g.stage.fx.trails.is_empty()
 		for p: Dictionary in g.stage.fx.parts:
-			if p["k"] == "star" and seen["star"] == Vector2.INF:
+			if p["k"] in ["star", "slash"] and seen["star"] == Vector2.INF:   # (a fan strike's is a slash - step 4)
 				seen["star"] = p["p"]
+				seen["look"] = str(p["k"])
 		var card: Node = g.cards.get_child(1)
 		var lag := (card.find_child("Lag", true, false) as ProgressBar).value
 		seen["lag"] = seen["lag"] or lag > (card.find_child("HP", true, false) as ProgressBar).value + 1.0
@@ -142,8 +143,9 @@ func _test_hit_effects() -> void:
 	g.sim.fighters[1].pos.x = 35.0
 	var seen := _watch(g, {"move": "jab", "x": 1.0})
 	var star: Vector2 = seen["star"]
-	_check("a jab that lands bursts where the fist meets the body (%.0f, %.0f)" % [star.x, star.y],
-			star.x > -10.0 and star.x < 60.0 and star.y < -60.0 and star.y > -100.0)
+	_check("a jab that lands - her fan - cuts where it meets the body (%s at %.0f, %.0f)" % [seen.get("look", ""),
+			star.x, star.y], star.x > -10.0 and star.x < 60.0 and star.y < -60.0 and star.y > -100.0
+			and seen.get("look", "") == "slash")
 	_check("the playback freezes on contact and holds that frame", seen["froze"] and seen["held"])
 	_check("the striking hand leaves an arc", seen["arc"])
 	_check("your next pick shows how far ahead you are over the one reeling (+%s), on a turn clock (%s)"
