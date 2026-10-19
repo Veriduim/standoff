@@ -7,7 +7,11 @@ lobbies.
 
 It is an original game; Your Only Move Is HUSTLE was studied as a reference only.
 
-- **Engine:** Godot 4.7, landscape 1280x720, Android.
+**Play:** the Android APK is on the [releases page](https://github.com/Veriduim/standoff/releases); on an iPhone or a PC,
+play in the browser at https://veriduim.github.io/standoff/ (on an iPhone, Share, then Add to Home Screen, for full
+screen).
+
+- **Engine:** Godot 4.7, landscape 1280x720, Android and the web.
 - **Code:**
   - `scripts/sim/`: the deterministic match.
   - `scripts/ui/`: the screens.
@@ -19,3 +23,6 @@ It is an original game; Your Only Move Is HUSTLE was studied as a reference only
   - `docs/lobby.md`: online play.
 - **Tests:** `bash tools/test.sh [sim|ui|online]`, run headless.
 - **Android:** `godot --headless --path . --export-debug "Android" build/Standoff-<version>.apk`.
+- **Web:** `bash tools/release_web.sh` builds it and puts it on GitHub Pages (`--build` to only build). The icons the
+  game's text uses come in its own small fonts (`assets/fonts`, made by `tools/icon_fonts.py`), since a browser has no
+  system fonts to borrow.

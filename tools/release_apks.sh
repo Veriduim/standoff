@@ -14,7 +14,8 @@ while [ $# -ge 2 ]; do
 	bump=$(git log --format=%h -S "config/version=\"$v\"" --reverse -- project.godot | head -1)
 	notes="$(git log -1 --format=%B "${bump:-$c}" | grep -v '^Co-Authored-By\|^Claude-Session')
 
-Android debug build (install the APK on the phone; it updates the one already there)."
+Android debug build (install the APK on the phone; it updates the one already there).
+iPhone or PC: play it in the browser at https://veriduim.github.io/standoff/ (tools/release_web.sh)."
 	gh release create "v$v" "$apk" --target "$sha" --title "Standoff $v" --notes "$notes" >/dev/null \
 		&& echo "released v$v ($c)" || echo "FAILED v$v"
 done

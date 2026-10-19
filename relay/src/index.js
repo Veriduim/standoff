@@ -32,6 +32,10 @@ const json = (d, status = 200) => new Response(JSON.stringify(d), {
 export default {
   async fetch(req, env) {
     const url = new URL(req.url);
+    // A browser asks first before it POSTs JSON from another site (the web version, 19 Oct 13:58).
+    if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: {
+      "access-control-allow-origin": "*", "access-control-allow-methods": "GET, POST, OPTIONS",
+      "access-control-allow-headers": "content-type", "access-control-max-age": "86400" } });
     if (url.pathname === "/") return new Response("Standoff lobbies - ok\n");
     if (url.pathname === "/lobbies") return env.DIRECTORY.get(env.DIRECTORY.idFromName("all")).fetch(req);
     if (url.pathname === "/replays" || REPLAY.test(url.pathname)) return env.SHELF.get(env.SHELF.idFromName("all")).fetch(req);

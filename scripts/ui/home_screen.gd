@@ -176,7 +176,8 @@ func _ready() -> void:
 			if box is StyleBoxFlat:
 				(box as StyleBoxFlat).content_margin_left = 14
 				(box as StyleBoxFlat).content_margin_right = 14
-	var ver := Ui.label(VERSION + "  ·  the Dancer and the Bruiser", 15, Color("#6b6b78"))
+	var tip := "  ·  full screen: Share, then Add to Home Screen" if Ui.ios_browser() else ""   # (Safari's bars)
+	var ver := Ui.label(VERSION + "  ·  the Dancer and the Bruiser" + tip, 15, Color("#6b6b78"))
 	ver.name = "Version"
 	add_child(ver)
 	var saved := ConfigFile.new()   # (your colour, kept between plays - 21:37 "remember the last option we choice")

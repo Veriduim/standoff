@@ -25,6 +25,12 @@ static func export_to_device(path: String) -> String:
 	var rec := load_rec(path)
 	if rec.is_empty():
 		return ""
+	if Ui.web:   # (the web version: the browser downloads it - there's no phone folder to write to)
+		var dw := Time.get_datetime_dict_from_unix_time(int(rec.get("when", 0)))
+		var file := "standoff_%04d-%02d-%02d_%02d%02d%02d.json" % [int(dw["year"]), int(dw["month"]), int(dw["day"]),
+			int(dw["hour"]), int(dw["minute"]), int(dw["second"])]
+		JavaScriptBridge.download_buffer(JSON.stringify(rec, "", false, true).to_utf8_buffer(), file, "application/json")
+		return file
 	var dir := device_folder()
 	if DirAccess.make_dir_recursive_absolute(dir) != OK and not DirAccess.dir_exists_absolute(dir):
 		return ""

@@ -4,6 +4,35 @@ extends RefCounted
 
 const CARD_H := 72.0   ## the top band: the cards (02:01 - a little taller for clearer bars)
 const FONT := 22
+## The icons behind the game's font (19 Oct 13:58, the web version - a browser has no system fonts, so every icon drew as
+## a box): just the ones the game's text uses, made by tools/icon_fonts.py from Noto fonts (SIL OFL, licences beside).
+const ICON_FONTS := ["res://assets/fonts/icons_emoji.ttf", "res://assets/fonts/icons_symbols.ttf",
+	"res://assets/fonts/icons_arrows.ttf"]
+
+static var web := OS.has_feature("web")   ## in a browser (the web version - 11:48 "The web version makes a lot of sense")
+
+
+## The icon fonts behind the game's own (once, at boot - main.gd; the same icons on every phone, Android included).
+static func add_icon_fonts() -> void:
+	for f: Font in [ThemeDB.fallback_font, ThemeDB.get_default_theme().default_font]:
+		if f == null:
+			continue
+		var all: Array[Font] = []
+		all.assign(f.fallbacks)
+		for path: String in ICON_FONTS:
+			var icon := load(path) as Font
+			if icon != null and not all.has(icon):
+				all.append(icon)
+		f.fallbacks = all
+
+
+## In a browser on an iPhone or iPad, not yet added to the home screen (Safari's bars take the screen's edges).
+static func ios_browser() -> bool:
+	if not web:
+		return false
+	var r: Variant = JavaScriptBridge.eval("(/iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "
+			+ "'MacIntel' && navigator.maxTouchPoints > 1)) && !navigator.standalone", true)
+	return typeof(r) in [TYPE_BOOL, TYPE_INT, TYPE_FLOAT] and bool(r)   # (a JS true comes back as 1; no browser, null)
 
 
 static func label(text: String, fs := FONT, col := Color.WHITE) -> Label:

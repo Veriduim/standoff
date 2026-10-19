@@ -79,6 +79,11 @@ check("a replay shared gets a code, and the code gets it back (02:36)", /^[0-9]{
   && got.data === "H4sIAAAAAAAAA-test" && got.v === "0.24.0");
 const none404 = await fetch(HTTP + "/replays/000000");
 check("a wrong replay code says so", none404.status === 404);
+const pre = await fetch(HTTP + "/replays", { method: "OPTIONS", headers: { origin: "https://veriduim.github.io",
+  "access-control-request-method": "POST", "access-control-request-headers": "content-type" } });
+check("a browser (the web version) may share a replay: its ask-first is answered, the answer readable from any site",
+  pre.status === 204 && /content-type/i.test(pre.headers.get("access-control-allow-headers") || "")
+  && none404.headers.get("access-control-allow-origin") === "*");
 const failed = results.filter((r) => !r[1]).length;
 console.log(`${results.length - failed}/${results.length} lobby checks passed`);
 process.exit(failed ? 1 : 0);

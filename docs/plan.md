@@ -270,6 +270,26 @@ one stage; each attack aims at a picked target.
   scaled about the feet: long going up, squat landing, squeezed by a blow, stretched along a strike; (5) lag - the head
   on a spring trailing fast moves (overshoots when they stop), her fans on a spring lagging the arm (Stick.fan_at turn).
   Not done (his word): 6 slow motion on a K.O. / a super.
+- 06:56 "the bottom of the screen is cutting off now" -> 0.32.1: the pad's arrows drawn (a phone's font drew the
+  diagonal glyphs taller), and the bottom bar grows up if what's in it ever needs more (PickPanel.bar_h).
+- 11:45 "Could someone on ios play this?" / 11:48 "The web version makes a lot of sense" / 13:58 "Go through those
+  steps" -> 0.33.0, the web version at https://veriduim.github.io/standoff/ (GitHub Pages, tools/release_web.sh with
+  each release; single-threaded build, ~10 MB to download, plays bots offline once loaded):
+  - The icons: a browser has no system fonts, so every icon and emoji drew as a box. The game carries its own - just
+    the 29 its text uses, cut from Noto Color Emoji / Noto Sans Symbols 2 / Noto Sans Math (SIL OFL) by
+    tools/icon_fonts.py, behind Godot's font (Ui.add_icon_fonts) on every platform. Their line spacing is capped at
+    Open Sans's: Symbols 2's deep descent had made every button 13% taller (the home card ran off the screen).
+  - In a browser: no Nearby tab (it can't host or find lobbies on the Wi-Fi - online only, with the same server, so
+    browser and Android players meet in the same lobbies); "Turn your phone sideways" when held upright (Safari can't
+    lock it); "Download" for a replay; on an iPhone's Safari, the home screen says Share, then Add to Home Screen, for
+    full screen; the on-screen keyboard for names, codes and chat.
+  - The lobby server answers a browser's ask-first (CORS preflight) so a replay can be shared from the web.
+  - The APK no longer packs the lobby server's node_modules (relay/.gdignore; build/.gdignore too).
+  - Not tested on a real iPhone yet (Chrome posing as one only) - a friend's iPhone is the next check.
+- 14:05 / 14:09 two reference videos of YOMI mod fights (Standoff Workshop/references/yomi_mods/video_19oct_1405,
+  _1409): "our attacks and effects dont use the full width and height of the field". Next: effects that fill the
+  screen - a floor-wide wall of spikes (Quake Stomp), a giant starburst with rings on big hits, solid afterimages on
+  the Bruiser's dashes, wide rings on grabs and clashes, a super that changes the stage's colours.
 
 ## To tune / later
 - **Match length with 6:** bot matches take 120-270 decision points with 6 fighters (50-90 with 2). At ~10 s a decision

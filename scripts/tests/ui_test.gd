@@ -735,6 +735,69 @@ func _test_bar_fits() -> void:
 	g.queue_free()
 
 
+func _test_web() -> void:
+	_section("The web version (11:48 \"The web version makes a lot of sense\"): its own icons, online only, sideways")
+	Ui.add_icon_fonts()
+	var font := ThemeDB.fallback_font
+	var missing := []
+	for ch: String in _text_chars("res://scripts"):
+		var have := font.has_char(ch.unicode_at(0))
+		for f: Font in font.fallbacks:
+			have = have or f.has_char(ch.unicode_at(0))
+		if not have:
+			missing.append("%s U+%X" % [ch, ch.unicode_at(0)])
+	var tall := []   # (an icon font's line deeper than the game's own makes every button taller - 14:16, the home card)
+	for f: Font in font.fallbacks:
+		if f.get_ascent(22) > font.get_ascent(22) + 0.5 or f.get_descent(22) > font.get_descent(22) + 0.5:
+			tall.append(f.resource_path.get_file())
+	_check("every icon in the game's text is in the fonts it carries - none left to a phone's own (a browser has none; "
+			+ "missing: %s), and none of them makes a line taller (%s)" % [missing, tall], missing.is_empty()
+			and tall.is_empty() and font.fallbacks.size() >= Ui.ICON_FONTS.size())
+	Ui.web = true
+	var g := _screen()
+	var lob: LobbyScreen = g.lobby
+	lob.set_nearby(true)
+	var near := lob.find_child("ModeNearby", true, false) as Button
+	g._turned(Vector2(390, 844))
+	var up := (g.get_node("TurnNote") as CanvasLayer).visible
+	g._turned(Vector2(844, 390))
+	_check("in a browser: no Nearby tab, and it stays online (%s); upright, \"Turn your phone sideways\" covers the "
+			% [lob.nearby] + "game, gone once it's turned", not near.visible and not lob.nearby and up
+			and not (g.get_node("TurnNote") as CanvasLayer).visible)
+	Ui.web = false
+	g.queue_free()
+
+
+## Every character past plain ASCII inside the game's strings (as tools/icon_fonts.py scans: comments aren't shown).
+func _text_chars(dir: String) -> Array:
+	var out := {}
+	for f: String in DirAccess.get_files_at(dir):
+		if not f.ends_with(".gd"):
+			continue
+		for line: String in FileAccess.get_file_as_string(dir.path_join(f)).split("\n"):
+			var q := ""   # (the quote we're inside, or "")
+			var i := 0
+			while i < line.length():
+				var ch := line[i]
+				if q == "":
+					if ch == "#":
+						break
+					if ch == "\"" or ch == "'":
+						q = ch
+				elif ch == "\\":
+					i += 1
+				elif ch == q:
+					q = ""
+				elif ch.unicode_at(0) > 127:
+					out[ch] = true
+				i += 1
+	for d: String in DirAccess.get_directories_at(dir):
+		if d not in ["tests", "dev"]:
+			for ch: String in _text_chars(dir.path_join(d)):
+				out[ch] = true
+	return out.keys()
+
+
 func _test_squash_and_lag() -> void:
 	_section("Squash and stretch, the head and fans lagging (06:38 \"Try the rest except 6\")")
 	var g := _screen()
