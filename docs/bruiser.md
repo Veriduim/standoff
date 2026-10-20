@@ -64,18 +64,24 @@ one hit and grabs go straight through it; knocked down, he loses half his Grit. 
 ## The look
 - **Gloves** - his prop (as her fans are hers): big round boxing gloves in his colour with a white wrist band; a broader
   chest. He bounces on his toes in a high guard.
-- **A fling** - a tall thin ring of air opening out the way they fly, wind streaks across the screen, cracks in the
-  floor where they land; they slide a long way.
-- **Quake Stomp** - a wall of grey spikes bursting up out of the floor across the whole screen, racing out both ways
-  from his foot, some taller than the screen (0.34.0, from the red brawler in Timmy's 14:09 mod video); a flat ring
-  along the floor, cracks, dust.
+- **A fling** - a tall thin ring of air opening out the way they fly; momentum lines in his colour trailing behind the
+  impact, back toward him (0.39.0 - 20 Oct 15:21 "Put them behind the impact to try and show the momentum of his
+  punch"; they used to streak across the screen); cracks in the floor where they land; they slide a long way, sent off
+  at YOMI's pace (0.37.0, Sim.LAUNCH_PACE).
+- **Quake Stomp** - spikes and a curtain of debris thrown up over the strip its shockwave hits, 100 px either side of
+  his foot, and a light shake (0.38.0 - 15:10 "The animation should only be in the are it effects"; YOMI's Robot ground
+  pound the model). It was a screen-wide wall of spikes (0.34.0).
 - **Rushing in** (Dash, Chase, Bull Rush...) - solid grey copies of him left behind, hanging a moment (0.34.0).
 - **Big hits** (45+ damage after scaling: the Haymaker, the Roundhouse, the K.O. Punch, supers - about 1 hit in 8, 3 a
   match) - a giant white starburst behind the fighters and rings opening out wide; grabs and clashes get wide rings.
   All of these are sized by the SCREEN, not the world (Fx.band), so they fill it however far the camera has pulled
   back (14:09 "our attacks anf effects domt use the full width and height of the field").
-- **Grit full** - his gloves glow orange with sparks rising; "K.O. READY" once.
-- **Armour** - a hard metal glint and a clang under the hit. **Guard break** - the guard in pieces, "GUARD BREAK".
+- **Grit full** - his gloves glow orange with sparks rising.
+- **Armour** - a hard metal glint and a clang under the hit. **Guard break** - the guard in pieces. (No words on the
+  stage since 0.36.0 - 20 Oct 14:22 "Dont keep the words and damage numbers".)
+- **Frames** (0.40.0 - 15:40 "we should change our frames to match YOMI's"): Jab 4 / 14 (YOMI's Punch), Cross, Hook
+  and Elbow out on 6, Body Blow and Leg Kick 5 / 18, Teep 11 / 24, Air Knee 6 / 15, Rising Uppercut 4, Clinch (his
+  grab) 3 - the table in docs/mechanics.md "Frame data = YOMI's".
 
 ## The wider stage (05:27)
 - 2800 wide by default (was 1600); a lobby can set 1200-4800 ("Big stage" 4400). One on one still starts 600 apart.

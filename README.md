@@ -7,7 +7,9 @@ lobbies.
 
 It is an original game; Your Only Move Is HUSTLE was studied as a reference only.
 
-**Play:** the Android APK is on the [releases page](https://github.com/Veriduim/standoff/releases).
+**Play:** the newest Android APK is always at
+https://github.com/Veriduim/standoff/releases/latest/download/Standoff.apk (every version is on the
+[releases page](https://github.com/Veriduim/standoff/releases)). Install it on the phone; it updates the one there.
 
 - **Engine:** Godot 4.7, landscape 1280x720, Android.
 - **Code:**
@@ -16,8 +18,11 @@ It is an original game; Your Only Move Is HUSTLE was studied as a reference only
   - `scripts/net/`: lobbies and online matches.
   - `relay/`: the Cloudflare lobby server.
 - **Docs:**
-  - `docs/plan.md`: the plan and the calls made so far.
-  - `docs/mechanics.md`: the fighting systems.
+  - `docs/plan.md`: the plan and every call made so far, with Timmy's words.
+  - `docs/mechanics.md`: the fighting systems - YOMI's rules, frame data, clashes, launch pace, the camera's scale.
+  - `docs/dancer.md`, `docs/bruiser.md`: the two fighters - their moves, looks, strengths and limits.
+  - `docs/xfactors.md`: the x-factors (Fans, Tempo, Forms...).
+  - `docs/yomi_chars.md`, `docs/dancer_research.md`: the YOMI study (reference only).
   - `docs/lobby.md`: online play.
 - **Tests:** `bash tools/test.sh [sim|ui|online]`, run headless.
 - **Android:** `godot --headless --path . --export-debug "Android" build/Standoff-<version>.apk`.
