@@ -71,7 +71,7 @@ func _draw() -> void:
 	var origin := area.get_center() - Vector2(mid.x * face, mid.y) * sc
 	var col := colour if not disabled else colour.darkened(0.6)
 	var dancer := character == "dancer"
-	var open := Stick.fan_open(0, str(m.get("kind", "")))
+	var open := float(m.get("fan_open", Stick.fan_open(0, str(m.get("kind", "")))))
 	if dancer:   # (her fans - the far one behind her)
 		Stick.fan_at(self, Stick._place(pose, origin, sc, face), "b", face, sc, open, col)
 	var pts := Stick.draw(self, pose, origin, sc, face, col, maxf(3.0, Stick.limb(sc)), head_r * sc, true, Stick.INK,

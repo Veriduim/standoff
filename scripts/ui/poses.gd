@@ -213,6 +213,74 @@ const P := {
 	"down": {"head": [-44, -8], "neck": [-32, -8], "hip": [0, -8], "elbow_f": [-20, -18], "hand_f": [-8, -24],
 		"elbow_b": [-28, -2], "hand_b": [-16, 0], "knee_f": [18, -14], "foot_f": [36, -6], "knee_b": [18, -4],
 		"foot_b": [38, 0]},
+	# the Dancer's dance moves (20 Oct 16:17 "All sounds good to me" - a melee spacer, her strikes as dance): built
+	# from joint angles with her bone lengths kept (the study's dance_poses.py); drawn as they are - no exaggeration
+	"tap_wind": {"head": [-3, -96], "neck": [-1, -84], "hip": [4, -50], "elbow_f": [-10, -66], "hand_f": [6, -64],
+		"elbow_b": [-13, -100], "hand_b": [-15, -116], "knee_f": [12, -26], "foot_f": [8, 0],
+		"knee_b": [-6, -26], "foot_b": [-8, 0]},
+	"tap_hit": {"head": [17, -92], "neck": [16, -80], "hip": [8, -47], "elbow_f": [36, -82], "hand_f": [52, -82],
+		"elbow_b": [-3, -85], "hand_b": [-19, -86], "knee_f": [23, -26], "foot_f": [25, 0],
+		"knee_b": [-9, -28], "foot_b": [-25, -7]},
+	"arab_wind": {"head": [4, -92], "neck": [3, -80], "hip": [1, -47], "elbow_f": [13, -63], "hand_f": [27, -57],
+		"elbow_b": [-7, -64], "hand_b": [-22, -58], "knee_f": [14, -24], "foot_f": [4, 0],
+		"knee_b": [-13, -25], "foot_b": [-4, 0]},
+	"arab_hit": {"head": [20, -91], "neck": [19, -79], "hip": [-2, -52], "elbow_f": [39, -81], "hand_f": [55, -82],
+		"elbow_b": [1, -86], "hand_b": [-13, -95], "knee_f": [0, -26], "foot_f": [0, 0],
+		"knee_b": [-27, -56], "foot_b": [-53, -63]},
+	"pir_prep": {"head": [2, -95], "neck": [2, -83], "hip": [2, -49], "elbow_f": [20, -75], "hand_f": [25, -90],
+		"elbow_b": [18, -70], "hand_b": [27, -83], "knee_f": [13, -25], "foot_f": [6, 0],
+		"knee_b": [-10, -26], "foot_b": [-6, 0]},
+	"pir_spin": {"head": [-1, -98], "neck": [0, -86], "hip": [1, -52], "elbow_f": [15, -73], "hand_f": [0, -79],
+		"elbow_b": [9, -68], "hand_b": [23, -76], "knee_f": [1, -26], "foot_f": [0, 0],
+		"knee_b": [27, -48], "foot_b": [4, -36]},
+	"pir_cut": {"head": [-1, -98], "neck": [0, -86], "hip": [1, -52], "elbow_f": [20, -87], "hand_f": [36, -87],
+		"elbow_b": [-20, -87], "hand_b": [-36, -86], "knee_f": [1, -26], "foot_f": [0, 0],
+		"knee_b": [27, -48], "foot_b": [4, -36]},
+	"fou_chamber": {"head": [-4, -98], "neck": [-3, -86], "hip": [1, -52], "elbow_f": [8, -103], "hand_f": [5, -118],
+		"elbow_b": [-22, -89], "hand_b": [-38, -94], "knee_f": [26, -57], "foot_f": [13, -35],
+		"knee_b": [0, -26], "foot_b": [0, 0]},
+	"fou_kick": {"head": [-7, -97], "neck": [-5, -85], "hip": [2, -52], "elbow_f": [-11, -104], "hand_f": [-8, -120],
+		"elbow_b": [-25, -83], "hand_b": [-40, -80], "knee_f": [28, -55], "foot_f": [54, -56],
+		"knee_b": [0, -26], "foot_b": [0, 0]},
+	"jete_prep": {"head": [20, -90], "neck": [17, -78], "hip": [10, -45], "elbow_f": [7, -61], "hand_f": [-6, -51],
+		"elbow_b": [4, -63], "hand_b": [-10, -56], "knee_f": [27, -25], "foot_f": [20, 0],
+		"knee_b": [-8, -27], "foot_b": [-20, -4]},
+	"jete_air": {"head": [2, -96], "neck": [2, -84], "hip": [0, -50], "elbow_f": [14, -100], "hand_f": [26, -111],
+		"elbow_b": [-9, -100], "hand_b": [-22, -110], "knee_f": [26, -52], "foot_f": [52, -52],
+		"knee_b": [-26, -51], "foot_b": [-52, -53]},
+	"jete_land": {"head": [31, -87], "neck": [26, -76], "hip": [11, -46], "elbow_f": [43, -67], "hand_f": [54, -56],
+		"elbow_b": [8, -86], "hand_b": [-7, -91], "knee_f": [27, -26], "foot_f": [25, 0],
+		"knee_b": [-10, -30], "foot_b": [-25, -9]},
+	"plie_wind": {"head": [-3, -87], "neck": [-2, -75], "hip": [0, -41], "elbow_f": [-19, -85], "hand_f": [-27, -100],
+		"elbow_b": [-21, -68], "hand_b": [-35, -60], "knee_f": [21, -26], "foot_f": [17, 0],
+		"knee_b": [-21, -26], "foot_b": [-17, -1]},
+	"plie_cut": {"head": [19, -75], "neck": [17, -63], "hip": [-1, -34], "elbow_f": [24, -44], "hand_f": [33, -31],
+		"elbow_b": [6, -80], "hand_b": [2, -95], "knee_f": [23, -26], "foot_f": [19, 0],
+		"knee_b": [-26, -26], "foot_b": [-19, 0]},
+	"pdb_wind": {"head": [4, -96], "neck": [4, -84], "hip": [1, -50], "elbow_f": [7, -64], "hand_f": [16, -51],
+		"elbow_b": [0, -64], "hand_b": [5, -49], "knee_f": [10, -26], "foot_f": [3, -1],
+		"knee_b": [-8, -26], "foot_b": [-3, 0]},
+	"pdb_hit": {"head": [-14, -96], "neck": [-9, -85], "hip": [-1, -52], "elbow_f": [-6, -105], "hand_f": [-7, -121],
+		"elbow_b": [-13, -105], "hand_b": [-20, -119], "knee_f": [0, -26], "foot_f": [0, 0],
+		"knee_b": [-15, -30], "foot_b": [-24, -6]},
+	"bat_kick": {"head": [-6, -97], "neck": [-4, -85], "hip": [2, -52], "elbow_f": [15, -93], "hand_f": [31, -94],
+		"elbow_b": [-23, -89], "hand_b": [-39, -90], "knee_f": [16, -74], "foot_f": [28, -97],
+		"knee_b": [0, -26], "foot_b": [0, 0]},
+	"bat_chop": {"head": [26, -89], "neck": [20, -78], "hip": [6, -48], "elbow_f": [36, -91], "hand_f": [46, -79],
+		"elbow_b": [2, -85], "hand_b": [-14, -88], "knee_f": [19, -26], "foot_f": [17, 0],
+		"knee_b": [-8, -26], "foot_b": [-17, -2]},
+	"tour_wrap": {"head": [-2, -96], "neck": [-1, -84], "hip": [0, -50], "elbow_f": [14, -71], "hand_f": [-1, -77],
+		"elbow_b": [8, -66], "hand_b": [22, -74], "knee_f": [-1, -24], "foot_f": [-1, 2],
+		"knee_b": [-3, -24], "foot_b": [-4, 2]},
+	"tour_cut": {"head": [-2, -96], "neck": [-1, -84], "hip": [0, -50], "elbow_f": [18, -88], "hand_f": [34, -89],
+		"elbow_b": [-21, -87], "hand_b": [-37, -88], "knee_f": [13, -28], "foot_f": [25, -4],
+		"knee_b": [-14, -28], "foot_b": [-6, -4]},
+	"saute_kick": {"head": [-11, -95], "neck": [-8, -83], "hip": [0, -50], "elbow_f": [-19, -100], "hand_f": [-22, -116],
+		"elbow_b": [-26, -93], "hand_b": [-36, -105], "knee_f": [20, -33], "foot_f": [40, -17],
+		"knee_b": [-22, -37], "foot_b": [-18, -11]},
+	"bow": {"head": [58, -71], "neck": [49, -63], "hip": [18, -49], "elbow_f": [66, -52], "hand_f": [81, -46],
+		"elbow_b": [32, -52], "hand_b": [18, -46], "knee_f": [31, -26], "foot_f": [31, 0],
+		"knee_b": [-5, -37], "foot_b": [-31, -37]},
 }
 
 
@@ -321,13 +389,13 @@ static func _strike(m: Dictionary, keys: Array, f: int) -> Variant:
 	var wind := get_pose(str(keys[wk][1]))
 	var hit := get_pose(str(keys[hk][1]))
 	if f < f_h:   # (the wind-up: snapped into, coiled, held - then one in-between through to the strike)
-		var coil := push(hit, wind, COIL)
+		var coil := wind if bool(m.get("drawn", false)) else push(hit, wind, COIL)   # (her dance moves: as drawn)
 		if f == f_h - 1 and f > f_w:
 			return blend(coil, hit, 0.5)
 		return coil
 	if f <= f_h + 1:   # (landing past it)
 		return push(wind, hit, OVERSHOOT * (1.0 if f == f_h else 0.5))
-	if f <= f_hold + HOLD_ON:
+	if f <= mini(f_hold + HOLD_ON, f_n - SNAP):   # (held - but not past the next key: a second spin still shows)
 		return hit
 	var nxt := get_pose(str(keys[hk + 1][1])) if hk + 1 < keys.size() else get_pose("idle")
 	var back := blend(hit, nxt, RECOVER)
@@ -371,6 +439,8 @@ static func for_record(character: String, r: Array) -> Dictionary:
 	var state := int(r[5])
 	if state == 4 or state == 5 or (str(r[3]) in ["", "wait"] and state == 0):   # (lying down and standing: as drawn)
 		return pose
+	if state in [0, 3] and str(r[3]) != "" and bool(Moves.move(character, str(r[3])).get("drawn", false)):
+		return pose   # (her dance moves are posed at full stretch already - 20 Oct)
 	return exaggerate(pose)
 
 

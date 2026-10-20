@@ -761,6 +761,8 @@ func _figure(i: int, r: Array, alpha: float, bare := false, tint := Color(0, 0, 
 		# no clothes just fans")
 		var mvk := str(Moves.move(ch, str(r[3])).get("kind", "")) if str(r[3]) != "" else ""
 		open = Stick.fan_open(int(r[5]), mvk)
+		if int(r[5]) == 0 and str(r[3]) != "":   # (a move can hold its fans its own way - Fan Tap's shut fan, 20 Oct)
+			open = float(Moves.move(ch, str(r[3])).get("fan_open", open))
 		fans = int(r[16]) if r.size() > 16 else 2
 		if int(r[5]) == 0 and str(r[3]) in ["", "wait"] and float(r[1]) >= -1.0 and (r.size() <= 14 or int(r[14]) == 0):
 			var k := 0.5 + 0.5 * sin(_time * 1.9 + i * 1.1)

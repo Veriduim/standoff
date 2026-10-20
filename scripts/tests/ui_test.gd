@@ -56,7 +56,7 @@ func _test_your_pick() -> void:
 	var sweep := p.drawer_grid.get_node("sweep") as MoveIcon
 	sweep.pressed.emit()
 	_check("tapping an icon picks the move and tucks the drawer away", str(p.choice["move"]) == "sweep"
-			and not p.drawer.visible and p.picked_label.text.begins_with("Sweep\nhits f%d" % Moves.startup(Moves.move("dancer", "sweep"))))
+			and not p.drawer.visible and p.picked_label.text.begins_with("%s\nhits f%d" % [Moves.move("dancer", "sweep")["name"], Moves.startup(Moves.move("dancer", "sweep"))]))
 	_check("a facing move aims at the nearest enemy (right) and only ← / → are usable on the pad",
 			float(p.choice["x"]) == 1.0 and (p.pad.get_node("d5") as Button).button_pressed
 			and not (p.pad.get_node("d3") as Button).disabled and (p.pad.get_node("d1") as Button).disabled
@@ -348,7 +348,7 @@ func _test_enemy_always_shown() -> void:
 	var s: Sim = g.sim
 	s.fighters[0].pos.x = -150.0
 	s.fighters[1].pos.x = 150.0
-	s.apply({1: {"move": "spin", "x": -1.0}})   # (they're mid Spin Kick; you're free)
+	s.apply({1: {"move": "straight", "x": -1.0}})   # (they're mid Fouetté; you're free)
 	s.step()
 	var p: PickPanel = g.pick
 	p.open(s, 0, g.stage)
@@ -356,7 +356,7 @@ func _test_enemy_always_shown() -> void:
 	var text := (card["label"] as Label).text
 	_check("they're mid-move: their card shows it with the frames left, their tabs greyed (%s)" % text.replace("
 ", " "),
-			p.foe == 1 and (card["panel"] as Control).visible and p.foe_box.visible and text.contains("Spin Kick")
+			p.foe == 1 and (card["panel"] as Control).visible and p.foe_box.visible and text.contains(Moves.move("dancer", "straight")["name"])
 			and text.contains("left") and (p.foe_box.get_child(0) as Button).disabled and p.foe_name.text.contains("mid-move"))
 	g.queue_free()
 

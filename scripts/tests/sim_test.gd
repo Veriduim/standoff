@@ -102,13 +102,14 @@ func _test_rules() -> void:
 	evs = _play(s, {0: {"move": "straight"}, 1: {"move": "block", "pf": st_at}})
 	_check("...and a straight landing on frame %d is parried on %d (%s)" % [st_at, st_at, _types(evs)], _types(evs).has("parry"))
 	s = _duel("dancer", "dancer", 70.0)
-	evs = _play(s, {0: {"move": "lowkick"}, 1: {"move": "block", "y": -1.0}})
+	evs = _play(s, {0: {"move": "sweep"}, 1: {"move": "block", "y": -1.0}})
 	var worse := evs.filter(func(e: Dictionary) -> bool: return e["type"] == "block" and e.get("worse", false))
-	_check("a low kick blocked high is blocked worse - double chip (hp %d)" % s.fighters[1].hp, not worse.is_empty()
-			and s.fighters[1].hp == 448)
+	var chip := int((Moves.move("dancer", "sweep")["hits"] as Array)[0]["chip"])   # (her low: the Plié Cut since 20 Oct)
+	_check("a low blocked high is blocked worse - double chip (hp %d)" % s.fighters[1].hp, not worse.is_empty()
+			and s.fighters[1].hp == 450 - 2 * chip)
 	s = _duel("dancer", "dancer", 70.0)
-	evs = _play(s, {0: {"move": "lowkick"}, 1: {"move": "block", "y": 1.0}})
-	_check("...blocked low it's clean (hp %d)" % s.fighters[1].hp, _types(evs).has("block") and s.fighters[1].hp == 449)
+	evs = _play(s, {0: {"move": "sweep"}, 1: {"move": "block", "y": 1.0}})
+	_check("...blocked low it's clean (hp %d)" % s.fighters[1].hp, _types(evs).has("block") and s.fighters[1].hp == 450 - chip)
 	s = _duel("dancer", "dancer", 80.0)
 	var x0 := s.fighters[0].pos.x
 	evs = _play(s, {0: {"move": "straight"}, 1: {"move": "pushblock"}})
@@ -771,7 +772,7 @@ func _test_initiative_faster() -> void:
 	s.apply({0: {"move": "sidekick", "x": 1.0}, 1: {"move": "wait"}})
 	var with: int = s.fighters[0].frame
 	var t := _duel("dancer", "dancer", 300.0)
-	t._start(t.fighters[1], {"move": "spin", "x": -1.0})   # (already committed to a move)
+	t._start(t.fighters[1], {"move": "straight", "x": -1.0})   # (already committed to a move)
 	t.apply({0: {"move": "sidekick", "x": 1.0}})
 	var without: int = t.fighters[0].frame
 	_check("with initiative it starts at frame %d; against someone already committed, at %d" % [with, without],

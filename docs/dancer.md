@@ -3,6 +3,12 @@
 Timmy, 18 Oct 23:59: "We need to decide what kind of fighter she is and limits. So she is clearly control and spacer so
 I think we need to make up for that with the space we have normally and work that into her kit."
 
+**20 Oct 15:28-16:17 - the rework:** a MELEE spacer now, YOMI's Cowboy the model (15:28 "YOMI is normally a very melee
+focused game"): her fans are her blades, her strikes are dance moves (0.41.0: Fan Tap, Fouetté, Arabesque, Plié Cut,
+Grand Battement, Sauté Kick, Tour en l'Air - each on its nearest YOMI move's frames), the zoning cut down to Fan Throw /
+Air Fan, Recall and Fan Step (next: Port de Bras, Pirouette, Grand Jeté; then the melee supers). The notes below are
+the zoner she was; they go as the rework lands.
+
 **Archetype:** control and spacing. She wins at mid range by holding the space in front of her. Her fans are her prop,
 her reach and her zoning tool, like the YOMI mods whose prop carries the character. YOMI's own characters and the mods
 are study only.

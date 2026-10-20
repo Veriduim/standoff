@@ -381,6 +381,15 @@ one stage; each attack aims at a picked target.
   onto the new active frames, the recovery onto the rest). Both jabs out on 4 (hers was 3, his 2). YOMI's clash rule
   too (its source): a match in damage clashes, a mismatch goes through, a one-sided meeting isn't a clash - so an
   invulnerable Uppercut or Gale goes through a strike out on the same frame. Bot matches as long as before.
+- 15:59 "Whats your suggestion? These would be basic or specials?" -> the kit: basics Fan Tap (was Jab), Fouetté
+  (Straight + Spin Kick), Plié Cut (Sweep), Arabesque (Side Kick), Grand Battement (Axe Kick), Sauté Kick (Air Kick),
+  Tour en l'Air (Air Knee); specials Port de Bras (Uppercut), Pirouette (new), Grand Jeté (Updraft) + Fan Throw / Air
+  Fan, Recall, Fan Step, Mirror; supers Fouetté Storm (1), Grand Finale ending on the Révérence (3), Gale kept; cut Low
+  Kick, Ripple, Ward, Gust, Flick, Fan Storm, Cyclone, Encore's spectral fans. 16:17 "All sounds good to me" ->
+  0.41.0, group 1 - the basics: the moves keep their ids (bots, tests, chains key on them) with new names, poses (22
+  new, Poses.P - built from joint angles, her bone lengths kept), YOMI's frames, hit boxes and icons. "drawn": true -
+  no exaggeration and no extra coil (posed at full stretch); "fan_open" - Fan Tap pokes with the fan shut. A held
+  strike stops at the next key (Tour en l'Air's second spin). Spin Kick and Low Kick gone.
 
 ## To tune / later
 - **Match length with 6:** bot matches take 120-270 decision points with 6 fighters (50-90 with 2). At ~10 s a decision

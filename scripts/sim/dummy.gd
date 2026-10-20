@@ -38,7 +38,7 @@ func choose(sim: Sim, id: int) -> Dictionary:
 				return {"move": "jump", "x": 0.0, "y": -1.0}
 			return {"move": "wait"}
 		"Attack":
-			var hits := ["jab", "straight", "lowkick", "sidekick", "fanslash"].filter(func(m: String) -> bool:
+			var hits := ["jab", "straight", "sweep", "sidekick", "fanslash"].filter(func(m: String) -> bool:
 				return legal.has(m))
 			if not hits.is_empty():
 				return {"move": str(hits[rng.randi() % hits.size()]), "x": toward}

@@ -6,10 +6,10 @@ extends RefCounted
 ## forward against a few likely answers from the enemy - the same sim the ghost preview runs, the two of them alone -
 ## and plays the one that went best. Seeded, so a test match plays the same every time.
 
-const GROUND_HITS := ["jab", "straight", "lowkick", "sidekick", "uppercut", "spin", "sweep", "axekick", "stomp",
+const GROUND_HITS := ["jab", "straight", "sidekick", "uppercut", "straight", "sweep", "axekick", "stomp",
 	"fanslash", "fanflick", "pop", "snapkick", "windmill", "kipup", "updraft", "glide"]
 const FROM_AFAR := ["fan", "ripple", "fan", "fanward", "recall", "glide", "fanward"]
-const FLOOR := ["windmill", "kipup", "sweep", "lowkick", "floorslide", "flowform", "snapform", "block", "roll", "ripple"]
+const FLOOR := ["windmill", "kipup", "sweep", "sweep", "floorslide", "flowform", "snapform", "block", "roll", "ripple"]
 const FORM_SWITCH := ["snapform", "floorform", "flowform"]
 const AIR := ["airkick", "airknee", "airdash", "fastfall", "block", "wait", "airfan", "airthrow", "airjump",
 	"fanward"]
