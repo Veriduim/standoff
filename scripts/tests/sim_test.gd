@@ -1317,7 +1317,11 @@ func _test_bruiser() -> void:
 	var flung := fe.filter(func(x: Dictionary) -> bool: return x["type"] == "hit" and bool(x.get("fling", false)))
 	var chase_ok := fl.legal_moves(0).has("chase")
 	fl.apply({0: {"move": "chase", "x": 1.0}, 1: {"move": "hold"}})
-	fl.run_segment()
+	var fastest := 0.0   # (20 Oct 14:48: launched at YOMI's pace - twice as fast as before; she flies as he gives chase)
+	var was := fl.fighters[1].pos.x
+	for fr: Array in fl.run_segment()["frames"]:
+		fastest = maxf(fastest, absf(float(fr[1][0]) - was))
+		was = float(fr[1][0])
 	var away := fl.fighters[1].pos.x - x_hit
 	var gap2 := fl.fighters[1].pos.x - fl.fighters[0].pos.x
 	fl.apply({0: {"move": "jab"}, 1: {"move": "hold"}})
@@ -1325,6 +1329,8 @@ func _test_bruiser() -> void:
 	_check("a fling: the Haymaker sends her sliding across the stage (%.0f px), Chase runs her down (%.0f px apart) "
 			% [away, gap2] + "and the combo goes on (combo %d)" % fl.fighters[1].combo, not flung.is_empty() and chase_ok
 			and away > 400.0 and gap2 < 90.0 and fl.fighters[1].combo == 2)
+	_check("...sent off at YOMI's pace (20 Oct 14:48): her fastest %.0f px a tick, twice what it was (~24)" % fastest,
+			fastest > 40.0)
 	var q := _duel("bruiser", "dancer", 60.0)
 	q.fighters[1].down = 10
 	evs = _play(q, {0: {"move": "quake"}})

@@ -157,7 +157,7 @@ func _test_hit_effects() -> void:
 			_watch(g, {"move": "wait"})
 	g.sim.fighters[0].pos.x = g.sim.fighters[1].pos.x - 70.0
 	_watch(g, {"move": "sweep", "x": 1.0})   # (a sweep leaves them reeling long enough for a jab)
-	g.sim.fighters[0].pos.x = g.sim.fighters[1].pos.x - 66.0
+	g.sim.fighters[0].pos.x = g.sim.fighters[1].pos.x - 46.0   # (close: since 0.37.0 the sweep sends her off twice as fast)
 	_watch(g, {"move": "jab", "x": 1.0})
 	_check("a hit while they still reel counts on as a combo - sweep, jab (%d), with no count or damage drawn over them "
 			% g.sim.fighters[1].combo + "(20 Oct 14:22 \"Dont keep the words and damage numbers\")",

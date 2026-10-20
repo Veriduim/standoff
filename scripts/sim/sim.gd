@@ -92,6 +92,16 @@ const LAUNCH_HIT := 7         ## the combo hit that always launches someone on t
 const RESTAND_LAG := 3        ## launched and landing in hitstun (no knockdown): out of the stun, this long unable to act
 const RESTAND := 5            ## ...and this long a grounded hit puts them back in a ground combo (a restand - the wiki)
 const KB_SCALE := 1.35        ## every hit's knockback (22:40 "We dont do things big enough" - launches that fly)
+## Launches at YOMI's pace (20 Oct 14:48 "Can you make those changes please?" - from its source, its knockback is ~4x
+## ours for the fighters' size and its gravity 2-3x): a hit sends them LAUNCH_PACE times as fast sideways, slowing in the
+## air (LAUNCH_DRAG; FLING_DRAG for a fling) so they end up about as far as before; up and down LAUNCH_LIFT, with gravity pulling as much harder
+## while they reel - the same time in the air (combos keep their timing), higher. On the ground they slide to a stop as
+## much faster (YOMI's ground friction is strong - its ground hits barely slide): the same distance, sooner. Their lean, the 7th hit's launch and a ground bounce go with it; jumps and walking don't
+## change. Bot matches as long as before (1v1 ~100 turns), combos about as long.
+const LAUNCH_PACE := 2.0
+const LAUNCH_DRAG := 0.9     ## ...and in the air they slow as they go (a burst away that eases off): about as far as before
+const FLING_DRAG := 0.95      ## ...a fling less so (05:27 "slapping an enemy accross map")
+const LAUNCH_LIFT := 1.4      ## up and down it's this much (not the whole pace): launched higher, still in reach of a juggle
 const WALL_BOUNCE := 0.6      ## how much of their speed someone launched into a wall keeps bouncing off it
 const WALL_STUN := 3          ## ...and the stun it adds
 const DEFAULT := {"move": "wait"}   ## a pick that never came (a turn timer ran out)
@@ -803,7 +813,10 @@ func _physics(f: Fighter) -> void:
 		return
 	var was_air := f.pos.y < 0.0
 	if not _floating(f) and (f.pos.y < 0.0 or f.vel.y < 0.0):
-		f.vel.y = minf(f.vel.y + (GRAVITY if f.vel.y < 0.0 else GRAVITY_FALL), MAX_FALL)
+		var pull := LAUNCH_LIFT if f.stun > 0 else 1.0   # (reeling: launched faster, pulled down as hard - the same air time)
+		f.vel.y = minf(f.vel.y + (GRAVITY if f.vel.y < 0.0 else GRAVITY_FALL) * pull, MAX_FALL * pull)
+	if f.stun > 0 and f.pos.y < 0.0:   # (launched at YOMI's pace: bursting away, easing off - combos still reach; a
+		f.vel.x *= LAUNCH_DRAG if f.slide <= 0 else FLING_DRAG   # fling eases off less - it's meant to cross the stage)
 	f.pos += f.vel
 	if f.pos.y >= 0.0:
 		f.pos.y = 0.0
@@ -827,6 +840,8 @@ func _physics(f: Fighter) -> void:
 		# sliding to a stop (knockback, the end of a step) unless a move is pushing them this frame
 		if not _pushing(f):
 			var fr := FLING_FRICTION if f.slide > 0 and f.stun > 0 else (CARRY if _in_startup(f) else FRICTION)
+			if f.stun > 0:   # (sent LAUNCH_PACE times as fast: stopping as much sooner - the same slide, quicker)
+				fr = 1.0 - (1.0 - fr) * LAUNCH_PACE
 			f.vel.x *= fr   # (an attack's startup slides on with its momentum; someone flung slides a long way)
 			if absf(f.vel.x) < 0.05:
 				f.vel.x = 0.0
@@ -854,7 +869,7 @@ func _physics(f: Fighter) -> void:
 
 ## Off the ground and back up (once a combo), a bit more stun.
 func _bounce(f: Fighter) -> void:
-	f.vel.y = -BOUNCE_UP
+	f.vel.y = -BOUNCE_UP * LAUNCH_LIFT
 	f.stun += BOUNCE_STUN
 	f.bounced = true
 	f.bounce_due = false
@@ -1622,20 +1637,20 @@ func _hurt(a: Fighter, d: Fighter, e: Dictionary, type: String, src := "", side_
 	d.slide = FLING_TICKS if e.get("fling", false) else 0   # (flung: they slide on and on)
 	if e.get("behind", false):   # (a dump: round behind them first - the knockback carries them on from there)
 		d.pos.x = clampf(a.pos.x - float(a.facing) * HOLD_PX, -half + 20.0, half - 20.0)
-	d.vel = Vector2(float(kb[0]) * side, float(kb[1])) * KB_SCALE / weight
+	d.vel = Vector2(float(kb[0]) * side * LAUNCH_PACE, float(kb[1]) * LAUNCH_LIFT) * KB_SCALE / weight
 	if d.di != Vector2.ZERO:   # (their lean: added to the knockback - on the ground a flat hit only takes its sideways part)
 		var lean := d.di
 		if d.grounded() and float(kb[1]) >= 0.0:
 			lean.y = 0.0
-		d.vel += lean * LEAN_PUSH * (1.0 + 0.1 * d.combo)
-	if d.combo == LAUNCH_HIT and d.pos.y >= 0.0 and d.vel.y > -4.0:   # (the 7th hit on the ground always launches)
-		d.vel.y = -11.5
+		d.vel += lean * Vector2(LAUNCH_PACE, LAUNCH_LIFT) * LEAN_PUSH * (1.0 + 0.1 * d.combo)
+	if d.combo == LAUNCH_HIT and d.pos.y >= 0.0 and d.vel.y > -4.0 * LAUNCH_LIFT:   # (the 7th hit on the ground always launches)
+		d.vel.y = -11.5 * LAUNCH_LIFT
 	if d.restand > 0:   # (hit as they land from an air combo: back in a ground combo - the count carries on)
 		d.restand = 0
 		_event("restand", a, d)
 	d.hit_look = _look(a, d, e)   # (how it landed - their reaction on screen)
 	d.hit_t = 0
-	if d.pos.y < -10.0 or d.vel.y < -6.0:   # (sent up, or hit up there: an air combo - landing can end it)
+	if d.pos.y < -10.0 or d.vel.y < -6.0 * LAUNCH_LIFT:   # (sent up, or hit up there: an air combo - landing can end it)
 		d.launched = true
 	# combo pushback: the longer the combo, the further the hitter's pushed off (not their speed - their place)
 	if src == "":   # (combo pushback - on the hitter, when it's their own body that hit)

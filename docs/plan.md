@@ -336,6 +336,17 @@ one stage; each attack aims at a picked target.
   - Six players: the Bruiser's Grit took the whole top card and hid the name - five pips on a narrow card now.
   - Found, not changed: YOMI's knockback is ~4x ours for the fighters' size (5-8 px a tick for a 32-tall fighter; ours
     ~4 for 106) and its gravity ~2-3x - its launches cross the screen far faster.
+- 14:48 "Remove the speed lines again or rework them into the background more like YOMI. Can you make those changes
+  please?" (read as: the lines, and yes to the faster launches) -> 0.37.0:
+  - Speed lines in the background, as YOMI has them (its own layer just over the background colour): drawn under the
+    glow, the walls, the floor and everyone, at most 45% see-through white, thinner. Recalibrated (LINES_FULL 0.75).
+  - Launches at YOMI's pace (Sim.LAUNCH_PACE 2): a hit sends them twice as fast sideways, slowing in the air
+    (LAUNCH_DRAG 0.9; a fling FLING_DRAG 0.95) so they end up about as far as before; up and down LAUNCH_LIFT 1.4 with
+    gravity as much stronger while they reel - the same time in the air (combos keep their timing), higher; on the
+    ground they stop twice as quickly (YOMI's ground friction is strong). A Haymaker sends her 48 px a tick (was 24).
+    Tuned on bot matches (24 1v1 + 12 four-way each): a plain x2 made 1v1 39% longer (combos fell out of reach); as
+    shipped, 1v1 ~101 turns (was ~100), four-way ~196 (~181, within the noise), the longest combo about the same.
+  - Smoke only on the big ones now (SMOKE_PX 11 - an ordinary hit goes 7-10 px a tick at the new pace).
 
 ## To tune / later
 - **Match length with 6:** bot matches take 120-270 decision points with 6 fighters (50-90 with 2). At ~10 s a decision

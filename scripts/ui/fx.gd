@@ -70,18 +70,21 @@ const BIG_HIT := 45          ## a hit this hard (after scaling) gets the giant s
 const SPIKES := 40           ## Quake Stomp's wall of spikes
 ## Speed lines (YOMI's, from its source - 20 Oct): LINES of them, LINE_MIN to LINE_MAX long (YOMI's 640-wide screen;
 ## scaled to ours), full strength when the camera moves LINES_FULL screen widths a second, only once it's kept up
-## LINES_SUSTAIN seconds; faded within LINES_CLEAR of a fighter. Calibrated on our own hits (ours fly slower than YOMI's
-## for their size): the fighters' middle at its fastest - a Haymaker 17 px a tick (full), a Roundhouse or Flying Knee
-## 12 (most), the K.O. Punch 11, a dash 7 (under the line - faint at most).
+## LINES_SUSTAIN seconds; faded within LINES_CLEAR of a fighter. In the BACKGROUND, as YOMI has them (14:48 "rework them
+## into the background more like YOMI"): drawn on the dark before the glow, the walls and the floor, at most
+## LINES_ALPHA. Calibrated on our hits since 0.37.0's launch pace: the fighters' middle at its fastest - a Haymaker 29 px
+## a tick, a Roundhouse 23 (full), the K.O. Punch 16, a Flying Knee 17 (most), a dash or Quake Stomp 7 (faint at most).
 const LINES := 100
 const LINE_MIN := 20.0
 const LINE_MAX := 200.0
-const LINES_FULL := 0.45
+const LINES_FULL := 0.75
+const LINES_ALPHA := 0.45
 const LINES_SUSTAIN := 0.05
 const LINES_CLEAR := Vector2(350.0, 250.0)
-## Smoke behind knockback (YOMI: a puff every tick someone hit moves faster than 6.5 px a tick - about a fifth of their
-## height; ours move slower for their size, so SMOKE_PX).
-const SMOKE_PX := 6.0
+## Smoke behind knockback (YOMI: a puff every tick someone hit moves faster than 6.5 px a tick - about its ordinary
+## hits' speed). Ours since 0.37.0's launch pace: an ordinary hit sends them 7-10 px a tick, a Haymaker 48, a Roundhouse
+## 41, the K.O. Punch 21 - so the big ones smoke.
+const SMOKE_PX := 11.0
 const SOLID := Color("#8f93a1")   ## the Bruiser's rush copies: solid grey (the red brawler in the 14:09 video)
 const AFTER_SOLID := 4       ## solid copies a fighter at most
 
@@ -476,8 +479,8 @@ func _debris(at: Vector2, inward: float, n: int) -> void:
 				_rng.randf_range(0.35, 0.7), c, _rng.randf_range(0.012, 0.032))
 
 
-## The speed lines, across the stage band behind the fighters (StageView, before drawing them): `near` = the fighters'
-## screen points (the lines fade round them).
+## The speed lines, across the stage band in the background (StageView, straight after the background - under the
+## glow, the walls, the floor and everyone): `near` = the fighters' screen points (the lines fade round them).
 func draw_lines(st: StageView, near: Array[Vector2]) -> void:
 	var k := lines_strength()
 	if k < 0.01:
@@ -501,7 +504,7 @@ func draw_lines(st: StageView, near: Array[Vector2]) -> void:
 		if li < 0.02:
 			continue
 		var half := dir * lerpf(LINE_MIN, LINE_MAX, li) * sc * 0.5
-		st.draw_line(pos - half, pos + half, Color(1, 1, 1, li), (1.5 + li) * sc * 0.5, true)
+		st.draw_line(pos - half, pos + half, Color(1, 1, 1, li * LINES_ALPHA), (1.0 + li) * sc * 0.4, true)
 	_rng.state = lr
 
 

@@ -453,6 +453,11 @@ func s2w(p: Vector2) -> Vector2:
 func _draw() -> void:
 	var vp := get_viewport_rect().size
 	draw_rect(Rect2(Vector2.ZERO, vp), BG)
+	if not frame.is_empty():   # (speed lines when the camera rushes - in the background, as YOMI's: under everything)
+		var near: Array[Vector2] = []
+		for i in frame.size():
+			near.append(w2s(_chest(i)))
+		fx.draw_lines(self, near)
 	if _glow == null:   # (a soft light behind the action - a radial gradient)
 		var g := Gradient.new()
 		g.set_color(0, Color(0.5, 0.56, 0.85, 0.075))
@@ -484,10 +489,6 @@ func _draw() -> void:
 		draw_line(Vector2(x, floor_y), Vector2(x, floor_y + (16.0 if i % 4 == 0 else 9.0)), LINE, 2.0)
 	if frame.is_empty():
 		return
-	var near: Array[Vector2] = []   # (speed lines when the camera rushes, behind everyone - clear of the fighters)
-	for i in frame.size():
-		near.append(w2s(_chest(i)))
-	fx.draw_lines(self, near)
 	for i in frame.size():   # (a faint spot under anyone in the air, so heights read)
 		var r: Array = frame[i]
 		var lift := clampf(-float(r[1]) / 300.0, 0.0, 0.8)
