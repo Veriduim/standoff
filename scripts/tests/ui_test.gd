@@ -940,7 +940,9 @@ func _test_strike_timeline() -> void:
 		var lp := ((p[bone[1]] as Vector2) - (p[bone[0]] as Vector2)).length()
 		kept = kept and absf(lb - lp) < 0.01
 	_check("a pose pushed on past another keeps every limb's length", kept)
-	var m := Moves.move("bruiser", "haymaker")
+	# (a stand-in with the old Haymaker's keys: his own is "drawn" since 20 Oct - no extra coil)
+	var m := {"kind": "attack", "frames": 40, "hits": [{"from": 13, "to": 15}],
+		"pose": [[0, "heavy_wind"], [13, "heavy_hit"], [26, "b_idle"]]}
 	var keys: Array = m["pose"]
 	var coil: Dictionary = Poses._strike(m, keys, 9)
 	var land: Dictionary = Poses._strike(m, keys, 13)

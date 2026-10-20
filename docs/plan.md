@@ -427,6 +427,11 @@ one stage; each attack aims at a picked target.
 - 17:39 "Final text change is for fighting text for move selection. Id have it for tags similar to the name if the
   move. So on its own line with tags in it separate maybe like tag . tag ?" -> 0.44.4: a card reads the move's name,
   then its tags on their own line (tag · tag - a super's lvl first), then hits on · damage · length.
+- 17:50 "Lets keep going and mak sure you have kept the documentation for all of this. Also is this on GitHub and
+  possible to download public?" -> the repo is public, every APK is a release, and
+  https://github.com/Veriduim/standoff/releases/latest/download/Standoff.apk is always the newest (release_apks.sh
+  uploads a copy named Standoff.apk too, since 0.44.4). 0.45.0: the Bruiser's strikes as full-body Muay Thai / boxing
+  shapes (docs/bruiser.md "His strikes") - his moves were the generic poses next to her dance.
 - Seen in the tests (not new - it was there at 0.43.0 too): Godot now and then crashes in the Nearby play test (a LAN
   host and finder) before the summary prints - rerun, it passes; the same crash usually lands after the summary.
 

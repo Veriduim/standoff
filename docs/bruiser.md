@@ -82,6 +82,18 @@ one hit and grabs go straight through it; knocked down, he loses half his Grit. 
 - **Frames** (0.40.0 - 15:40 "we should change our frames to match YOMI's"): Jab 4 / 14 (YOMI's Punch), Cross, Hook
   and Elbow out on 6, Body Blow and Leg Kick 5 / 18, Teep 11 / 24, Air Knee 6 / 15, Rising Uppercut 4, Clinch (his
   grab) 3 - the table in docs/mechanics.md "Frame data = YOMI's".
+- **His strikes** (0.45.0 - 20 Oct 17:50 "Lets keep going": his were the generic boxing poses next to her dance moves):
+  23 full-body Muay Thai / boxing shapes from joint angles with his bone lengths kept (torso 33, head 12, upper arm 18,
+  forearm 16, thigh 26, shin 24 - Poses.P "the Bruiser's strikes"). Each strike is a loaded wind-up held, a snap to the
+  committed shape, held, then back to his guard: the hips and back heel turn into a punch, the other glove stays at his
+  chin, kicks lean back to balance. Jab (a step in), Cross (the whole body turned in, the back leg straight), Hook (round
+  at shoulder height, the elbow out), Body Blow (a level change), Leg Kick (the shin into their knee), Teep (the knee
+  up, the foot driven out), Elbow (a rising lead elbow), Roundhouse (the shin at head height, leaning right back),
+  Haymaker (wound right back, then a lunge at full stretch), Rising Uppercut (up from a deep crouch), Superman Punch (a
+  hop, the back leg kicked out, the rear hand through), K.O. Punch (a deep coil, an overhand thrown down). The Air Hook
+  and Clinch Elbow, the Barrage's punches and the Bull Rush's finish use them too. His moves are `"drawn"` like hers -
+  shown as made, no extra coil. **Weak spot:** the Elbow is hard to read side on (his gloves cover it); two other shapes
+  (a level elbow, a slashing one) read no better.
 
 ## The wider stage (05:27)
 - 2800 wide by default (was 1600); a lobby can set 1200-4800 ("Big stage" 4400). One on one still starts 600 apart.
