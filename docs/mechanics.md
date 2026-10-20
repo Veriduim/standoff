@@ -101,6 +101,28 @@ the rules of play. The names, art, characters and code are not ours to take, and
   in. In fighter heights: 7.8 apart, a screen 20 wide, a stage 50 wide. Ours are ~106 tall: 1v1 starts 840 apart
   (Sim.START_1V1, was 600), and the camera never shows less than 2120 across (StageView.VIEW_MIN = 20 heights, was
   400 - it came in to ~9 heights in a 1v1). The stage stays 2800 (26 heights) - six fighters fill it.
+- **Frame data** (20 Oct 15:34 "grab the frame data for the basic attacks from YOMI as I think our grab is 5 frames
+  instead of the standard 3"): from YOMI's source (a hit box's start_tick is live on that frame of the move, counting
+  the first as 1 - as ours does). First live frame / frames live / whole move (IASA = can act early from):
+
+  | YOMI | | Standoff | |
+  |---|---|---|---|
+  | Throw (everyone, ground and air) | 3 / 3 / 16 | Dancer Grab (0.39.1; was 5 / 2 / 22) | 3 / 3 / 16 |
+  | Jump throw | 6 / 3 / 15 | Bruiser Clinch (0.39.1; was 4) | 3 / 3 / 24 |
+  | Ninja Punch | 4 / 2 / 14 | Dancer Air Throw | 3 / 4 / 20 |
+  | Robot Punch | 4 / 2 / 15 | Dancer Jab | 3 / 2 / 13 |
+  | Ninja Kick | 5 / 3 / 18 | Bruiser Jab | 2 / 2 / 11 |
+  | Mutant Slash | 6 / 4 / 18 | Bruiser Cross | 3 / 3 / 16 |
+  | Cowboy Horiz. Slash | 6 / 2 (+8 / 2) / 20, IASA 15 | Dancer Low Kick | 5 / 2 / 16 |
+  | Ninja Sweep | 7 / 2 / 22 | Bruiser Hook, Body Blow, Leg Kick | 5 / 3 / 18-22 |
+  | Wizard Kick | 7 / 13 / 30, IASA 24 | Dancer Straight | 7 / 3 / 20 |
+  | Cowboy Upward Swipe | 8 / 4 / 32, IASA 22 | Dancer Side Kick | 8 / 3 / 24 |
+  | Mutant Sweep | 10 / 3 / 25 | Dancer Sweep | 9 / 3 / 28 |
+  | Cowboy Vert. Slash, Stinger | 11 / 2 / 30, IASA 18-20 | Bruiser Teep | 6 / 3 / 22 |
+  | Mutant Kick, Robot Side Kick | 11 / 3 / 24 | Dancer Axe Kick | 15 / 3 / 32 |
+
+  YOMI's quickest strike is out on frame 4; our jabs on 3 (her) and 2 (him). A strike live on the same frame as a
+  grab beats it (ours, as YOMI's).
 - **Launch pace** since 0.37.0 (YOMI's knockback is ~4x ours for the fighters' size, its gravity 2-3x - its source):
   hits send them twice as fast sideways, easing off in the air to about the old distance (Sim.LAUNCH_PACE / DRAG /
   FLING_DRAG), up and down x1.4 with gravity x1.4 while reeling (LAUNCH_LIFT - the same air time, higher), and a

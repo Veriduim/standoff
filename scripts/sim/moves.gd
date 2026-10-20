@@ -218,10 +218,12 @@ const DANCER := {
 				"group": 0, "knockdown": true}],
 			"pose": [[0, "grab_reach"], [6, "throw"], [14, "fall"]], "icon": "grab_reach"},
 		# ---- grabs
-		"grab": {"name": "Grab", "tab": "attack", "kind": "grab", "frames": 22, "where": "ground", "aim": "facing", "motion": [[2, 6, 5.0, 0.0]],
-			"hits": [{"from": 5, "to": 6, "box": [6, -88, 38, 60], "dmg": 50, "stun": 26, "kb": [10.0, -5.0],
+		# (20 Oct 15:34 "I think our grab is 5 frames instead of the standard 3": YOMI's own Throw, from its source, is out
+		# frames 3-5 of 16 - so is ours now; it was 5-6 of 22)
+		"grab": {"name": "Grab", "tab": "attack", "kind": "grab", "frames": 16, "where": "ground", "aim": "facing", "motion": [[1, 4, 5.0, 0.0]],
+			"hits": [{"from": 3, "to": 5, "box": [6, -88, 38, 60], "dmg": 50, "stun": 26, "kb": [10.0, -5.0],
 				"group": 0, "knockdown": true}],
-			"pose": [[0, "grab_reach"], [7, "throw"], [15, "idle"]], "icon": "grab_reach"},
+			"pose": [[0, "grab_reach"], [5, "throw"], [11, "idle"]], "icon": "grab_reach"},
 		# ---- show-off
 		"taunt": {"name": "Taunt", "tab": "defend", "kind": "wait", "interrupt": true, "frames": 50, "where": "ground", "aim": "facing",
 			"meter_gain": 125, "pose": [[0, "taunt"]]},
@@ -469,10 +471,11 @@ const BRUISER := {
 		# ---- the clinch (Muay Thai's): his grab holds them instead of throwing - then knees (up to three), an elbow
 		# out, or a dump down behind him. They can Burst out.
 		"clinch": {"name": "Clinch", "tab": "attack", "kind": "grab", "frames": 24, "where": "ground", "aim": "facing",
-			"motion": [[2, 6, 4.5, 0.0]], "note": "holds them: knees, an elbow or a dump next",
-			"hits": [{"from": 4, "to": 6, "box": [6, -100, 36, 72], "dmg": 8, "stun": 30, "kb": [0.0, 0.0], "group": 0,
+			"motion": [[1, 5, 4.5, 0.0]], "note": "holds them: knees, an elbow or a dump next",
+			# (his grab: out on YOMI's standard frame 3 - 20 Oct 15:34; it was 4. Whiffed it still costs him 24)
+			"hits": [{"from": 3, "to": 5, "box": [6, -100, 36, 72], "dmg": 8, "stun": 30, "kb": [0.0, 0.0], "group": 0,
 				"hold": true}],
-			"pose": [[0, "grab_reach"], [6, "b_clinch"], [18, "b_idle"]], "icon": "b_clinch"},
+			"pose": [[0, "grab_reach"], [5, "b_clinch"], [18, "b_idle"]], "icon": "b_clinch"},
 		"clinchknee": {"name": "Clinch Knee", "tab": "attack", "kind": "attack", "after": ["clinch", "clinchknee"],
 			"repeat": 2, "frames": 16, "where": "ground", "aim": "facing", "note": "in the clinch: up to three",
 			"hits": [{"from": 3, "to": 5, "box": [0, -86, 50, 46], "dmg": 20, "stun": 22, "kb": [0.5, -1.0],

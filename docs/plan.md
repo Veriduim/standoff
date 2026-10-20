@@ -365,6 +365,16 @@ one stage; each attack aims at a picked target.
   no longer fly off across the screen the way she goes. Nine momentum lines in his colour trail BEHIND the impact,
   back toward him - long wedges, thick at the impact end, easing on into it (Fx "mline"); over the starburst, under
   the fighters; fighter-sized.
+- 15:28 "a lot of our hit animations a bit generic ... We should rework dancer as well. She is suppose to be a zoner/
+  spacer but she is a bit to stiff ... YOMI is normally a very melee focused game" - YOMI's own hurt drawings are one
+  still each (high / mid / low / air / down / wall slam); its life is in the attacks, each a full-body shape. 15:32
+  "Sounds good then we can work on the rest": (1) the Dancer a MELEE spacer like YOMI's Cowboy - fans as blades, long
+  cuts at mid range; keep Fan Throw / Air Fan, Recall and Fan Step; cut Ripple, Ward, Gust, Flick and the projectile
+  supers; melee supers again; (2) her strikes as dance moves - a labelled pose sheet first. (3) moving like a dancer
+  and (4) better hit reactions after.
+- 15:34 "grab the frame data for the basic attacks from YOMI as I think our grab is 5 frames instead of the standard 3"
+  -> 0.39.1: it was - YOMI's Throw is out frames 3-5 of 16 (its source). Her Grab now 3-5 of 16 (was 5-6 of 22), his
+  Clinch out on 3 (was 4; still 24 long). The table: docs/mechanics.md "Frame data".
 
 ## To tune / later
 - **Match length with 6:** bot matches take 120-270 decision points with 6 fighters (50-90 with 2). At ~10 s a decision

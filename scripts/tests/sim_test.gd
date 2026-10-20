@@ -77,6 +77,10 @@ func _test_rules() -> void:
 	s = _duel("dancer", "dancer", 50.0)
 	evs = _play(s, {0: {"move": "grab"}, 1: {"move": "block"}})
 	_check("a grab goes through a Block (%s)" % [_types(evs)], _types(evs).has("throw"))
+	var gm := Moves.move("dancer", "grab")
+	_check("a grab is out on frame 3, as YOMI's Throw (20 Oct 15:34 \"the standard 3\"): her Grab %d of %d, his Clinch %d"
+			% [Moves.startup(gm), int(gm["frames"]), Moves.startup(Moves.move("bruiser", "clinch"))],
+			Moves.startup(gm) == 3 and int(gm["frames"]) == 16 and Moves.startup(Moves.move("bruiser", "clinch")) == 3)
 	s = _duel("dancer", "dancer", 50.0)
 	evs = _play(s, {0: {"move": "grab"}, 1: {"move": "jab"}})
 	_check("a strike beats a grab (%s)" % [_types(evs)], _types(evs).has("hit") and not _types(evs).has("throw")
