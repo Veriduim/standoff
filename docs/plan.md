@@ -416,6 +416,10 @@ one stage; each attack aims at a picked target.
 - 17:05 "What is the boxes button for? Also now with the more space id use that for text now" -> 0.44.1: the cards'
   text takes the room the Free / Hold buttons left (it grows; the Distance column only as wide as its slider), back to
   14 px. (Boxes: the hit and hurt boxes drawn on the stage - YOMI's "show hitboxes".)
+- 17:12 "Drop that and move it into the settings in the hamburger menu. Then for distance things. Put them on the left
+  of arrows. So our order is action icon - text - distance(when applicable) - direction arrows - confirm" -> 0.44.2:
+  Boxes off the bar, a match-menu setting ("Hit boxes: on / off", by Sound; kept between plays - PickPanel.boxes);
+  the card's order icon - text - Distance - arrows (theirs mirrored); the bar's middle is Confirm alone.
 
 ## To tune / later
 - **Match length with 6:** bot matches take 120-270 decision points with 6 fighters (50-90 with 2). At ~10 s a decision

@@ -90,7 +90,6 @@ var dist_row: Control         ## a dash / jump's Distance, or a Block's parry fr
 var dist_name: Label
 var dist_slider: HSlider
 var dist_label: Label
-var boxes_btn: Button
 var cards := {}              ## the two pick cards along the bottom: "me" (yours, left) and "foe" (the enemy's, right)
 var confirm_btn: Button
 var undo_btn: Button
@@ -141,16 +140,9 @@ func _ready() -> void:
 	var centre := HBoxContainer.new()   # (in the middle, as YOMI's Lock In)
 	centre.add_theme_constant_override("separation", 6)
 	row.add_child(centre)
-	var side := VBoxContainer.new()
-	side.add_theme_constant_override("separation", 4)
-	centre.add_child(side)
-	boxes_btn = Ui.button("Boxes", func() -> void: _toggle_boxes(), 15)
-	boxes_btn.toggle_mode = true
-	boxes_btn.custom_minimum_size = Vector2(92, 0)
-	boxes_btn.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	side.add_child(boxes_btn)
 	# (Hold lives in the Movement tab alone, and the Free switch went - 20 Oct 16:59 "Our ui is getting cluttered in the
-	# fight. Lets remove the free box and then I think hold is fine in movement alone")
+	# fight. Lets remove the free box and then I think hold is fine in movement alone"; Boxes is a setting in the match
+	# menu now - 17:12)
 	undo_btn = Ui.button("↶ Undo", func() -> void: undone.emit(), 16)   # (against bots: take back your last turn -
 	undo_btn.name = "Undo"                                              # top right, where Leave is online)
 	add_child(undo_btn)
@@ -226,6 +218,7 @@ func open(the_sim: Sim, id: int, the_stage: StageView) -> void:
 	if not stage.fighter_tapped.is_connected(_on_tap):
 		stage.fighter_tapped.connect(_on_tap)
 	visible = true
+	stage.show_boxes = boxes()   # (the hit boxes while you pick, if they're on in the match menu)
 	undo_btn.visible = can_undo
 	guesses = {}
 	foe = _nearest_foe()
@@ -288,9 +281,8 @@ func close() -> void:
 		stage.ghost = []
 		stage.ghost_shots = []
 		stage.ghost_ids = []
-		stage.show_boxes = false
+		stage.show_boxes = false   # (only while you pick)
 		stage.guessing = -1
-		boxes_btn.set_pressed_no_signal(false)
 
 
 ## Every move id you could pick now, as the tabs list them (the tests).
@@ -550,7 +542,8 @@ func _build_card(parent: Control, side: String) -> Dictionary:
 	slider.add_theme_stylebox_override("slider", track)
 	slider.value_changed.connect(func(v: float) -> void: _on_dist(side, v))
 	drow.add_child(slider)
-	var order: Array = [ctl, grid, label, icon] if right else [icon, label, grid, ctl]
+	# (17:12 "our order is action icon - text - distance(when applicable) - direction arrows - confirm"; theirs mirrored)
+	var order: Array = [grid, ctl, label, icon] if right else [icon, label, ctl, grid]
 	for n: Control in order:
 		h.add_child(n)
 	return {"panel": panel, "icon": icon, "label": label, "pad": grid, "dist_row": drow, "dist_name": dn,
@@ -879,8 +872,34 @@ func _on_dist(side: String, v: float) -> void:
 	refresh()
 
 
-func _toggle_boxes() -> void:
-	stage.show_boxes = boxes_btn.button_pressed
+## Hit boxes while you pick - a setting in the match menu (20 Oct 17:12 "Drop that and move it into the settings in the
+## hamburger menu"), kept between plays (not written by the tests - keep).
+static var _boxes := false
+static var _boxes_loaded := false
+
+
+static func boxes() -> bool:
+	if not _boxes_loaded:
+		_boxes_loaded = true
+		var cfg := ConfigFile.new()
+		if cfg.load(SETTINGS) == OK:
+			_boxes = bool(cfg.get_value("look", "boxes", false))
+	return _boxes
+
+
+static func set_boxes(on: bool) -> void:
+	_boxes = on
+	_boxes_loaded = true
+	if not keep:
+		return
+	var cfg := ConfigFile.new()
+	cfg.load(SETTINGS)
+	cfg.set_value("look", "boxes", on)
+	cfg.save(SETTINGS)
+
+
+static func boxes_label() -> String:
+	return "Hit boxes: on" if boxes() else "Hit boxes: off"
 
 
 ## A fighter tapped on the stage: an opponent picking too -> guess their move; you -> back to your own pick.

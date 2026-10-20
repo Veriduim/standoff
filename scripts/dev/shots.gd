@@ -104,8 +104,8 @@ func run(game: Control, out: String) -> void:
 			await _snap(out.path_join("3d_block.png"))
 			p._close_drawer()
 		p.select("sidekick" if game.sim.legal_moves(game.me).has("sidekick") else "jab")
-		p.boxes_btn.button_pressed = true
-		p._toggle_boxes()
+		PickPanel.set_boxes(true)
+		game.stage.show_boxes = true
 		await _wait(6)
 		await _snap(out.path_join("4_scrub_boxes.png"))
 		p._confirm()

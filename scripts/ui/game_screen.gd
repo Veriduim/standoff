@@ -841,7 +841,7 @@ func _build_menu() -> void:
 	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(t)
 	for b: Array in [["Resume", "Resume"], ["Restart", "Restart"], ["Help", "How to play"], ["Sound", Sfx.label()],
-			["Quit", "Quit to menu"]]:
+			["Boxes", PickPanel.boxes_label()], ["Quit", "Quit to menu"]]:
 		var id: String = b[0]
 		var btn := Ui.button(str(b[1]), func() -> void: _menu_pick(id), 22)
 		btn.name = "Menu" + id
@@ -871,6 +871,11 @@ func _menu_pick(id: String) -> void:
 		Sfx.set_on(not Sfx.on)
 		(menu_panel.find_child("MenuSound", true, false) as Button).text = Sfx.label()
 		home.sync_sound()
+		return
+	if id == "Boxes":   # (the hit / hurt boxes while you pick - 17:12, from the bar into the menu)
+		PickPanel.set_boxes(not PickPanel.boxes())
+		(menu_panel.find_child("MenuBoxes", true, false) as Button).text = PickPanel.boxes_label()
+		stage.show_boxes = PickPanel.boxes() and pick.visible
 		return
 	_menu_shown(false)
 	match id:

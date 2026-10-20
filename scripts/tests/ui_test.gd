@@ -92,13 +92,14 @@ func _test_your_pick() -> void:
 			and str(p.choice["move"]) == "jab")
 	p.select("walk")
 	p.set_dir(Vector2(1, 0))
-	p.boxes_btn.button_pressed = true
-	p._toggle_boxes()
-	_check("Boxes shows the hit / hurt boxes", g.stage.show_boxes)
+	g._menu_pick("Boxes")   # (a setting in the match menu since 17:12 - not on the bar)
+	_check("Hit boxes in the match menu show the hit / hurt boxes while you pick (%s)" % PickPanel.boxes_label(),
+			g.stage.show_boxes and PickPanel.boxes() and not p.has_method("_toggle_boxes"))
 	var x0: float = g.sim.fighters[0].pos.x
 	p._confirm()
 	_check("Confirm plays the turn and puts the panel away (boxes off)", g.phase == "play" and not p.visible
 			and not g.stage.show_boxes)
+	PickPanel.set_boxes(false)
 	var guard := 0
 	while g.phase == "play" and guard < 50:
 		g.finish_playback()
