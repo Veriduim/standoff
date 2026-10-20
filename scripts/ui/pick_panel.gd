@@ -407,14 +407,15 @@ static func _word(key: String, after := "") -> String:
 	return "[color=%s]%s[/color]%s" % [w[1], str(w[0]).replace(" ", "\u00a0"), after.replace(" ", "\u00a0")]
 
 
-## A move's frame data for its card: hits on, damage, length (plain), then its effects in colour (BBCode - the cards
-## are rich text).
+## A move's frame data for its card: its effects in colour on their own line, tag · tag (17:39 "on its own line with
+## tags in it separate maybe like tag . tag"), then hits on, damage, length (BBCode - the cards are rich text).
 static func frame_data(m: Dictionary) -> String:
 	var parts: Array[String] = []
+	var words: Array[String] = []
 	var hits: Array = m.get("hits", [])
 	if int(m.get("cost", 0)) > 0:   # (a super: its level, YOMI's colours)
 		var lv := clampi(int(ceil(float(m["cost"]) / float(Sim.BAR))), 1, 3)
-		parts.append("[color=%s]lvl%d[/color]" % [LEVELS[lv - 1], lv])
+		words.append("[color=%s]lvl%d[/color]" % [LEVELS[lv - 1], lv])
 	if not hits.is_empty():
 		var dmg := 0
 		for e: Dictionary in hits:
@@ -429,7 +430,6 @@ static func frame_data(m: Dictionary) -> String:
 		"guard":
 			parts.append("both heights, no chip, shoves them off" if m.get("push", false)
 					else "↑ high / ↓ low · parries on its frame")
-	var words: Array[String] = []
 	if str(m["kind"]) == "grab":
 		words.append(_word("grab"))
 	var heights: Array = hits.map(func(e: Dictionary) -> String: return str(e.get("height", "mid")))
@@ -456,7 +456,8 @@ static func frame_data(m: Dictionary) -> String:
 	if m.has("note"):   # (what the numbers can't say)
 		parts.append(str(m["note"]))
 	# (a Launcher says what "jump on hit" did - the cards are small)
-	return " · ".join(parts) + ("" if words.is_empty() else " · " + " ".join(words))
+	return ("" if words.is_empty() else " · ".join(words) + "
+") + " · ".join(parts)
 
 
 ## A pick card along the bottom - YOMI's two panels: yours bottom left, the enemy's bottom right (mirrored: their

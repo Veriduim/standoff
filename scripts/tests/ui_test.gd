@@ -56,7 +56,8 @@ func _test_your_pick() -> void:
 	var sweep := p.drawer_grid.get_node("sweep") as MoveIcon
 	sweep.pressed.emit()
 	_check("tapping an icon picks the move and tucks the drawer away", str(p.choice["move"]) == "sweep"
-			and not p.drawer.visible and p.picked_label.text.begins_with("%s\nhits f%d" % [Moves.move("dancer", "sweep")["name"], Moves.startup(Moves.move("dancer", "sweep"))]))
+			and not p.drawer.visible and p.picked_label.text.begins_with("%s\n" % Moves.move("dancer", "sweep")["name"])
+			and p.picked_label.text.contains("\nhits f%d" % Moves.startup(Moves.move("dancer", "sweep"))))
 	_check("a facing move aims at the nearest enemy (right) and only ← / → are usable on the pad",
 			float(p.choice["x"]) == 1.0 and (p.pad.get_node("d5") as Button).button_pressed
 			and not (p.pad.get_node("d3") as Button).disabled and (p.pad.get_node("d1") as Button).disabled
@@ -719,6 +720,7 @@ func _test_drawer_order() -> void:
 	_check("the frame data says each effect in its colour with its icon, as YOMI's words (20 Oct 16:50): %s / %s / %s"
 			% [fd_up, fd_axe, fd_fin], fd_up.contains("[color=#64d26b]⚡ Initiative[/color]") and fd_up.contains("Launcher")
 			and fd_axe.contains("Overhead") and fd_axe.contains("Knockdown") and fd_fin.begins_with("[color=#ff00ff]lvl3")
+			and fd_axe.contains("[/color] · [color=") and fd_axe.split("\n")[1].begins_with("hits f")
 			and g.get("fast_btn") == null)
 	var icon := p.drawer_grid.get_child(0) as MoveIcon
 	var picked := [false]

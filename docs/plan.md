@@ -424,6 +424,11 @@ one stage; each attack aims at a picked target.
   bot games and dummy games" -> 0.44.3: How to play is a button on the home screen by Training and Replays (it was a
   small "?"), not in the ☰ menu; Restart there already shows offline only (bots, training). Her card's tag is "Spacer
   · war fans" and her How to play card describes the melee spacer (it still told of Fan Ward and Fan Gust).
+- 17:39 "Final text change is for fighting text for move selection. Id have it for tags similar to the name if the
+  move. So on its own line with tags in it separate maybe like tag . tag ?" -> 0.44.4: a card reads the move's name,
+  then its tags on their own line (tag · tag - a super's lvl first), then hits on · damage · length.
+- Seen in the tests (not new - it was there at 0.43.0 too): Godot now and then crashes in the Nearby play test (a LAN
+  host and finder) before the summary prints - rerun, it passes; the same crash usually lands after the summary.
 
 ## To tune / later
 - **Match length with 6:** bot matches take 120-270 decision points with 6 fighters (50-90 with 2). At ~10 s a decision
