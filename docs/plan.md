@@ -413,6 +413,9 @@ one stage; each attack aims at a picked target.
   - No Free switch and no Hold button on the bar (Hold's in Movement). The Free Cancel charges are the crosses over the
     health bar; an attack takes one by itself while there's one - and never a bar of meter on its own (with none left a
     Free Cancel costs a bar - YOMI's rule - so with no switch that's off now).
+- 17:05 "What is the boxes button for? Also now with the more space id use that for text now" -> 0.44.1: the cards'
+  text takes the room the Free / Hold buttons left (it grows; the Distance column only as wide as its slider), back to
+  14 px. (Boxes: the hit and hurt boxes drawn on the stage - YOMI's "show hitboxes".)
 
 ## To tune / later
 - **Match length with 6:** bot matches take 120-270 decision points with 6 fighters (50-90 with 2). At ~10 s a decision

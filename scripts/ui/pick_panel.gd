@@ -486,9 +486,11 @@ func _build_card(parent: Control, side: String) -> Dictionary:
 	label.fit_content = true
 	label.scroll_active = false
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	label.add_theme_font_size_override("normal_font_size", 13)
+	label.add_theme_font_size_override("normal_font_size", 14)
 	label.add_theme_color_override("default_color", Color("#c9c9d6"))
 	label.custom_minimum_size = Vector2(110, 0)
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL   # (the room the Free / Hold buttons left - 17:05 "use that
+	label.size_flags_vertical = Control.SIZE_SHRINK_CENTER   # for text now")
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT if right else HORIZONTAL_ALIGNMENT_LEFT
 	var grid := GridContainer.new()
@@ -519,8 +521,8 @@ func _build_card(parent: Control, side: String) -> Dictionary:
 		b.add_theme_stylebox_override("hover_pressed", on)
 		b.toggle_mode = true
 		grid.add_child(b)
-	var ctl := VBoxContainer.new()
-	ctl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var ctl := VBoxContainer.new()   # (only as wide as the Distance slider needs - the text takes the rest)
+	ctl.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	ctl.alignment = BoxContainer.ALIGNMENT_CENTER
 	ctl.add_theme_constant_override("separation", 2)
 	var free: Button = null   # (no Free switch - 16:59: an attack takes a Free Cancel by itself while there's one)
