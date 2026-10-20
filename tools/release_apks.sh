@@ -15,6 +15,10 @@ while [ $# -ge 2 ]; do
 	notes="$(git log -1 --format=%B "${bump:-$c}" | grep -v '^Co-Authored-By\|^Claude-Session')
 
 Android debug build (install the APK on the phone; it updates the one already there)."
-	gh release create "v$v" "$apk" --target "$sha" --title "Standoff $v" --notes "$notes" >/dev/null \
+	# (a copy named Standoff.apk too: .../releases/latest/download/Standoff.apk is always the newest - 20 Oct 17:50
+	# "is this on GitHub and possible to download public?")
+	same="$(dirname "$apk")/Standoff.apk"
+	cp "$apk" "$same"
+	gh release create "v$v" "$apk" "$same" --target "$sha" --title "Standoff $v" --notes "$notes" >/dev/null \
 		&& echo "released v$v ($c)" || echo "FAILED v$v"
 done
