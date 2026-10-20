@@ -379,10 +379,10 @@ func _on_status(state: String, detail: String) -> void:
 			note.text = detail
 		"reconnecting":
 			code_label.text = "Reconnecting to lobby %s..." % net.last_code
-		"closed" when net.want_back and _tries < 8:   # (the line dropped / the phone was put aside: back in, 00:11)
-			_tries += 1
-			code_label.text = "Reconnecting to lobby %s..." % net.last_code
-			get_tree().create_timer(0.3 if _tries == 1 else 1.5).timeout.connect(_retry)
+		"closed" when net.want_back:   # (the line dropped / the phone was put aside: back in, 00:11 - and it keeps
+			_tries += 1                  # trying while the lobby keeps the place: 20 Oct 18:13 "the lobby dies too
+			code_label.text = "Reconnecting to lobby %s..." % net.last_code   # wuickly" - it gave up after 8 tries)
+			get_tree().create_timer([0.3, 1.0, 2.0, 3.0, 5.0][mini(_tries - 1, 4)]).timeout.connect(_retry)
 		"error", "closed":
 			if net.want_back and view == "room":   # (it couldn't get back in - the lobby's gone)
 				net.want_back = false
@@ -559,9 +559,10 @@ func _member_row(id: int, m: Dictionary) -> Control:
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(v)
 	var who := str(m["name"]) + (" (you)" if id == net.id else "") + ("  👑" if id == net.owner_id else "")
-	v.add_child(Ui.label(who, 17, Color("#f2f2f7")))
-	v.add_child(Ui.label(str(data.get("status", "")), 13, Color("#8a8a9c")))
-	if id != net.id and str(data.get("status", "idle")) == "idle" and _out.is_empty():
+	var away := bool(m.get("away", false))   # (their line dropped - the place is kept for them: 20 Oct 18:13)
+	v.add_child(Ui.label(who, 17, Color("#f2f2f7") if not away else Color("#8a8a9c")))
+	v.add_child(Ui.label("away - back soon" if away else str(data.get("status", "")), 13, Color("#8a8a9c")))
+	if id != net.id and not away and str(data.get("status", "idle")) == "idle" and _out.is_empty():
 		var ch := Ui.button("Challenge", func() -> void: challenge([id], 0, "ffa"), 15)
 		ch.name = "Challenge%d" % id
 		row.add_child(ch)
@@ -717,7 +718,7 @@ func _new_match() -> void:
 	_modal(func(b: VBoxContainer) -> void:
 		b.add_child(Ui.label("New match - up to 6", 22, Color("#f2f2f7")))
 		for id: int in net.members:
-			if id == net.id or str(net.members[id].get("data", {}).get("status", "idle")) != "idle":
+			if id == net.id or net.is_away(id) or str(net.members[id].get("data", {}).get("status", "idle")) != "idle":
 				continue
 			var cb := Ui.button(str(net.members[id]["name"]), func() -> void: pass, 17)   # (on = blue = invited)
 			cb.toggle_mode = true

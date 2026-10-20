@@ -607,9 +607,12 @@ func start_online(nm: NetMatch) -> void:
 	nm.turn.connect(_on_net_turn)
 	nm.ended.connect(_on_net_end)
 	nm.resync.connect(_on_resync)
+	nm.host_changed.connect(_on_host_changed)
+	nm.host_away.connect(_on_host_away)
 	_demo = null
 	bots.clear()
 	sim = Sim.from_dict(nm.start_snap)
+	nm.sim = sim   # (the match as this phone has it - any phone may have to run it: 20 Oct 18:13)
 	_replay_log.clear()
 	me = nm.mine
 	stage.setup(sim.fighters.map(func(f: Fighter) -> String: return f.character),
@@ -669,6 +672,7 @@ func _on_resync(snap: Dictionary) -> void:
 	_net_queue.clear()
 	pick.close()
 	sim = Sim.from_dict(snap)
+	net_match.sim = sim
 	_rec_jump(snap)
 	stage.fx.clear()
 	stage.show_tick(sim.record(), [], sim.record_shots())
@@ -699,6 +703,27 @@ func _on_lobby_back() -> void:
 		net_match.reclaim(lobby.my_name)
 
 
+## The match moved to another phone - its host's line dropped (20 Oct 18:13 "I minimised it to text someone and it
+## killed the match") - or this phone carries on running it: the lobby shows who runs it now (Spectate goes there), and
+## if it's this phone, the turn opens here.
+func _on_host_changed(h: int) -> void:
+	if net_match == null or phase == "over":
+		return
+	if not lobby.in_match.is_empty():
+		lobby.in_match["host"] = h
+		lobby.net.set_member({"host": h})
+	if banner.text.begins_with("Waiting for") and banner.text.ends_with("come back..."):
+		banner.text = ""
+	if net_match.is_host() and phase in ["pick", "wait"]:
+		net_match.open_turn(sim)
+
+
+## The host's line dropped and no other phone can run the match (the rest are bots): it waits for them.
+func _on_host_away(who: String) -> void:
+	if net_match != null and phase != "over":
+		banner.text = "Waiting for %s to come back..." % who
+
+
 ## The host's turn, played here: the same picks from the same state; then the host's state is the truth.
 func _on_net_turn(t: int, picks: Dictionary, snap: Dictionary) -> void:
 	if net_match == null:
@@ -709,6 +734,7 @@ func _on_net_turn(t: int, picks: Dictionary, snap: Dictionary) -> void:
 	if sim.tick != t:   # (out of step - take the host's state as it is)
 		if not snap.is_empty():
 			sim = Sim.from_dict(snap)
+			net_match.sim = sim
 			_rec_jump(snap)
 			stage.show_tick(sim.record(), [], sim.record_shots())
 			_update_cards()
@@ -726,6 +752,7 @@ func _on_net_turn(t: int, picks: Dictionary, snap: Dictionary) -> void:
 		net_match.publish(t, picks, w)
 	elif not snap.is_empty():
 		sim = Sim.from_dict(snap)
+	net_match.sim = sim
 	_frames = seg["frames"]
 	_events = seg["events"]
 	_shots = seg.get("shots", [])
@@ -888,6 +915,13 @@ func _menu_pick(id: String) -> void:
 
 ## The phone's Back: the match menu in a match; the lobby -> home; the result -> on; home -> quit.
 func _notification(what: int) -> void:
+	if what == NOTIFICATION_APPLICATION_PAUSED and net_match != null and net_match.live and phase != "over":
+		net_match.put_aside()   # (20 Oct 18:13 "I minimised it to text someone": the match goes on without this phone)
+		return
+	if what in [NOTIFICATION_APPLICATION_RESUMED, NOTIFICATION_APPLICATION_FOCUS_IN] and net_match != null \
+			and net_match.aside and lobby.net.in_lobby():
+		_on_lobby_back()   # (back: where's the match now, and this phone's seat)
+		return
 	if what != NOTIFICATION_WM_GO_BACK_REQUEST:
 		return
 	if how != null and how.visible:

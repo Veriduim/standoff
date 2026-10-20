@@ -10,6 +10,7 @@ extends Node
 const WS_PORT := 47270
 const ASK_PORT := 47271
 const TELL_PORT := 47272
+const DEAD_MS := 45000            ## a phone that pinged, and hasn't for this long: its line's dead (as online)
 
 static var active: LanHost        ## the lobby this phone is hosting, if it is
 static var bind_to := "*"         ## where it listens (the tests: 127.0.0.1 - no firewall question on the PC)
@@ -29,6 +30,7 @@ var _closing: Array[LanPeer] = []
 class LanPeer:
 	extends LobbyNet
 	var sock: WebSocketPeer
+	var pinged := 0   ## (ms) its last ping - a phone that pinged and stopped has lost its line (minimised, out of range)
 
 	func deliver(d: Dictionary) -> void:
 		if sock.get_ready_state() == WebSocketPeer.STATE_OPEN:
@@ -117,13 +119,22 @@ func poll(delta := 0.0) -> void:
 		var st := peer.sock.get_ready_state()
 		if st == WebSocketPeer.STATE_OPEN:
 			while peer.sock.get_available_packet_count() > 0:
-				var d: Variant = JSON.parse_string(peer.sock.get_packet().get_string_from_utf8())
+				var text := peer.sock.get_packet().get_string_from_utf8()
+				if text == "ping":   # (the line's alive - as the online server answers)
+					peer.pinged = Time.get_ticks_msec()
+					peer.sock.send_text("pong")
+					continue
+				var d: Variant = JSON.parse_string(text)
 				if d is Dictionary and peer.loop != null:
 					peer.loop.receive(peer, d)
+			if peer.pinged > 0 and Time.get_ticks_msec() - peer.pinged > DEAD_MS:   # (no ping: its line's dead)
+				peer.sock.close(1001, "no ping")
+				if peer.loop != null:
+					peer.loop.drop(peer)
 		elif st == WebSocketPeer.STATE_CLOSED:
 			peers.erase(peer)
-			if peer.loop != null:
-				peer.loop.leave(peer)
+			if peer.loop != null:   # (the line dropped: its place kept - LoopLobby.drop; "leave" came first if on purpose)
+				peer.loop.drop(peer)
 			peer.free()
 	while ask.is_bound() and ask.get_available_packet_count() > 0:
 		var pkt := ask.get_packet().get_string_from_utf8()
@@ -133,6 +144,8 @@ func poll(delta := 0.0) -> void:
 	_since += delta
 	if _since >= 1.0:
 		_since = 0.0
+		if LoopLobby.lobbies.has(code):   # (places kept too long: gone)
+			(LoopLobby.lobbies[code] as LoopLobby).expire()
 		var b := JSON.stringify(info()).to_utf8_buffer()
 		for addr in broadcasts():
 			tell.set_dest_address(addr, TELL_PORT)
@@ -147,7 +160,8 @@ func _admit(ws: WebSocketPeer) -> void:
 	var q := {}
 	for kv in u.get_slice("?", 1).split("&", false):
 		q[kv.get_slice("=", 0)] = kv.get_slice("=", 1).uri_decode()
-	var into := {"name": str(q.get("name", "Player")), "v": str(q.get("v", "?"))}
+	var into := {"name": str(q.get("name", "Player")), "v": str(q.get("v", "?")), "r": str(q.get("r", "")) == "1",
+		"resume": int(q.get("resume", "0")), "key": str(q.get("key", ""))}
 	if str(q.get("create", "")) == "1":
 		into.merge({"create": true, "lname": str(q.get("lname", "")), "public": str(q.get("public", "1")) == "1",
 			"max": int(q.get("max", 8))})

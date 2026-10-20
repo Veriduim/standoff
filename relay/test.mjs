@@ -1,5 +1,6 @@
 // The lobby server's checks (against `wrangler dev`): create, the public list, join, chat, member data, the owner's
-// rules, a direct message (a challenge), a match channel (players + a spectator), errors, the owner leaving.
+// rules, a direct message (a challenge), a match channel (players + a spectator), errors, the owner leaving; kept
+// places (a line dropping, back with its key, a dead line replaced, leaving on purpose - 0.46.0).
 const BASE = process.argv[2] || "ws://127.0.0.1:8787";
 const HTTP = BASE.replace(/^ws/, "http");
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -84,6 +85,57 @@ const pre = await fetch(HTTP + "/replays", { method: "OPTIONS", headers: { origi
 check("a browser (the web version) may share a replay: its ask-first is answered, the answer readable from any site",
   pre.status === 204 && /content-type/i.test(pre.headers.get("access-control-allow-headers") || "")
   && none404.headers.get("access-control-allow-origin") === "*");
+// Kept places (20 Oct 18:13 "I find the lobby dies too wuickly and in the match I minimised it to text someone and it
+// killed the match"): phones that can come back (r=1) keep their place when the line drops.
+const code2 = String(1000 + Math.floor(Math.random() * 8999));
+const ann = await open(`/lobby/${code2}?name=Ann&create=1&lname=Kept&public=0&max=4&v=0.46.0&r=1`);
+const bob = await open(`/lobby/${code2}?name=Bob&v=0.46.0&r=1`);
+await sleep(400);
+const annW = ann.got.find((m) => m.t === "welcome");
+const bobW = bob.got.find((m) => m.t === "welcome");
+check("a welcome carries a key to come back with", !!bobW && typeof bobW.key === "string" && bobW.key.length > 8
+  && bobW.resumed === false);
+const pong = new Promise((res) => { const was = bob.onmessage; bob.onmessage = (e) => { if (e.data === "pong") res(true);
+  else was(e); }; setTimeout(() => res(false), 2000); });
+bob.send("ping");
+check("a ping is answered (the line's alive)", await pong);
+for (const s of [ann, bob]) s.say({ t: "sub", ch: "m2" });
+await sleep(200);
+bob.close();
+await sleep(600);
+check("a line that drops keeps its place: the others are told it's away, not gone", has(ann, (m) => m.t === "away"
+  && m.id === bobW.id) && !has(ann, (m) => m.t === "left"));
+const bob2 = await open(`/lobby/${code2}?name=Bob&v=0.46.0&r=1&resume=${bobW.id}&key=${bobW.key}`);
+await sleep(400);
+const b2w = bob2.got.find((m) => m.t === "welcome");
+check("back with its key: the same member again (same id), told it was away; the others told it's back",
+  !!b2w && b2w.id === bobW.id && b2w.resumed === true && b2w.was_away === true
+  && has(ann, (m) => m.t === "back" && m.id === bobW.id));
+ann.say({ t: "chan", ch: "m2", msg: { k: "seg", n: 2 } });
+await sleep(300);
+check("...still on its match channel", has(bob2, (m) => m.t === "chan" && m.msg.n === 2));
+const bob3 = await open(`/lobby/${code2}?name=Bob&v=0.46.0&r=1&resume=${bobW.id}&key=${bobW.key}`);
+await sleep(500);
+const b3w = bob3.got.find((m) => m.t === "welcome");
+check("a dead line replaced (it never closed): the same member, the old line shut, nobody told anything",
+  !!b3w && b3w.id === bobW.id && b3w.was_away === false && bob2.readyState !== 1
+  && ann.got.filter((m) => m.t === "away" || m.t === "left").length === 1);
+const fake = await open(`/lobby/${code2}?name=Bob&v=0.46.0&r=1&resume=${bobW.id}&key=wrong`);
+await sleep(400);
+const fw = fake.got.find((m) => m.t === "welcome");
+check("a wrong key is just a new member", !!fw && fw.id !== bobW.id && fw.resumed === false);
+fake.say({ t: "leave" });
+await sleep(400);
+check("leaving on purpose: gone at once", has(ann, (m) => m.t === "left" && m.id === fw.id));
+ann.close();
+bob3.close();
+await sleep(500);
+const keep = await open(`/lobby/${code2}?name=Cy&v=0.46.0&r=1`);
+await sleep(400);
+check("everyone's line dropped: the lobby's still there (their places kept)", has(keep, (m) => m.t === "welcome"
+  && m.members.filter((x) => x.away).length === 2));
+keep.say({ t: "leave" });
+await sleep(300);
 const failed = results.filter((r) => !r[1]).length;
 console.log(`${results.length - failed}/${results.length} lobby checks passed`);
 process.exit(failed ? 1 : 0);

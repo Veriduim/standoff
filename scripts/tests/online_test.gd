@@ -120,21 +120,167 @@ func _test_online_match() -> void:
 	_check("a second match (they host it this time)", a.net_match != null and b.net_match != null and b.net_match.is_host())
 	b.lobby.leave_lobby()
 	_poll([a, b, c], 4)
-	_check("the host leaving ends it for the other (%s)" % (a.over_panel.find_child("Result", true, false) as Label).text,
-			a.phase == "over" and (a.over_panel.find_child("Result", true, false) as Label).text.contains("host left"))
+	_check("the host leaving the lobby: the match moves to the other phone and goes on (20 Oct 18:13 - it ended it)",
+			a.net_match.is_host() and a.net_match.live and a.phase != "over" and a.net_match.bots.has(0))
 	for g: Control in [a, b, c]:
 		g.queue_free()
 	LobbyNet.use_loop = false
 
 
-## The line dropping (the phone put aside to send the code - Timmy 00:11): what the lobby server would do, then the
-## screen gets it back.
+## The line dropping (the phone put aside to send the code - Timmy 00:11; minimised mid-match - 20 Oct 18:13): what the
+## lobby server would do (the place kept - "away"), then the screen gets it back (to the same place).
 func _drop(g: Control) -> void:
 	var n: LobbyNet = g.lobby.net
-	n.loop.leave(n)
+	n.loop.drop(n)
 	n.loop = null
 	n.id = 0
 	n.status.emit("closed", "Lost the lobby server")
+
+
+## Two phones in a lobby, a's challenge to b accepted (and `bots` bots), a few turns played with bots picking for both.
+func _two_in_a_match(bots := 0) -> Array:
+	LobbyNet.use_loop = true
+	LoopLobby.reset()
+	var a := _screen()
+	var b := _screen()
+	a.lobby.open(0)
+	a.lobby.create_lobby()
+	_poll([a, b])
+	b.lobby.open(1)
+	b.lobby.join(str(LoopLobby.list()[0]["code"]))
+	_poll([a, b])
+	a.lobby.challenge([b.lobby.net.id], bots, "ffa")
+	_poll([a, b])
+	b.lobby.answer(true)
+	_poll([a, b], 6)
+	a.auto_me = true
+	b.auto_me = true
+	a._next()
+	b._next()
+	for _i in 60:   # (a few turns in)
+		_poll([a, b], 2)
+		for g: Control in [a, b]:
+			g.finish_playback()
+		if a.sim.tick > 120:
+			break
+	return [a, b]
+
+
+## Played on to the end: the same on both?
+func _play_out(a: Control, b: Control) -> bool:
+	var steps := 0
+	while steps < 3000 and not (a.phase == "over" and b.phase == "over"):
+		_poll([a, b], 2)
+		for g: Control in [a, b]:
+			g.finish_playback()
+		steps += 1
+	return a.phase == "over" and b.phase == "over" and a.sim.tick == b.sim.tick and a.sim.winners() == b.sim.winners()
+
+
+func _test_match_moves() -> void:
+	_section("Minimised mid-match (20 Oct 18:13 \"I minimised it to text someone and it killed the match\"): the place " +
+			"kept, the match moves to another phone and back")
+	var ab := _two_in_a_match()
+	var a: Control = ab[0]
+	var b: Control = ab[1]
+	var a_id: int = a.lobby.net.id
+	var b_id: int = b.lobby.net.id
+	_drop(a)   # (the host's line drops - its app put aside)
+	_poll([b], 3)
+	var away_seen: bool = b.lobby.net.is_away(a_id) and b.lobby.net.members.size() == 2
+	var moved: bool = b.net_match.host == b_id and b.net_match.is_host()
+	var t0: int = b.sim.tick
+	for _i in 40:   # (b runs it now: a bot plays a's seat meanwhile)
+		_poll([b], 2)
+		b.finish_playback()
+	_check("the host's line drops: the lobby keeps its place (away %s), the match moves to the other phone (%s)" % [
+			away_seen, moved], away_seen and moved)
+	_check("...and goes on there, a bot in the host's seat (tick %d -> %d)" % [t0, b.sim.tick], b.sim.tick > t0
+			and b.net_match.bots.has(0) and b.phase != "over")
+	for _i in 4:
+		_poll([a, b])
+		await get_tree().create_timer(0.35).timeout
+	_poll([a, b], 6)
+	_check("the old host back: its own place (id %d = %d), told the match is on the other phone - a player now, its seat "
+			% [a.lobby.net.id, a_id] + "back (host %d, peer %d)" % [a.net_match.host, int(b.net_match.seats[0]["peer"])],
+			a.lobby.net.id == a_id and a.net_match.host == b_id and not a.net_match.is_host() and a.net_match.live
+			and int(b.net_match.seats[0]["peer"]) == a_id and not b.net_match.bots.has(0) and a.sim.tick >= b.sim.tick - 200)
+	_check("...and the match plays out to the same end on both (%s / %s, tick %d / %d)" % [a.phase, b.phase,
+			a.sim.tick, b.sim.tick], _play_out(a, b))
+	for g: Control in [a, b]:
+		g.queue_free()
+	LobbyNet.use_loop = false
+
+
+func _test_both_away() -> void:
+	_section("Both phones put aside mid-match and back (18:50 \"If we both leave the game i mean for keeping it " +
+			"alive\"): the places kept, the one furthest on runs it, on to the same end")
+	NetMatch.ask_every = 0.3   # (the asking quicker - real phones ask every 4 s)
+	var ab := _two_in_a_match()
+	var a: Control = ab[0]
+	var b: Control = ab[1]
+	var a_id: int = a.lobby.net.id
+	var b_id: int = b.lobby.net.id
+	_drop(a)   # (the host first - the match moves to b and goes on a while)
+	for _i in 20:
+		_poll([b], 2)
+		b.finish_playback()
+	var moved: bool = b.net_match.is_host()
+	_drop(b)   # (then b - nobody left to run it)
+	var kept: bool = LoopLobby.lobbies.values()[0].away.size() == 2
+	var t_b: int = b.sim.tick
+	var both := func() -> bool:
+		return a.lobby.net.in_lobby() and b.lobby.net.in_lobby() and not a.net_match._reclaiming \
+				and not b.net_match._reclaiming
+	var end := Time.get_ticks_msec() + 8000
+	while Time.get_ticks_msec() < end and not both.call():
+		_poll([a, b])
+		await get_tree().create_timer(0.1).timeout
+	_check("both away: the lobby keeps both places (%s); back, both in their own places (ids %d %d)" % [kept,
+			a.lobby.net.id, b.lobby.net.id], moved and kept and a.lobby.net.id == a_id and b.lobby.net.id == b_id)
+	_check("...one runs the match - the one furthest on (b, tick %d) - and the other follows it (hosts %d / %d)" % [t_b,
+			a.net_match.host, b.net_match.host], both.call() and a.net_match.host == b_id and b.net_match.host == b_id
+			and b.net_match.is_host() and not a.net_match.is_host() and a.sim.tick >= t_b)
+	_check("...and the match plays out to the same end on both (%s / %s, tick %d / %d)" % [a.phase, b.phase,
+			a.sim.tick, b.sim.tick], _play_out(a, b))
+	NetMatch.ask_every = 4.0
+	for g: Control in [a, b]:
+		g.queue_free()
+	LobbyNet.use_loop = false
+
+
+func _test_host_alone_back() -> void:
+	_section("The host alone with bots, minimised and back: nobody else can run it - it waits, and on it goes")
+	LobbyNet.use_loop = true
+	LoopLobby.reset()
+	var a := _screen()
+	a.lobby.open(0)
+	a.lobby.create_lobby()
+	_poll([a])
+	a.lobby.challenge([], 1, "ffa")
+	_poll([a], 6)
+	var ok: bool = a.net_match != null
+	if ok:
+		a.auto_me = true
+		a._next()
+		for _i in 30:
+			_poll([a], 2)
+			a.finish_playback()
+		var id: int = a.lobby.net.id
+		var t0: int = a.sim.tick
+		_drop(a)
+		for _i in 4:
+			_poll([a])
+			await get_tree().create_timer(0.35).timeout
+		for _i in 30:
+			_poll([a], 2)
+			a.finish_playback()
+		ok = a.lobby.net.id == id and a.net_match.is_host() and a.net_match.live and a.sim.tick > t0
+		_check("back in its place, still running the match, and on it goes (tick %d -> %d)" % [t0, a.sim.tick], ok)
+	else:
+		_check("a match against a bot started", false)
+	a.queue_free()
+	LobbyNet.use_loop = false
 
 
 func _test_rejoin() -> void:
@@ -248,33 +394,12 @@ func _test_nearby() -> void:
 
 func _test_match_rejoin() -> void:
 	_section("Back into a match after a drop (01:32 \"3 makes sense\"): the bot hands the seat back, and on it goes")
-	LobbyNet.use_loop = true
-	LoopLobby.reset()
-	var a := _screen()
-	var b := _screen()
-	a.lobby.open(0)
-	a.lobby.create_lobby()
-	_poll([a, b])
-	b.lobby.open(1)
-	b.lobby.join(str(LoopLobby.list()[0]["code"]))
-	_poll([a, b])
-	a.lobby.challenge([b.lobby.net.id], 0, "ffa")
-	_poll([a, b])
-	b.lobby.answer(true)
-	_poll([a, b], 6)
-	a.auto_me = true
-	b.auto_me = true
-	a._next()
-	b._next()
-	for _i in 60:   # (a few turns in)
-		_poll([a, b], 2)
-		for g: Control in [a, b]:
-			g.finish_playback()
-		if a.sim.tick > 120:
-			break
+	var ab := _two_in_a_match()
+	var a: Control = ab[0]
+	var b: Control = ab[1]
 	_drop(b)
 	_poll([a, b], 3)
-	var bot_seat: bool = int(a.net_match.seats[1]["peer"]) == 0 and bool(a.net_match.seats[1].get("left", false))
+	var bot_seat: bool = bool(a.net_match.seats[1].get("away", false)) and a.net_match.bots.has(1)
 	var said: String = b.banner.text
 	for _i in 30:   # (the match goes on without them meanwhile - their bot plays)
 		_poll([a, b], 2)
@@ -289,15 +414,8 @@ func _test_match_rejoin() -> void:
 	_check("back in the lobby, they get the seat back and the host's state (host tick %d, theirs %d)" % [a.sim.tick,
 			b.sim.tick], b.lobby.net.in_lobby() and int(a.net_match.seats[1]["peer"]) == b.lobby.net.id
 			and not b.net_match._reclaiming and b.net_match.live and b.sim.tick >= went_on)
-	var steps := 0
-	while steps < 3000 and not (a.phase == "over" and b.phase == "over"):
-		_poll([a, b], 2)
-		for g: Control in [a, b]:
-			g.finish_playback()
-		steps += 1
 	_check("...and the match plays out to the same end on both (%s / %s, tick %d / %d)" % [a.phase, b.phase,
-			a.sim.tick, b.sim.tick], a.phase == "over" and b.phase == "over" and a.sim.tick == b.sim.tick
-			and a.sim.winners() == b.sim.winners())
+			a.sim.tick, b.sim.tick], _play_out(a, b))
 	for g: Control in [a, b]:
 		g.queue_free()
 	LobbyNet.use_loop = false

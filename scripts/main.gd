@@ -22,6 +22,11 @@ func _ready() -> void:
 		add_child(live)
 		live.call("run")
 		return
+	if "--awaycheck" in OS.get_cmdline_user_args():   # (dev: a phone put aside mid-match - scripts/dev/away_check.gd)
+		var away: Node = load("res://scripts/dev/away_check.gd").new()
+		add_child(away)
+		away.call("run")
+		return
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--figlab="):   # (dev: body styles side by side - scripts/dev/figure_lab.gd)
 			var lab: Node2D = load("res://scripts/dev/figure_lab.gd").new()
