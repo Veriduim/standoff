@@ -101,28 +101,35 @@ the rules of play. The names, art, characters and code are not ours to take, and
   in. In fighter heights: 7.8 apart, a screen 20 wide, a stage 50 wide. Ours are ~106 tall: 1v1 starts 840 apart
   (Sim.START_1V1, was 600), and the camera never shows less than 2120 across (StageView.VIEW_MIN = 20 heights, was
   400 - it came in to ~9 heights in a 1v1). The stage stays 2800 (26 heights) - six fighters fill it.
-- **Frame data** (20 Oct 15:34 "grab the frame data for the basic attacks from YOMI as I think our grab is 5 frames
-  instead of the standard 3"): from YOMI's source (a hit box's start_tick is live on that frame of the move, counting
-  the first as 1 - as ours does). First live frame / frames live / whole move (IASA = can act early from):
+- **Frame data = YOMI's** (20 Oct 15:34 "grab the frame data for the basic attacks from YOMI"; 15:40 "we should change
+  our frames to match YOMI's as their makes sense to me" - 0.40.0). From YOMI's source (a hit box's start_tick is live
+  on that frame of the move, the first counting as 1 - as ours does). Each of our basic attacks now has its nearest YOMI
+  move's first live frame / last live frame / whole move; its pose keys, lunge, low profile and invulnerability
+  stretched to fit:
 
-  | YOMI | | Standoff | |
-  |---|---|---|---|
-  | Throw (everyone, ground and air) | 3 / 3 / 16 | Dancer Grab (0.39.1; was 5 / 2 / 22) | 3 / 3 / 16 |
-  | Jump throw | 6 / 3 / 15 | Bruiser Clinch (0.39.1; was 4) | 3 / 3 / 24 |
-  | Ninja Punch | 4 / 2 / 14 | Dancer Air Throw | 3 / 4 / 20 |
-  | Robot Punch | 4 / 2 / 15 | Dancer Jab | 3 / 2 / 13 |
-  | Ninja Kick | 5 / 3 / 18 | Bruiser Jab | 2 / 2 / 11 |
-  | Mutant Slash | 6 / 4 / 18 | Bruiser Cross | 3 / 3 / 16 |
-  | Cowboy Horiz. Slash | 6 / 2 (+8 / 2) / 20, IASA 15 | Dancer Low Kick | 5 / 2 / 16 |
-  | Ninja Sweep | 7 / 2 / 22 | Bruiser Hook, Body Blow, Leg Kick | 5 / 3 / 18-22 |
-  | Wizard Kick | 7 / 13 / 30, IASA 24 | Dancer Straight | 7 / 3 / 20 |
-  | Cowboy Upward Swipe | 8 / 4 / 32, IASA 22 | Dancer Side Kick | 8 / 3 / 24 |
-  | Mutant Sweep | 10 / 3 / 25 | Dancer Sweep | 9 / 3 / 28 |
-  | Cowboy Vert. Slash, Stinger | 11 / 2 / 30, IASA 18-20 | Bruiser Teep | 6 / 3 / 22 |
-  | Mutant Kick, Robot Side Kick | 11 / 3 / 24 | Dancer Axe Kick | 15 / 3 / 32 |
+  | Ours | Now (was) | YOMI's |
+  |---|---|---|
+  | Grab (her) | 3-5 / 16 (5-6 / 22) | Throw 3-5 / 16 (everyone, ground and air) |
+  | Clinch (his grab) | 3-5 / 24 (4-6) | Throw 3 |
+  | Air Throw (her) | 3-5 / 16 (3-6 / 20) | air Throw 3-5 / 16 |
+  | Jab (both) | 4-5 / 14 (her 3-4 / 13, his 2-3 / 11) | Ninja / Robot Punch 4-5 / 14-15 |
+  | Uppercut (both) | 4-7 (6-9, 5-8) | Ninja Uppercut 4 |
+  | Low Kick (her), Body Blow, Leg Kick (his) | 5-7 / 18 | Ninja Kick 5-7 / 18 |
+  | Straight (her) | 6-7 / 20 (7-9) | Cowboy Horiz. Slash 6-7 / 20 |
+  | Cross, Hook, Elbow (his) | 6 (3, 5, 4) | Mutant Slash 6-9 / 18 |
+  | Sweep (her) | 7-8 / 22 (9-11 / 28) | Ninja Sweep 7-8 / 22 |
+  | Side Kick (her), Teep (his) | 11-13 / 24 (8, 6) | Mutant Kick, Robot Side Kick 11-13 / 24 |
+  | Axe Kick (her overhead) | 11-12 / 30 (15-17 / 32) | Cowboy Vert. Slash 11-12 / 30 |
+  | Air Kick (her) | 5-11 / 22 (4-8 / 18) | Ninja air Kick 5-11 / 22 |
+  | Air Knee (both) | 6-7 / 15 (3, 4) | Mutant air Kick 6-7 / 15 |
 
-  YOMI's quickest strike is out on frame 4; our jabs on 3 (her) and 2 (him). A strike live on the same frame as a
-  grab beats it (ours, as YOMI's).
+  YOMI's quickest strike is out on frame 4 and its throw on 3, so point blank a grab beats a jab started with it; a
+  little further out the jab's reach wins (a grab reaches 84, a jab 90). Other YOMI numbers: Cowboy Stinger 11 / 30,
+  Upward Swipe 8 / 32; Mutant Sweep 10 / 25; Wizard Kick 7 / 30.
+- **Clashes = YOMI's** (0.40.0, its source - game.gd): two strikes meeting clash only when both would land (or
+  neither) and their damage is within `Sim.CLASH_DIFF` 12 (YOMI's 25 - its damage runs about twice ours); otherwise
+  the stronger goes through. If only one would land (the other invulnerable or out of reach), no clash: it lands
+  (YOMI's lobby default - clashing on, "asymmetrical clashing" off). It was: any two strikes touching clashed.
 - **Launch pace** since 0.37.0 (YOMI's knockback is ~4x ours for the fighters' size, its gravity 2-3x - its source):
   hits send them twice as fast sideways, easing off in the air to about the old distance (Sim.LAUNCH_PACE / DRAG /
   FLING_DRAG), up and down x1.4 with gravity x1.4 while reeling (LAUNCH_LIFT - the same air time, higher), and a

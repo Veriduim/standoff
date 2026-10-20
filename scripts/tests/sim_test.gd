@@ -81,20 +81,26 @@ func _test_rules() -> void:
 	_check("a grab is out on frame 3, as YOMI's Throw (20 Oct 15:34 \"the standard 3\"): her Grab %d of %d, his Clinch %d"
 			% [Moves.startup(gm), int(gm["frames"]), Moves.startup(Moves.move("bruiser", "clinch"))],
 			Moves.startup(gm) == 3 and int(gm["frames"]) == 16 and Moves.startup(Moves.move("bruiser", "clinch")) == 3)
-	s = _duel("dancer", "dancer", 50.0)
+	s = _duel("dancer", "dancer", 50.0)   # (20 Oct, YOMI's frames: a grab out on 3, a jab on 4)
 	evs = _play(s, {0: {"move": "grab"}, 1: {"move": "jab"}})
-	_check("a strike beats a grab (%s)" % [_types(evs)], _types(evs).has("hit") and not _types(evs).has("throw")
+	var close_evs := _types(evs)
+	s = _duel("dancer", "dancer", 100.0)   # (out of the grab's reach, 84 - with his jab's lunge in - and in the jab's, 90)
+	evs = _play(s, {0: {"move": "grab"}, 1: {"move": "jab"}})
+	_check("point blank the grab's quicker than a jab (%s, frame 3 to 4 - YOMI's); further out the jab's reach wins (%s)"
+			% [close_evs, _types(evs)], close_evs.has("throw") and _types(evs).has("hit") and not _types(evs).has("throw")
 			and s.fighters[0].hp < 450)
 	s = _duel()
-	evs = _play(s, {0: {"move": "jab"}, 1: {"move": "block", "pf": 3}})
-	_check("a Block set to the frame the jab lands on (3) parries it - no damage (%s)" % [_types(evs)],
+	var jab_at := Moves.startup(Moves.move("dancer", "jab"))
+	evs = _play(s, {0: {"move": "jab"}, 1: {"move": "block", "pf": jab_at}})
+	_check("a Block set to the frame the jab lands on (%d) parries it - no damage (%s)" % [jab_at, _types(evs)],
 			_types(evs).has("parry") and s.fighters[1].hp == 450)
 	s = _duel()
-	evs = _play(s, {0: {"move": "jab"}, 1: {"move": "block", "pf": 5}})
+	evs = _play(s, {0: {"move": "jab"}, 1: {"move": "block", "pf": jab_at + 2}})
 	_check("...a frame off is just a block (%s)" % [_types(evs)], _types(evs).has("block") and not _types(evs).has("parry"))
 	s = _duel("dancer", "dancer", 80.0)
-	evs = _play(s, {0: {"move": "straight"}, 1: {"move": "block", "pf": 7}})
-	_check("...and a straight landing on frame 7 is parried on 7 (%s)" % [_types(evs)], _types(evs).has("parry"))
+	var st_at := Moves.startup(Moves.move("dancer", "straight"))
+	evs = _play(s, {0: {"move": "straight"}, 1: {"move": "block", "pf": st_at}})
+	_check("...and a straight landing on frame %d is parried on %d (%s)" % [st_at, st_at, _types(evs)], _types(evs).has("parry"))
 	s = _duel("dancer", "dancer", 70.0)
 	evs = _play(s, {0: {"move": "lowkick"}, 1: {"move": "block", "y": -1.0}})
 	var worse := evs.filter(func(e: Dictionary) -> bool: return e["type"] == "block" and e.get("worse", false))
@@ -1150,9 +1156,8 @@ func _test_bruiser() -> void:
 	var after_cross := s.legal_moves(0)
 	s.apply({0: {"move": "hook"}, 1: {"move": "hold"}})
 	s.run_segment()
-	_check("Jab (f%d - hers is f%d) -> Cross -> Hook: each there only right after the one before (combo %d)"
-			% [Moves.startup(kit["jab"]), Moves.startup(Moves.move("dancer", "jab")), s.fighters[1].combo],
-			Moves.startup(kit["jab"]) < Moves.startup(Moves.move("dancer", "jab")) and after_jab.has("cross")
+	_check("Jab (f%d, YOMI's punch) -> Cross -> Hook: each there only right after the one before (combo %d)"
+			% [Moves.startup(kit["jab"]), s.fighters[1].combo], Moves.startup(kit["jab"]) == 4 and after_jab.has("cross")
 			and not after_jab.has("hook") and after_cross.has("hook") and s.fighters[1].combo == 3)
 	var near := _duel("bruiser", "dancer", 50.0)
 	var e := {"dmg": 20, "stun": 14, "kb": [2.0, 0.0], "block": 6, "chip": 1, "box": [8, -88, 48, 18]}
@@ -1348,7 +1353,7 @@ func _test_bruiser() -> void:
 	# the universal blocking rule he leans on
 	var bl := _duel("bruiser", "dancer", 60.0)
 	bl.apply({0: {"move": "jab"}, 1: {"move": "block"}})
-	for _i in 4:
+	for _i in Moves.startup(Moves.move("bruiser", "jab")) + 1:
 		bl.step()
 	var stunned := bl.fighters[1].blockstun > 0
 	bl.fighters[1].blockstun = 6

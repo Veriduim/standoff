@@ -56,7 +56,7 @@ func _test_your_pick() -> void:
 	var sweep := p.drawer_grid.get_node("sweep") as MoveIcon
 	sweep.pressed.emit()
 	_check("tapping an icon picks the move and tucks the drawer away", str(p.choice["move"]) == "sweep"
-			and not p.drawer.visible and p.picked_label.text.begins_with("Sweep\nhits f9"))
+			and not p.drawer.visible and p.picked_label.text.begins_with("Sweep\nhits f%d" % Moves.startup(Moves.move("dancer", "sweep"))))
 	_check("a facing move aims at the nearest enemy (right) and only ← / → are usable on the pad",
 			float(p.choice["x"]) == 1.0 and (p.pad.get_node("d5") as Button).button_pressed
 			and not (p.pad.get_node("d3") as Button).disabled and (p.pad.get_node("d1") as Button).disabled
@@ -189,8 +189,8 @@ func _test_block_reads_guess() -> void:
 	p.select("straight")
 	p.guess(g.me)
 	p.select("block")
-	_check("guessing their straight sets your Block to parry on frame 7 (%s)" % [p.choice.get("pf", 0)],
-			int(p.choice.get("pf", 0)) == 7 and p.dist_row.visible and p.dist_name.text.begins_with("Parry"))
+	_check("guessing their straight sets your Block to parry on frame %d (%s)" % [Moves.startup(Moves.move("dancer", "straight")), p.choice.get("pf", 0)],
+			int(p.choice.get("pf", 0)) == Moves.startup(Moves.move("dancer", "straight")) and p.dist_row.visible and p.dist_name.text.begins_with("Parry"))
 	_check("...and the preview says you parry it (%s)" % p.info.text.replace("\n", " "), p.info.text.contains("You parry"))
 	g.queue_free()
 

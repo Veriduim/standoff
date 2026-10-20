@@ -51,6 +51,10 @@ const FRICTION := 0.8
 const SEGMENT_CAP := 900      ## ticks a segment may run without a decision (a safety net - 15 s)
 const CLASH_LOCK := 10
 const CLASH_PUSH := 5.0
+## Clashes as YOMI's (its source, 20 Oct): two strikes meeting clash only when both would land (or neither) and their
+## damage is within CLASH_DIFF (YOMI's 25 - its damage runs about twice ours); otherwise the stronger goes through. If
+## only one would land (the other can't be hit - invulnerable, out of reach), there's no clash: it lands.
+const CLASH_DIFF := 12
 const PARRY_STUN := 18
 const TECH_LOCK := 12
 const BAR := 125              ## meter per bar (the wiki's "level")...
@@ -1063,7 +1067,8 @@ func _resolve_hits() -> Dictionary:
 		kind[f.id] = _kind(f)
 		frame[f.id] = f.frame
 		live[f.id] = active_hits(f)
-	# clashes: two enemies' strikes meeting - both stopped
+	# clashes: two enemies' strikes meeting - YOMI's rule (CLASH_DIFF): both stopped when they're a match; the stronger
+	# goes through when they're not (the weaker stopped); none at all when only one of them would land
 	var clashed := {}
 	for a in alive():
 		for b in alive():
@@ -1071,9 +1076,21 @@ func _resolve_hits() -> Dictionary:
 				continue
 			for ea: Dictionary in live[a.id]:
 				for eb: Dictionary in live[b.id]:
-					if not clashed.has(a.id) and hitbox(a, ea).intersects(hitbox(b, eb)):
+					if clashed.has(a.id) or clashed.has(b.id) or not hitbox(a, ea).intersects(hitbox(b, eb)):
+						continue
+					var a_hit: bool = not invulnerable(a) and live[b.id].any(func(x: Dictionary) -> bool:
+						return hitbox(b, x).intersects(hurtbox(a)))
+					var b_hit: bool = not invulnerable(b) and live[a.id].any(func(x: Dictionary) -> bool:
+						return hitbox(a, x).intersects(hurtbox(b)))
+					if a_hit != b_hit:   # (only one would land - it does)
+						continue
+					var da := int(ea.get("dmg", 0))
+					var db := int(eb.get("dmg", 0))
+					if absi(da - db) < CLASH_DIFF:
 						clashed[a.id] = b
 						clashed[b.id] = a
+					else:   # (the stronger goes through - the weaker's stopped)
+						live[a.id if da < db else b.id] = []
 	for id in clashed:
 		var f := get_f(int(id))
 		f.move = ""

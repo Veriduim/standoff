@@ -375,6 +375,12 @@ one stage; each attack aims at a picked target.
 - 15:34 "grab the frame data for the basic attacks from YOMI as I think our grab is 5 frames instead of the standard 3"
   -> 0.39.1: it was - YOMI's Throw is out frames 3-5 of 16 (its source). Her Grab now 3-5 of 16 (was 5-6 of 22), his
   Clinch out on 3 (was 4; still 24 long). The table: docs/mechanics.md "Frame data".
+- 15:40 "I was actually saying we should change our frames to match YOMI's as their makes sense to me" -> 0.40.0:
+  every basic attack retimed to its nearest YOMI move (docs/mechanics.md "Frame data = YOMI's"; poses, lunges, low
+  profile and invulnerability stretched to fit - the retime script's map: the wind-up onto the new startup, the hit
+  onto the new active frames, the recovery onto the rest). Both jabs out on 4 (hers was 3, his 2). YOMI's clash rule
+  too (its source): a match in damage clashes, a mismatch goes through, a one-sided meeting isn't a clash - so an
+  invulnerable Uppercut or Gale goes through a strike out on the same frame. Bot matches as long as before.
 
 ## To tune / later
 - **Match length with 6:** bot matches take 120-270 decision points with 6 fighters (50-90 with 2). At ~10 s a decision
