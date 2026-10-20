@@ -823,7 +823,8 @@ func _next() -> void:
 		_commit({})
 
 
-## The match menu (☰ / Back): Resume, Restart (against bots), Quit to menu - or Leave match online.
+## The match menu (☰ / Back): Resume, Restart (bots and training only - not online), Sound, Hit boxes, Quit to menu - or
+## Leave match online. (How to play went back to the home screen - 20 Oct 17:18.)
 func _build_menu() -> void:
 	menu_panel = PanelContainer.new()
 	var st := Ui.box(Color("#15161ef4"), 16)
@@ -840,7 +841,7 @@ func _build_menu() -> void:
 	t.name = "MenuTitle"
 	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(t)
-	for b: Array in [["Resume", "Resume"], ["Restart", "Restart"], ["Help", "How to play"], ["Sound", Sfx.label()],
+	for b: Array in [["Resume", "Resume"], ["Restart", "Restart"], ["Sound", Sfx.label()],
 			["Boxes", PickPanel.boxes_label()], ["Quit", "Quit to menu"]]:
 		var id: String = b[0]
 		var btn := Ui.button(str(b[1]), func() -> void: _menu_pick(id), 22)
@@ -879,8 +880,6 @@ func _menu_pick(id: String) -> void:
 		return
 	_menu_shown(false)
 	match id:
-		"Help":   # (the match waits while the cards are up)
-			how.open()
 		"Restart":
 			start_local(setup_count, setup_mode, setup_colour, training)
 		"Quit":

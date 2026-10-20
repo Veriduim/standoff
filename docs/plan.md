@@ -420,6 +420,10 @@ one stage; each attack aims at a picked target.
   of arrows. So our order is action icon - text - distance(when applicable) - direction arrows - confirm" -> 0.44.2:
   Boxes off the bar, a match-menu setting ("Hit boxes: on / off", by Sound; kept between plays - PickPanel.boxes);
   the card's order icon - text - Distance - arrows (theirs mirrored); the bar's middle is Confirm alone.
+- 17:18 "remove how to play from hamburger menu and put that back in main menu. Restart is fine as long as its only for
+  bot games and dummy games" -> 0.44.3: How to play is a button on the home screen by Training and Replays (it was a
+  small "?"), not in the ☰ menu; Restart there already shows offline only (bots, training). Her card's tag is "Spacer
+  · war fans" and her How to play card describes the melee spacer (it still told of Fan Ward and Fan Gust).
 
 ## To tune / later
 - **Match length with 6:** bot matches take 120-270 decision points with 6 fighters (50-90 with 2). At ~10 s a decision

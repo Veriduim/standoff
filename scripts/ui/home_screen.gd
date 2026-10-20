@@ -18,7 +18,7 @@ const SETTINGS := "user://settings.cfg"
 ## The fighter you play - the Dancer or the Bruiser (05:03 "we will work on our next char"); saved, read by every match
 ## you start or join.
 static var fighter := "dancer"
-const TAGS := {"dancer": "Zoner · war fans", "bruiser": "Rushdown · Muay Thai"}
+const TAGS := {"dancer": "Spacer · war fans", "bruiser": "Rushdown · Muay Thai"}   # (a melee spacer since 20 Oct)
 
 var colour := 0
 var opponents := 3
@@ -152,10 +152,9 @@ func _ready() -> void:
 	for s in ["normal", "hover", "focus"]:
 		snd.add_theme_stylebox_override(s, Ui.box(Color("#1e2029e8"), 12))
 	add_child(snd)
-	var how := Ui.button("?", func() -> void: help.emit(), 24)   # (How to play - a small icon by it)
-	how.name = "HowToPlay"
-	how.custom_minimum_size = Vector2(52, 48)
-	for s in ["normal", "hover", "focus"]:
+	var how := Ui.button("How to play", func() -> void: help.emit(), 18)   # (20 Oct 17:18 "remove how to play from
+	how.name = "HowToPlay"                                                  # hamburger menu and put that back in main
+	for s in ["normal", "hover", "focus"]:                                  # menu" - a button by Training and Replays)
 		how.add_theme_stylebox_override(s, Ui.box(Color("#1e2029e8"), 12))
 	add_child(how)
 	var rep := Ui.button("Replays", func() -> void: replays.emit(), 18)
@@ -168,7 +167,7 @@ func _ready() -> void:
 	for s in ["normal", "hover", "focus"]:
 		train.add_theme_stylebox_override(s, Ui.box(Color("#2b6e4a"), 12))
 	add_child(train)
-	for b: Button in [rep, train]:   # (just these two along the bottom)
+	for b: Button in [rep, train, how]:   # (these three along the bottom)
 		b.custom_minimum_size = Vector2(150, 50)
 		b.add_theme_constant_override("h_separation", 0)
 		for look in ["normal", "hover", "focus", "pressed"]:
@@ -274,7 +273,6 @@ func _layout() -> void:
 	var ver := get_node("Version") as Label
 	ver.position = Vector2(24, vp.y - 36)
 	(get_node("Sound") as Button).position = Vector2(14, 12)   # (top left, small)
-	(get_node("HowToPlay") as Button).position = Vector2(72, 12)
 	var gap := 16.0   # (your fighter: the two cards side by side under the title)
 	var row_w := 0.0
 	for fc in picks:
@@ -287,7 +285,7 @@ func _layout() -> void:
 		fc.position = Vector2(px, py)
 		px += fc.size.x + gap
 	var x := 24.0
-	for n: String in ["Training", "Replays"]:   # (side by side along the bottom)
+	for n: String in ["Training", "Replays", "HowToPlay"]:   # (side by side along the bottom)
 		var b := get_node(n) as Button
 		b.reset_size()
 		b.position = Vector2(x, vp.y - 92)

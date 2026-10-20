@@ -23,9 +23,9 @@ const PAGES := [
 		"takes a turn back.", "taunt"],
 	["Getting hit", "Stuck in a combo? Pick Hold and tap an arrow to lean away. When your Burst bar is full, BURST " +
 		"throws everyone off you. Block: ↑ high, ↓ low.", "burst"],
-	["The Dancer", "A zoner with two war fans. Thrown, they fly back to her hand; Fan Ward leaves one hanging as a " +
-		"trap, and Recall pulls them home through anyone in the way. Fan Gust blows rushers and shots off her. Hits " +
-		"at the fan's edge hurt most; point blank she's weaker - keep them out there.", "sidekick"],
+	["The Dancer", "A spacer whose war fans are her blades. The Arabesque reaches furthest, the Fouetté whips at hip " +
+		"height, the Plié Cut goes low, Port de Bras sweeps the air above her. Thrown, a fan flies back; Fan Step " +
+		"blinks her to it. Hits at the fan's edge hurt most; point blank she's weaker - fight at her reach.", "sidekick"],
 	["The Bruiser", "A rushdown - Muay Thai and a boxer's hands. Jab, Cross, Hook; Bob & Weave slips shots; his big " +
 		"hits send them flying and Chase runs them down. Armour (🛡) takes one hit. Clinch holds them for knees. Grit " +
 		"builds as he trades - full, the K.O. Punch. Floored, he loses half.", "haymaker", "bruiser"],

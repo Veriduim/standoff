@@ -463,7 +463,7 @@ func _test_pad_neutral() -> void:
 
 
 func _test_how_to_play() -> void:
-	_section("How to play (01:32): cards from the home screen and the ☰ menu; the match waits while they're up")
+	_section("How to play (01:32): cards from the home screen's How to play button (17:18 - not the ☰ menu)")
 	var g := _screen()
 	var shut: bool = not g.how.visible   # (the tests: it doesn't pop up by itself)
 	g.home.help.emit()
@@ -477,12 +477,10 @@ func _test_how_to_play() -> void:
 			and HowToPlay.seen())
 	g.start_local(1, "ffa")
 	g.toggle_menu()
-	g._menu_pick("Help")
-	var t0: float = g._turn_left
-	g._process(1.0)
-	_check("from the ☰ menu: up over the match, and the turn clock waits", g.how.visible
-			and is_equal_approx(g._turn_left, t0))
-	g.how.close()
+	_check("not in the ☰ menu any more - a How to play button on the home screen (20 Oct 17:18); Restart there "
+			+ "offline only", g.menu_panel.find_child("MenuHelp", true, false) == null
+			and (g.home.find_child("HowToPlay", true, false) as Button).text == "How to play"
+			and (g.menu_panel.find_child("MenuRestart", true, false) as Button).visible)
 	g.queue_free()
 
 
