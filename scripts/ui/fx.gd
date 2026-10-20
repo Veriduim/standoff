@@ -136,13 +136,18 @@ func on_event(type: String, at: Vector2, face: float, dmg: int, by: Color, victi
 		"whiff":   # (a Whiff Cancel: a quick white ring off them)
 			_add("shock", at, Vector2.ZERO, 0.18, Color.WHITE, 46.0)
 		# the Bruiser (05:27 "his effects of slapping an enemy accross map" - the Nakmuay mod, studied; our own drawing)
-		"fling":   # (a big hit sending them off: a tall ring of air bursting out the way they fly, wind streaks, cracks)
+		"fling":   # (a big hit sending them off: a tall ring of air bursting out the way they fly, cracks - and streaks
+			# trailing BEHIND the impact, the momentum of his strike (15:21 "Put them behind the impact to try and show the
+			# momentum of his punch" - they used to fly off across the screen the way she went; sized by the fighters,
+			# 15:10: only where the move reaches))
 			_add_scr("boom", at + Vector2(face * 10.0, 0.0), Vector2.ZERO, 0.48, by.lightened(0.7), 0.36, 0.0, face)
 			_add_scr("boom", at + Vector2(face * 34.0, 0.0), Vector2.ZERO, 0.4, by.lightened(0.45), 0.24, 0.0, face)
-			for i in 14:   # (streaks of wind across the screen the way they're sent - screen-sized, 14:09)
-				var off := Vector2(_rng.randf_range(-0.03, 0.03), _rng.randf_range(-0.16, 0.16)) * band / maxf(view_zoom, 0.05)
-				_add_scr("hwind", at + off, Vector2(face * _rng.randf_range(1800.0, 2800.0), 0.0), _rng.randf_range(0.26, 0.4),
-						Color("#eef4ff"), _rng.randf_range(0.2, 0.42))
+			for i in 9:   # (momentum lines in his colour: each thick by the impact, thinning back toward him, easing on
+				# into it - over the starburst, under the fighters)
+				var off := Vector2(-face * _rng.randf_range(4.0, 34.0), _rng.randf_range(-36.0, 36.0))
+				_add("mline", at + off, Vector2(face * _rng.randf_range(120.0, 320.0), 0.0), _rng.randf_range(0.26, 0.38),
+						by.lightened(0.35), _rng.randf_range(80.0, 170.0), face)
+				parts[-1]["w"] = 0.0
 			if at.y > -140.0:
 				_add("crack", Vector2(at.x, 0.0), Vector2.ZERO, 1.4, Color("#c9ccd8"), 120.0, face)
 			splash(0.45, at)
@@ -626,7 +631,7 @@ func draw_back(st: StageView) -> void:
 		var k := str(p["k"])
 		if float(p["age"]) < 0.0:   # (not started yet - a delayed part)
 			continue
-		if k in ["bubble", "floorring", "ribbon", "crack", "spikes", "bigstar", "puff"]:
+		if k in ["bubble", "floorring", "ribbon", "crack", "spikes", "bigstar", "puff", "mline"]:
 			_draw_back_part(st, p)
 			continue
 		if k != "ink":
@@ -658,6 +663,13 @@ func _draw_back_part(st: StageView, p: Dictionary) -> void:
 	var at := st.w2s(p["p"])
 	var z := band if p.has("scr") else st.zoom   # (a screen-sized part: its size is a share of the band)
 	match str(p["k"]):
+		"mline":   # (a momentum line behind a big strike: a long wedge, thick at the impact end, thin back toward him)
+			var ln := float(p["s"]) * z * (1.0 - 0.45 * t)
+			var wd := maxf(2.0, 7.0 * z) * (1.0 - 0.6 * t)
+			var back := Vector2(-float(p["x"]), 0.0)
+			c.a = 0.95 * (1.0 - t * t)
+			st.draw_colored_polygon(PackedVector2Array([at + Vector2(0.0, -wd / 2.0), at + Vector2(0.0, wd / 2.0),
+					at + back * ln]), c)
 		"puff":   # (smoke behind knockback: a soft grey puff swelling and thinning)
 			c.a = 0.42 * (1.0 - t) * (1.0 - t)
 			st.draw_circle(at, float(p["s"]) * z * (0.6 + 0.9 * t), c, true, -1.0, true)
@@ -762,7 +774,7 @@ func draw_parts(st: StageView) -> void:
 		var c: Color = p["c"]
 		var s := float(p["s"]) * (band if p.has("scr") else z)   # (screen-sized parts: a share of the band)
 		match str(p["k"]):
-			"ink", "bubble", "floorring", "ribbon", "crack", "spikes", "bigstar", "puff":   # (behind the fighters - draw_back)
+			"ink", "bubble", "floorring", "ribbon", "crack", "spikes", "bigstar", "puff", "mline":   # (behind the fighters - draw_back)
 				pass
 			"wring":   # (a wide thin ring opening out round a big moment; x = how strong)
 				var e := 1.0 - pow(1.0 - t, 2.0)

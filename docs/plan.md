@@ -360,6 +360,11 @@ one stage; each attack aims at a picked target.
     floor carrying their own hit, and one short bump of the camera - nothing screen-wide. Now: 14 spikes and 36 bits of
     debris over its own strip (Fx.QUAKE_REACH 100, world sizes - the tallest by his foot), the floor ring and crack
     that size, and a light shake (2.5).
+- 15:21 "Drop this streaks for hay maker. Actually. Put them behind the impact to try and show the momentum of his
+  punch?" -> 0.39.0: a fling's streaks (Haymaker, Teep, Roundhouse, Clinch Elbow, Bull Rush - one shared effect)
+  no longer fly off across the screen the way she goes. Nine momentum lines in his colour trail BEHIND the impact,
+  back toward him - long wedges, thick at the impact end, easing on into it (Fx "mline"); over the starburst, under
+  the fighters; fighter-sized.
 
 ## To tune / later
 - **Match length with 6:** bot matches take 120-270 decision points with 6 fighters (50-90 with 2). At ~10 s a decision

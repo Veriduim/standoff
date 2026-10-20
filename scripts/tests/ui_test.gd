@@ -846,6 +846,13 @@ func _test_big_effects() -> void:
 	var debris := fx2.parts.filter(func(p: Dictionary) -> bool: return str(p["k"]) == "chip" and p.has("scr")).size()
 	_check("no words or numbers on the stage (%d) and no push-in on big hits; a wall splat throws %d big chunks off the "
 			% [words, debris] + "wall (YOMI's wall slam)", words == 0 and debris >= 30 and fx2.get("punch") == null)
+	fx2.parts.clear()
+	fx2.on_event("fling", Vector2(0.0, -80.0), 1.0, 0, Color.RED, 1, Color.BLUE, false, 10)   # (his strike going right)
+	var behind := fx2.parts.filter(func(p: Dictionary) -> bool: return str(p["k"]) == "mline")
+	var trail_ok := not behind.is_empty() and behind.all(func(p: Dictionary) -> bool:
+		return (p["p"] as Vector2).x < 0.0 and not p.has("scr") and (p["v"] as Vector2).x > 0.0)
+	_check("a fling's streaks trail behind the impact, on his side, his strike's momentum (15:21) - fighter-sized, not "
+			+ "across the screen (%d)" % behind.size(), trail_ok)
 
 
 ## Every character past plain ASCII inside the game's strings (as tools/icon_fonts.py scans: comments aren't shown).
