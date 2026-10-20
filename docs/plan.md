@@ -396,6 +396,11 @@ one stage; each attack aims at a picked target.
   Ripple, Fan Ward, Fan Gust and Fan Flick cut (their code was all data - nothing left behind but generic shot and
   effect code). Her bots play her range with pokes, a Pirouette in, a Jeté over lows; the zoner-kit test is now
   the melee-spacer test.
+  0.43.0, group 3 - the supers: Fouetté Storm (Fan Storm's id, 1 bar: five whipping kicks travelling on, the last
+  floors them), the Grand Finale (3 bars: Pirouette in, three Fouettés, a Grand Jeté landing on a cut that floors them,
+  then the Révérence bow - 112 damage on a fresh opponent after combo scaling), Encore a melee flurry (three cuts, the
+  last floors them); Gale kept; the Cyclone cut. Bot matches as long as before (1v1 ~97 turns). docs/dancer.md
+  rewritten for the melee spacer.
 
 ## To tune / later
 - **Match length with 6:** bot matches take 120-270 decision points with 6 fighters (50-90 with 2). At ~10 s a decision

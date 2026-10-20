@@ -234,49 +234,39 @@ const DANCER := {
 		# ---- show-off
 		"taunt": {"name": "Taunt", "tab": "defend", "kind": "wait", "interrupt": true, "frames": 50, "where": "ground", "aim": "facing",
 			"meter_gain": 125, "pose": [[0, "taunt"]]},
-		# ---- supers
-		# (03:03 "Why are all the supers for Dancer melee supers when she is supposed to be a zoner char?" - a zoner's:
-		# fans from range, wind to get room, a whirlwind that holds the space, fans from the sky. Spectral fans - her two
-		# stay in her hands.)
-		"fanstorm": {"name": "Fan Storm", "tab": "super", "kind": "super", "frames": 34, "where": "ground", "aim": "facing",
-			"cost": 125, "invuln": [0, 4],
-			"spawn": [
-				{"at": 8, "kind": "sfan", "speed": 13.0, "from": [30, -84], "dir": [1.0, -0.7], "box": [26, 20], "dmg": 14, "stun": 13, "kb": [3.0, -3.0], "block": 6, "chip": 2, "life": 60},
-				{"at": 10, "kind": "sfan", "speed": 13.0, "from": [30, -80], "dir": [1.0, -0.38], "box": [26, 20], "dmg": 14, "stun": 13, "kb": [3.0, -3.0], "block": 6, "chip": 2, "life": 60},
-				{"at": 12, "kind": "sfan", "speed": 13.0, "from": [30, -76], "dir": [1.0, 0.0], "box": [26, 20], "dmg": 14, "stun": 13, "kb": [3.0, -3.0], "block": 6, "chip": 2, "life": 60},
-				{"at": 14, "kind": "sfan", "speed": 13.0, "from": [30, -64], "dir": [1.0, 0.2], "box": [26, 20], "dmg": 14, "stun": 13, "kb": [3.0, -3.0], "block": 6, "chip": 2, "life": 60},
-				{"at": 16, "kind": "sfan", "speed": 13.0, "from": [30, -78], "dir": [1.0, -0.16], "box": [26, 20], "dmg": 14, "stun": 13, "kb": [3.0, -3.0], "block": 6, "chip": 2, "life": 60},
-			],
-			"pose": [[0, "gather"], [4, "twirl_a"], [6, "twirl_b"], [8, "throw_out"], [10, "throw_back"], [12, "throw_out"],
-				[14, "throw_back"], [16, "fan_spread"], [27, "idle"]],
-			"icon": "fan_spread"},
+		# (her supers, a melee spacer's - 20 Oct 16:17: the dance itself, her fans the blades. Fouetté Storm - 1 bar: five
+		# whipping kicks as she travels on, the last floors them)
+		"fanstorm": {"name": "Fouetté Storm", "tab": "super", "kind": "super", "frames": 46, "where": "ground",
+			"aim": "facing", "cost": 125, "invuln": [0, 4], "no_cancel": true, "drawn": true,
+			"motion": [[4, 34, 5.0, 0.0]], "cue": {"at": 6, "type": "sweep"},
+			"hits": [{"from": 8, "to": 9, "box": [-16, -96, 92, 56], "dmg": 14, "stun": 14, "kb": [1.5, 0.0], "block": 8, "chip": 1, "group": 0},
+				{"from": 14, "to": 15, "box": [-16, -96, 92, 56], "dmg": 14, "stun": 14, "kb": [1.5, 0.0], "block": 8, "chip": 1, "group": 1},
+				{"from": 20, "to": 21, "box": [-16, -96, 92, 56], "dmg": 14, "stun": 14, "kb": [1.5, 0.0], "block": 8, "chip": 1, "group": 2},
+				{"from": 26, "to": 27, "box": [-16, -96, 92, 56], "dmg": 14, "stun": 14, "kb": [1.5, 0.0], "block": 8, "chip": 1, "group": 3},
+				{"from": 32, "to": 33, "box": [-16, -96, 92, 56], "dmg": 28, "stun": 26, "kb": [7.0, -8.0], "block": 9, "chip": 2, "group": 4, "knockdown": true}],
+			"pose": [[0, "fou_chamber"], [8, "fou_kick"], [11, "fou_chamber"], [14, "fou_kick"], [17, "fou_chamber"],
+				[20, "fou_kick"], [23, "fou_chamber"], [26, "fou_kick"], [29, "fou_chamber"], [32, "fou_kick"], [40, "idle"]],
+			"icon": "fou_kick"},
 		"gale": {"name": "Gale", "tab": "super", "kind": "super", "frames": 30, "where": "both", "aim": "none", "cost": 125,
 			"invuln": [0, 9],
 			"hits": [{"from": 6, "to": 9, "box": [-110, -150, 220, 160], "dmg": 30, "stun": 24, "kb": [10.0, -6.0],
 				"block": 10, "chip": 4, "group": 0, "away": true}],
 			"cue": [{"at": 6, "type": "gust"}, {"at": 6, "type": "sweep_up"}, {"at": 6, "type": "galering"}],
 			"pose": [[0, "gather"], [5, "fan_spread"], [17, "fan_spread"], [24, "idle"]], "icon": "fan_spread"},
-		"cyclone": {"name": "Cyclone", "tab": "super", "kind": "super", "frames": 36, "where": "ground", "aim": "facing",
-			"cost": 250, "cue": {"at": 10, "type": "sweep"},
-			"spawn": [{"at": 12, "kind": "cyclone", "speed": 3.5, "from": [50, -62], "dir": [1.0, 0.0], "box": [70, 124],
-				"dmg": 11, "stun": 14, "kb": [1.0, -5.0], "block": 4, "chip": 2, "life": 100, "pierce": true, "rehit": 10,
-				"heavy": true, "parry": false}],
-			"pose": [[0, "gather"], [3, "twirl_a"], [6, "twirl_b"], [9, "twirl_a"], [12, "throw_out"], [26, "idle"]],
-			"icon": "twirl_a"},
-		"finale": {"name": "Grand Finale", "tab": "super", "kind": "super", "frames": 48, "where": "ground", "aim": "facing",
-			"cost": 375, "invuln": [0, 12], "cue": {"at": 8, "type": "sweep_up"},
-			"spawn": [
-				{"at": 14, "kind": "sfan", "speed": 15.0, "from": [70, -440], "dir": [0.12, 1.0], "box": [30, 28], "dmg": 15, "stun": 16, "kb": [2.0, -4.0], "block": 6, "chip": 2, "life": 70},
-				{"at": 16, "kind": "sfan", "speed": 15.0, "from": [125, -440], "dir": [0.12, 1.0], "box": [30, 28], "dmg": 15, "stun": 16, "kb": [2.0, -4.0], "block": 6, "chip": 2, "life": 70},
-				{"at": 18, "kind": "sfan", "speed": 15.0, "from": [180, -440], "dir": [0.12, 1.0], "box": [30, 28], "dmg": 15, "stun": 16, "kb": [2.0, -4.0], "block": 6, "chip": 2, "life": 70},
-				{"at": 20, "kind": "sfan", "speed": 15.0, "from": [235, -440], "dir": [0.12, 1.0], "box": [30, 28], "dmg": 15, "stun": 16, "kb": [2.0, -4.0], "block": 6, "chip": 2, "life": 70},
-				{"at": 22, "kind": "sfan", "speed": 15.0, "from": [290, -440], "dir": [0.12, 1.0], "box": [30, 28], "dmg": 15, "stun": 16, "kb": [2.0, -4.0], "block": 6, "chip": 2, "life": 70},
-				{"at": 24, "kind": "sfan", "speed": 15.0, "from": [345, -440], "dir": [0.12, 1.0], "box": [30, 28], "dmg": 15, "stun": 16, "kb": [2.0, -4.0], "block": 6, "chip": 2, "life": 70},
-				{"at": 26, "kind": "sfan", "speed": 15.0, "from": [400, -440], "dir": [0.12, 1.0], "box": [30, 28], "dmg": 15, "stun": 16, "kb": [2.0, -4.0], "block": 6, "chip": 2, "life": 70},
-				{"at": 28, "kind": "sfan", "speed": 15.0, "from": [455, -440], "dir": [0.12, 1.0], "box": [30, 28], "dmg": 15, "stun": 16, "kb": [2.0, -4.0], "block": 6, "chip": 2, "life": 70},
-			],
-			"pose": [[0, "gather"], [4, "twirl_a"], [7, "twirl_b"], [10, "twirl_a"], [12, "throw_high"], [16, "fan_up"],
-				[30, "fan_spread"], [42, "idle"]], "icon": "throw_high"},
+		# (the Grand Finale - 3 bars: a Pirouette in, three Fouettés, a Grand Jeté landing on a cut that floors them, and
+		# the Révérence - her bow)
+		"finale": {"name": "Grand Finale", "tab": "super", "kind": "super", "frames": 92, "where": "ground", "aim": "facing",
+			"cost": 375, "invuln": [0, 12], "no_cancel": true, "drawn": true, "cue": {"at": 8, "type": "sweep_up"},
+			"motion": [[2, 14, 8.0, 0.0], [16, 34, 3.0, 0.0], [40, 47, 6.0, -7.0]],
+			"hits": [{"from": 10, "to": 11, "box": [-34, -100, 96, 64], "dmg": 24, "stun": 18, "kb": [1.0, 0.0], "block": 8, "chip": 2, "group": 0},
+				{"from": 14, "to": 15, "box": [-10, -104, 102, 44], "dmg": 24, "stun": 18, "kb": [1.0, 0.0], "block": 8, "chip": 2, "group": 1},
+				{"from": 20, "to": 21, "box": [-16, -96, 92, 56], "dmg": 20, "stun": 20, "kb": [1.0, 0.0], "block": 8, "chip": 1, "group": 2},
+				{"from": 26, "to": 27, "box": [-16, -96, 92, 56], "dmg": 20, "stun": 20, "kb": [1.0, 0.0], "block": 8, "chip": 1, "group": 3},
+				{"from": 32, "to": 33, "box": [-16, -96, 92, 56], "dmg": 20, "stun": 30, "kb": [1.0, -1.0], "block": 8, "chip": 1, "group": 4},
+				{"from": 54, "to": 55, "box": [6, -64, 78, 80], "dmg": 80, "stun": 40, "kb": [8.0, -9.0], "block": 12, "chip": 3, "group": 5, "knockdown": true}],
+			"pose": [[0, "pir_prep"], [10, "pir_spin"], [14, "pir_cut"], [18, "fou_chamber"], [20, "fou_kick"],
+				[23, "fou_chamber"], [26, "fou_kick"], [29, "fou_chamber"], [32, "fou_kick"], [38, "jete_prep"],
+				[44, "jete_air"], [54, "jete_land"], [66, "bow"], [86, "bow"], [90, "idle"]], "icon": "bow"},
 		# (Grand Jeté - a leap over low hits: a deep coil, the split in the air, landing on a cut; YOMI's dive kick,
 		# out on 12. Clear of a low by frame 7)
 		"updraft": {"name": "Grand Jeté", "tab": "special", "kind": "attack", "frames": 34, "where": "ground",
@@ -307,19 +297,16 @@ const DANCER := {
 		"recall": {"name": "Recall", "tab": "special", "kind": "special", "xf": "fans", "recall_at": 3, "frames": 12,
 			"where": "both", "aim": "lean", "float": true,   # (no direction: home; a direction: fling them that way first)
 			"pose": [[0, "throw_out"], [3, "throw_wind"], [9, "idle"]], "icon": "throw_wind"},
-		# Tempo: a beat for landing or having a move blocked, or dodging through a hit; four = Encore (spends them). Since
-		# 05:03 a zoner's finisher - from range, not a rush in: a pirouette, then three spectral fans in a burst, the last
-		# one floors them (it was a four-kick melee string)
+		# (Encore - Tempo full: a flurry of three cuts, the last floors them - a melee finisher since 20 Oct; it was three
+		# spectral fans)
 		"encore": {"name": "Encore", "tab": "special", "kind": "special", "xf": "tempo", "tempo": 4, "frames": 36,
-			"where": "ground", "aim": "facing", "invuln": [0, 4], "note": "three fans in a burst - the last floors them",
-			"cue": {"at": 6, "type": "sweep"},
-			"spawn": [
-				{"at": 10, "kind": "sfan", "speed": 14.0, "from": [30, -88], "dir": [1.0, -0.12], "box": [30, 24], "dmg": 18, "stun": 18, "kb": [2.0, -1.0], "block": 8, "chip": 2, "life": 50},
-				{"at": 13, "kind": "sfan", "speed": 14.0, "from": [30, -72], "dir": [1.0, 0.0], "box": [30, 24], "dmg": 18, "stun": 18, "kb": [2.0, -1.0], "block": 8, "chip": 2, "life": 50},
-				{"at": 16, "kind": "sfan", "speed": 15.0, "from": [30, -80], "dir": [1.0, -0.05], "box": [34, 28], "dmg": 30, "stun": 30, "kb": [6.0, -9.0], "block": 12, "chip": 3, "life": 50, "knockdown": true},
-			],
-			"pose": [[0, "gather"], [4, "twirl_a"], [7, "twirl_b"], [10, "throw_out"], [13, "throw_back"], [16, "fan_spread"],
-				[28, "idle"]], "icon": "fan_spread"},
+			"where": "ground", "aim": "facing", "invuln": [0, 4], "no_cancel": true, "drawn": true,
+			"note": "three cuts - the last floors them", "cue": {"at": 6, "type": "sweep"},
+			"motion": [[2, 10, 6.0, 0.0]],
+			"hits": [{"from": 8, "to": 9, "box": [6, -96, 84, 40], "dmg": 14, "stun": 18, "kb": [1.0, 0.0], "block": 8, "chip": 1, "group": 0},
+				{"from": 12, "to": 13, "box": [-10, -104, 102, 44], "dmg": 14, "stun": 18, "kb": [1.0, 0.0], "block": 8, "chip": 1, "group": 1},
+				{"from": 16, "to": 17, "box": [14, -98, 88, 28], "dmg": 26, "stun": 30, "kb": [6.0, -9.0], "block": 10, "chip": 2, "group": 2, "knockdown": true}],
+			"pose": [[0, "pir_prep"], [8, "tap_hit"], [12, "pir_cut"], [16, "arab_hit"], [28, "idle"]], "icon": "arab_hit"},
 		# Forms: Flow (as she is), Snap (sharp: her strikes do more and stun longer; Pop, Snap Kick), Floor (low: high
 		# hits pass over her; only her floor moves - Windmill, Kip-Up back to Flow, Floor Slide - and defence)
 		"snapform": {"name": "Snap Form", "tab": "special", "kind": "move", "xf": "forms", "to_form": "snap",

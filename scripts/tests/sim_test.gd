@@ -814,20 +814,20 @@ func _test_melee_spacer() -> void:
 	_check("the bots only reach for moves she still has (%s)" % [bot_moves.filter(func(m: String) -> bool:
 			return not kit.has(m))], bot_moves.all(known))
 
-func _test_zoner_supers() -> void:
-	_section("Her supers, a zoner's (03:03): Fan Storm's volley, Gale's wind, the Cyclone holding the space, fans from the sky")
-	var s := _duel("dancer", "dancer", 380.0)
+func _test_dance_supers() -> void:
+	_section("Her supers, a melee spacer's (20 Oct): Fouetté Storm's kicks, Gale's wind, the Grand Finale's dance and bow")
+	var s := _duel("dancer", "dancer", 110.0)
 	s.fighters[0].meter = Sim.METER_MAX
 	s.fighters[1].burst = 0
+	var x0 := s.fighters[0].pos.x
 	s.apply({0: {"move": "fanstorm", "x": 1.0}, 1: {"move": "wait"}})
-	var most := 0
-	var hit := false
+	var kicks := 0
 	for _i in 60:
+		s.events.clear()
 		s.step()
-		most = maxi(most, s.shots.size())
-		hit = hit or s.events.any(func(e: Dictionary) -> bool: return str(e["type"]) == "hit" and int(e["a"]) == 0)
-	_check("Fan Storm: five fans in a spread from range (most out %d), it lands, her own two still in hand (%d)" % [most,
-			s.fighters[0].fans], most == 5 and hit and s.fighters[0].fans == Sim.FANS_MAX)
+		kicks += s.events.filter(func(e: Dictionary) -> bool: return str(e["type"]) == "hit" and int(e["a"]) == 0).size()
+	_check("Fouetté Storm: whipping kicks as she travels on (%d land, %.0f px), the last floors them (down %d)" % [kicks,
+			s.fighters[0].pos.x - x0, s.fighters[1].down], kicks >= 4 and s.fighters[0].pos.x - x0 > 80.0)
 	var g := _duel("dancer", "dancer", 60.0)
 	g.fighters[0].meter = Sim.METER_MAX
 	g.apply({0: {"move": "gale"}, 1: {"move": "straight", "x": -1.0}})
@@ -836,31 +836,22 @@ func _test_zoner_supers() -> void:
 	_check("Gale: wind all round her blows a rusher off (gap %.0f, she's untouched %d)" % [absf(g.fighters[1].pos.x
 			- g.fighters[0].pos.x), g.fighters[0].hp], absf(g.fighters[1].pos.x - g.fighters[0].pos.x) > 140.0
 			and g.fighters[0].hp == g.fighters[0].max_hp)
-	var c := _duel("dancer", "dancer", 260.0)
-	c.fighters[0].meter = Sim.METER_MAX
-	c.fighters[1].burst = 0
-	c.apply({0: {"move": "cyclone", "x": 1.0}, 1: {"move": "wait"}})
-	var hits := 0
-	for _i in 120:
-		c.step()
-		hits += c.events.filter(func(e: Dictionary) -> bool: return str(e["type"]) == "hit" and int(e["a"]) == 0).size()
-		if not c.deciders().is_empty():
-			var hold := {}
-			for id in c.deciders():
-				hold[id] = {"move": "hold"} if not c.fighters[id].actionable() else {"move": "wait"}
-			c.apply(hold)
-	_check("Cyclone: a whirlwind that keeps hitting whoever's in it (%d hits)" % hits, hits >= 3)
-	var r := _duel("dancer", "dancer", 300.0)
+	var r := _duel("dancer", "dancer", 110.0)
 	r.fighters[0].meter = Sim.METER_MAX
 	r.fighters[1].burst = 0
 	r.apply({0: {"move": "finale", "x": 1.0}, 1: {"move": "wait"}})
-	var from_sky := false
-	var rain_hit := false
-	for _i in 90:
+	var steps := 0
+	var bowed := false
+	for _i in 100:
+		r.events.clear()
 		r.step()
-		from_sky = from_sky or r.shots.any(func(sh: Dictionary) -> bool: return (sh["pos"] as Vector2).y < -400.0)
-		rain_hit = rain_hit or r.events.any(func(e: Dictionary) -> bool: return str(e["type"]) == "hit" and int(e["a"]) == 0)
-	_check("Grand Finale: fans from the sky across the stage, and they land", from_sky and rain_hit)
+		steps += r.events.filter(func(e: Dictionary) -> bool: return str(e["type"]) == "hit" and int(e["a"]) == 0).size()
+		var pose := Poses.for_record("dancer", r.record()[0])
+		bowed = bowed or (r.fighters[0].move == "finale" and r.fighters[0].frame >= 70
+				and ((pose["head"] as Vector2) - (Poses.get_pose("bow")["head"] as Vector2)).length() < 1.0)
+	_check("Grand Finale: the whole dance lands (%d of 6 cuts), floors them (%d left of 450), and she bows (%s)" % [steps,
+			r.fighters[1].hp, bowed], steps >= 5 and r.fighters[1].hp < 360 and bowed)
+	_check("the Cyclone's gone (a zoner's whirlwind)", not Moves.of("dancer").has("cyclone"))
 
 
 ## Two Dancers with these x-factors on (Sim RULES "xf"), gap apart, facing each other.

@@ -14,7 +14,7 @@ const FORM_SWITCH := ["snapform", "floorform", "flowform"]
 const AIR := ["airkick", "airknee", "airdash", "fastfall", "block", "wait", "airfan", "airthrow", "airjump",
 	"airknee"]
 const GRABS := ["grab"]
-const SUPERS := ["fanstorm", "gale", "cyclone", "finale"]
+const SUPERS := ["fanstorm", "gale", "fanstorm", "finale"]
 const CLOSE_IN := ["walk", "dash", "roll", "floorslide", "fanstep"]
 const BACK_OFF := ["backstep", "walk", "dash"]
 ## A spacer (the Dancer - a melee one since 20 Oct, her fans her blades) plays her range: point blank she makes room...
