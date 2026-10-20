@@ -47,7 +47,7 @@ func _test_your_pick() -> void:
 				"Defense"] and tab_of.call("wait") == "move" and tab_of.call("grab") == "attack"
 			and tab_of.call("airkick") == "attack" and tab_of.call("uppercut") == "special"
 			and tab_of.call("roll") == "defend" and tab_of.call("burstcancel") == "super"
-			and not names.has("hold") and p.hold_btn.disabled)
+			and not names.has("hold") and p.find_child("Hold", true, false) == null)
 	_check("...the Super tab is greyed out (no meter yet)", (p.tabs_box.get_node("super") as Button).disabled)
 	p._tab("attack")
 	var icons: Array = p.drawer_grid.get_children()
@@ -78,8 +78,8 @@ func _test_your_pick() -> void:
 	_check("a dash shows the Distance slider; a short one ends nearer (100: %.0f, 20: %.0f)" % [long_x, short_x],
 			p.dist_row.visible and short_x < long_x - 40.0 and float(p.choice["dist"]) == 20.0)
 	p.select("jab")
-	_check("an attack has the Free switch, on while there's a charge (%s)" % p.free_btn.text, p.free_btn.visible
-			and bool(p.choice["free"]) and not p.dist_row.visible)
+	_check("an attack takes a Free Cancel by itself while there's a charge - no Free box (16:59 \"Our ui is getting "
+			+ "cluttered\")", bool(p.choice["free"]) and not p.dist_row.visible and (p.cards["me"]["free"]) == null)
 	var foe := 1
 	p._on_tap(foe)
 	_check("tapping an opponent who's picking too: the tabs and pad are theirs (%s)" % p.picked_label.text.replace("\n", " "),
@@ -270,7 +270,7 @@ func _test_multiplayer_qol() -> void:
 	p._close_drawer()
 	var mine: Dictionary = p.cards["me"]
 	var theirs: Dictionary = p.cards["foe"]
-	_check("bottom left your card in your colour, bottom right theirs (%s)" % (theirs["label"] as Label).text.replace("
+	_check("bottom left your card in your colour, bottom right theirs (%s)" % (theirs["label"] as RichTextLabel).text.replace("
 ", " "),
 			(mine["panel"] as Control).get_index() == 0
 			and (theirs["panel"] as Control).get_index() == (theirs["panel"] as Control).get_parent().get_child_count() - 1
@@ -285,7 +285,7 @@ func _test_multiplayer_qol() -> void:
 	_check("...guess their dash and how far: their card's Distance (30) - their ghost stops short (%.0f -> %.0f)"
 			% [far, near], str(p.guesses[1]["move"]) == "dash" and float(p.guesses[1]["dist"]) == 30.0
 			and (theirs["dist_row"] as Control).visible and absf(near - g.sim.fighters[1].pos.x) < absf(far - g.sim.fighters[1].pos.x)
-			and (theirs["label"] as Label).text.contains("Dash"))
+			and (theirs["label"] as RichTextLabel).text.contains("Dash"))
 	var their_icon: MoveIcon = theirs["icon"]
 	var my_icon: MoveIcon = mine["icon"]
 	var faced := their_icon.face == -1.0 and my_icon.face == 1.0
@@ -336,7 +336,7 @@ func _test_hold_mid_move() -> void:
 			icon.pressed.emit()
 		_check("%s: Hold picked first; picked something else, Movement still has Hold and it takes you back (%s -> %s -> %s)"
 				% [cs[3], first, other, p.choice.get("move", "")], first == "hold" and icon != null
-				and str(p.choice.get("move", "")) == "hold" and not p.hold_btn.disabled)
+				and str(p.choice.get("move", "")) == "hold")
 		g.queue_free()
 
 
@@ -353,7 +353,7 @@ func _test_enemy_always_shown() -> void:
 	var p: PickPanel = g.pick
 	p.open(s, 0, g.stage)
 	var card: Dictionary = p.cards["foe"]
-	var text := (card["label"] as Label).text
+	var text := (card["label"] as RichTextLabel).text
 	_check("they're mid-move: their card shows it with the frames left, their tabs greyed (%s)" % text.replace("
 ", " "),
 			p.foe == 1 and (card["panel"] as Control).visible and p.foe_box.visible and text.contains(Moves.move("dancer", "straight")["name"])
@@ -714,6 +714,13 @@ func _test_drawer_order() -> void:
 			Moves.badges(Moves.move("dancer", "fan"))], Moves.badges(Moves.move("dancer", "grab")).contains("✊")
 			and Moves.badges(Moves.move("dancer", "uppercut")).contains("⚡")
 			and Moves.badges(Moves.move("dancer", "fan")).contains("🎯"))
+	var fd_up := PickPanel.frame_data(Moves.move("dancer", "uppercut"))
+	var fd_axe := PickPanel.frame_data(Moves.move("dancer", "axekick"))
+	var fd_fin := PickPanel.frame_data(Moves.move("dancer", "finale"))
+	_check("the frame data says each effect in its colour with its icon, as YOMI's words (20 Oct 16:50): %s / %s / %s"
+			% [fd_up, fd_axe, fd_fin], fd_up.contains("[color=#64d26b]⚡ Initiative[/color]") and fd_up.contains("Launcher")
+			and fd_axe.contains("Overhead") and fd_axe.contains("Knockdown") and fd_fin.begins_with("[color=#ff00ff]lvl3")
+			and g.get("fast_btn") == null)
 	var icon := p.drawer_grid.get_child(0) as MoveIcon
 	var picked := [false]
 	var b2 := MoveIcon.make("dancer", "jab", Color.WHITE, func() -> void: picked[0] = true)

@@ -15,7 +15,7 @@ var sim: Sim
 var bots := {}             ## fighter id -> Bot
 var me := 0
 var phase := "menu"        ## menu | pick | play | over
-var speed := 1.0
+var speed := 1.0   ## the playback's speed - always 1x (its button went 20 Oct 16:50)
 var setup_count := 3       ## opponents
 var setup_mode := "ffa"
 var setup_colour := 0      ## your colour (StageView.COLOURS) - the bots take the others
@@ -39,7 +39,6 @@ var leave_btn: Button
 var clock: Label
 var post: ColorRect
 var over_panel: PanelContainer
-var fast_btn: Button
 
 var _frames: Array = []
 var _events: Array = []
@@ -102,11 +101,9 @@ func _ready() -> void:
 	cards.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(cards)
 	banner = Ui.label("", FONT, Color("#e8e8f0"))
-	banner.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT   # (left, by the speed button - clear of the drawer)
+	banner.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT   # (left, by the menu button - clear of the drawer)
 	banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(banner)
-	fast_btn = Ui.button("1x", func() -> void: _toggle_speed())
-	add_child(fast_btn)
 	clock = Ui.label("", 20, Color("#e8e8f0"))   # (the round: seconds of match time left)
 	clock.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	clock.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -168,10 +165,8 @@ func _layout() -> void:
 	var vp := get_viewport_rect().size
 	if train_bar != null:
 		train_bar.position = Vector2(vp.x - 540.0, Ui.CARD_H + 44)
-	banner.position = Vector2(152, Ui.CARD_H + 16)
-	banner.size = Vector2(vp.x - 152.0 - PickPanel.TAB_W - 20.0, 30)
-	fast_btn.position = Vector2(70, Ui.CARD_H + 8)
-	fast_btn.size = Vector2(70, 44)
+	banner.position = Vector2(82, Ui.CARD_H + 16)
+	banner.size = Vector2(vp.x - 82.0 - PickPanel.TAB_W - 20.0, 30)
 	if leave_btn != null:
 		leave_btn.position = Vector2(vp.x - 230.0, Ui.CARD_H + 44)
 		leave_btn.size = Vector2(90, 40)
@@ -179,7 +174,7 @@ func _layout() -> void:
 		replay_btn.position = Vector2(vp.x - 250.0, Ui.CARD_H + 44)
 		replay_btn.size = Vector2(110, 40)
 	if menu_btn != null:
-		menu_btn.position = Vector2(10, Ui.CARD_H + 8)   # (top left, before the speed button)
+		menu_btn.position = Vector2(10, Ui.CARD_H + 8)   # (top left)
 		menu_btn.size = Vector2(54, 44)
 		menu_panel.reset_size()
 		menu_panel.position = (vp - menu_panel.size) / 2.0
@@ -246,7 +241,6 @@ func _show_start() -> void:
 	if menu_btn != null:
 		menu_btn.visible = false
 	over_panel.visible = false
-	fast_btn.visible = false
 	pick.close()
 	banner.text = ""
 	for c in cards.get_children():
@@ -361,7 +355,6 @@ func start_local(opponents: int, mode: String, colour := 0, train := false) -> v
 	_rec_begin()
 	_lag.clear()
 	home.visible = false
-	fast_btn.visible = true
 	over_panel.visible = false
 	_saved_replay = false
 	_build_cards()
@@ -635,7 +628,6 @@ func start_online(nm: NetMatch) -> void:
 	_lag.clear()
 	home.visible = false
 	lobby.visible = false
-	fast_btn.visible = true
 	menu_btn.visible = true
 	over_panel.visible = false
 	_build_cards()
@@ -774,7 +766,6 @@ func _leave_match() -> void:
 			cards.remove_child(c)
 			c.queue_free()
 		phase = "menu"
-		fast_btn.visible = false
 		banner.text = ""
 		_demo_start()
 		_stage_band()
@@ -919,7 +910,6 @@ func watch_replay() -> void:
 	over_panel.visible = false
 	leave_btn.visible = false
 	replay_btn.visible = true
-	fast_btn.visible = true
 	stage.fx.clear()
 	banner.text = "▶ Replay"
 	_replay_next()
@@ -1270,9 +1260,3 @@ func _finish() -> void:
 	_layout()
 	banner.text = ""
 	leave_btn.visible = false
-
-
-func _toggle_speed() -> void:
-	speed = 2.0 if speed == 1.0 else 1.0
-	stage.time_scale = speed
-	fast_btn.text = "%dx" % int(speed)

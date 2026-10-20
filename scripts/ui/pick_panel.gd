@@ -84,17 +84,15 @@ var drawer: PanelContainer
 var drawer_grid: GridContainer
 var bar: PanelContainer
 var picked_icon: MoveIcon
-var picked_label: Label
+var picked_label: RichTextLabel
 var pad: GridContainer
 var dist_row: Control         ## a dash / jump's Distance, or a Block's parry frame
 var dist_name: Label
 var dist_slider: HSlider
 var dist_label: Label
-var free_btn: Button
 var boxes_btn: Button
 var cards := {}              ## the two pick cards along the bottom: "me" (yours, left) and "foe" (the enemy's, right)
 var confirm_btn: Button
-var hold_btn: Button
 var undo_btn: Button
 var info: Label
 
@@ -151,19 +149,8 @@ func _ready() -> void:
 	boxes_btn.custom_minimum_size = Vector2(92, 0)
 	boxes_btn.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	side.add_child(boxes_btn)
-	hold_btn = Ui.button("Hold", func() -> void: select("hold"), 17)   # (carry on / ride it out - by Confirm, as in YOMI)
-	hold_btn.name = "Hold"
-	hold_btn.toggle_mode = true
-	hold_btn.custom_minimum_size = Vector2(92, 0)
-	hold_btn.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	for st in ["normal", "hover", "focus"]:   # (clearly a button when you can press it - 22:37)
-		hold_btn.add_theme_stylebox_override(st, Ui.box(Color("#2e3140")))
-	hold_btn.add_theme_stylebox_override("pressed", Ui.box(Color("#2b4f8a")))
-	hold_btn.add_theme_stylebox_override("hover_pressed", Ui.box(Color("#2b4f8a")))
-	hold_btn.add_theme_stylebox_override("disabled", Ui.box(Color("#1a1b22")))
-	hold_btn.add_theme_color_override("font_color", Color("#f2f2f7"))
-	hold_btn.add_theme_color_override("font_disabled_color", Color("#4a4b57"))
-	side.add_child(hold_btn)
+	# (Hold lives in the Movement tab alone, and the Free switch went - 20 Oct 16:59 "Our ui is getting cluttered in the
+	# fight. Lets remove the free box and then I think hold is fine in movement alone")
 	undo_btn = Ui.button("↶ Undo", func() -> void: undone.emit(), 16)   # (against bots: take back your last turn -
 	undo_btn.name = "Undo"                                              # top right, where Leave is online)
 	add_child(undo_btn)
@@ -182,7 +169,6 @@ func _ready() -> void:
 	dist_name = mine["dist_name"]
 	dist_slider = mine["dist_slider"]
 	dist_label = mine["dist_label"]
-	free_btn = mine["free"]
 	info = Ui.label("", 17, Color("#e2e2ea"))
 	info.add_theme_stylebox_override("normal", Ui.box(Color("#0e0f14bb"), 8))
 	info.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -262,7 +248,7 @@ func open(the_sim: Sim, id: int, the_stage: StageView) -> void:
 		select(str(again["move"]))
 		choice["dist"] = float(again.get("dist", 100.0))
 		choice["free"] = bool(again.get("free", false)) and str(Moves.move(f.character, str(choice["move"]))["kind"]) == "attack" \
-				and (f.fc > 0 or f.meter >= Sim.BAR)
+				and f.fc > 0   # (a charge only - never a bar on its own, 16:59)
 		refresh()
 		_close_drawer()
 		return
@@ -327,8 +313,6 @@ func _moves_of(id: int, tab_id: String) -> Array:
 
 ## Both sides' tabs: yours down the left, the enemy's down the right (their name over them, in their colour).
 func _build_tabs() -> void:
-	hold_btn.disabled = not sim.legal_moves(me).has("hold")
-	hold_btn.set_pressed_no_signal(str(choice.get("move", "")) == "hold")
 	_build_side(tabs_box, me, false)
 	foe_box.visible = foe >= 0
 	foe_name.visible = foe >= 0
@@ -416,46 +400,71 @@ func _close_drawer() -> void:
 
 
 ## A move's frame data in a line: when it hits, how hard, how long, armour, invulnerability, cost.
+## A move's effects as coloured words with their icons (Moves.badges' - 20 Oct 16:50 "can we use coloured words
+## similar to YOMI to say the effect in the frame data text"; YOMI's own: Guard Break orange, Initiative green, a
+## super's lvl1 / lvl2 / lvl3 cyan / orange / magenta).
+const WORDS := {"grab": ["✊ Grab", "#ff8fd0"], "initiative": ["⚡ Initiative", "#64d26b"], "invuln": ["👻 Invulnerable", "#7fe0ff"],
+	"low": ["🔻 Low", "#6fb6ff"], "overhead": ["Overhead", "#c58bff"], "guardbreak": ["💥 Guard Break", "#ff7c1f"],
+	"projectile": ["🎯 Projectile", "#5fe0c0"], "armor": ["🛡 Super Armor", "#ffcf5a"], "knockdown": ["Knockdown", "#ff6b6b"],
+	"launcher": ["Launcher", "#ffe066"]}   ## (shown with no-break spaces - an icon never wraps away from its word)
+const LEVELS := ["#00ffff", "#ff8000", "#ff00ff"]
+
+
+static func _word(key: String, after := "") -> String:
+	var w: Array = WORDS[key]
+	return "[color=%s]%s[/color]%s" % [w[1], str(w[0]).replace(" ", "\u00a0"), after.replace(" ", "\u00a0")]
+
+
+## A move's frame data for its card: hits on, damage, length (plain), then its effects in colour (BBCode - the cards
+## are rich text).
 static func frame_data(m: Dictionary) -> String:
 	var parts: Array[String] = []
 	var hits: Array = m.get("hits", [])
+	if int(m.get("cost", 0)) > 0:   # (a super: its level, YOMI's colours)
+		var lv := clampi(int(ceil(float(m["cost"]) / float(Sim.BAR))), 1, 3)
+		parts.append("[color=%s]lvl%d[/color]" % [LEVELS[lv - 1], lv])
 	if not hits.is_empty():
 		var dmg := 0
 		for e: Dictionary in hits:
 			dmg += int(e["dmg"])
 		parts.append("hits f%d" % int(hits[0]["from"]))
 		parts.append("%d dmg" % dmg)
+		if hits.size() > 1:
+			parts.append("%d hits" % hits.size())
+	parts.append("%d-%df by distance" % [int(m["dist"][0]), int(m["dist"][1])] if m.has("dist")
+			and int(m["dist"][0]) != int(m["dist"][1]) else "%df" % int(m["frames"]))
 	match str(m["kind"]):
 		"guard":
 			parts.append("both heights, no chip, shoves them off" if m.get("push", false)
 					else "↑ high / ↓ low · parries on its frame")
-		"grab":
-			parts.append("beats blocks")
-	if not hits.is_empty() and str(hits[0].get("height", "mid")) != "mid":
-		parts.append("block it " + str(hits[0]["height"]))
-	if not hits.is_empty() and hits[0].get("guardbreak", false):
-		parts.append("guard break")
-	parts.append("%d-%df by distance" % [int(m["dist"][0]), int(m["dist"][1])] if m.has("dist")
-			and int(m["dist"][0]) != int(m["dist"][1]) else "%df" % int(m["frames"]))
+	var words: Array[String] = []
+	if str(m["kind"]) == "grab":
+		words.append(_word("grab"))
+	var heights: Array = hits.map(func(e: Dictionary) -> String: return str(e.get("height", "mid")))
+	if heights.has("low") or Moves.spawns(m).any(func(sp: Dictionary) -> bool: return str(sp.get("height", "mid")) == "low"):
+		words.append(_word("low"))
+	if heights.has("high"):
+		words.append(_word("overhead"))
+	if hits.any(func(e: Dictionary) -> bool: return bool(e.get("guardbreak", false))):
+		words.append(_word("guardbreak"))
 	if m.has("armor"):
-		parts.append("armour f%d-%d" % [int(m["armor"][0]), int(m["armor"][1])])
+		words.append(_word("armor", " f%d-%d" % [int(m["armor"][0]), int(m["armor"][1])]))
 	if m.has("invuln"):
-		parts.append("dodges f%d-%d" % [int(m["invuln"][0]), int(m["invuln"][1])])
-	var into: Array = m.get("cancel_into", [])
-	if not into.is_empty():   # (02:19 "Is the only way to follow super jump?" - what it can go into on hit)
-		parts.append("%s on hit" % " / ".join(PackedStringArray(into.map(func(x: String) -> String:
-			return str(Moves.move("dancer", x).get("name", x))))))
-	if m.has("init_faster"):   # (initiative: the enemy was choosing too, not already committed)
-		parts.append("%df sooner with initiative" % int(m["init_faster"]))
-	if m.has("init_invuln"):
-		parts.append("dodges f%d-%d with initiative" % [int(m["init_invuln"][0]), int(m["init_invuln"][1])])
-	if int(m.get("cost", 0)) > 0:
-		parts.append("%d meter" % int(m["cost"]))
+		words.append(_word("invuln", " f%d-%d" % [int(m["invuln"][0]), int(m["invuln"][1])]))
+	if m.has("init_faster") or m.has("init_invuln"):   # (initiative: the enemy was choosing too, not already committed)
+		words.append(_word("initiative"))
+	if m.has("spawn"):
+		words.append(_word("projectile"))
+	if hits.any(func(e: Dictionary) -> bool: return float((e["kb"] as Array)[1]) <= -9.0) or m.has("cancel_into"):
+		words.append(_word("launcher"))
+	if hits.any(func(e: Dictionary) -> bool: return bool(e.get("knockdown", false))):
+		words.append(_word("knockdown"))
 	if int(m.get("meter_gain", 0)) > 0:
 		parts.append("+%d meter" % int(m["meter_gain"]))
-	if m.has("note"):   # (what the numbers can't say - a trap, wind, a reflect)
+	if m.has("note"):   # (what the numbers can't say)
 		parts.append(str(m["note"]))
-	return " · ".join(parts)
+	# (a Launcher says what "jump on hit" did - the cards are small)
+	return " · ".join(parts) + ("" if words.is_empty() else " · " + " ".join(words))
 
 
 ## A pick card along the bottom - YOMI's two panels: yours bottom left, the enemy's bottom right (mirrored: their
@@ -472,7 +481,13 @@ func _build_card(parent: Control, side: String) -> Dictionary:
 	var icon := MoveIcon.make("dancer", "", Color.WHITE, func() -> void: pass)
 	icon.custom_minimum_size = Vector2(72, 0)
 	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var label := Ui.label("", 14, Color("#c9c9d6"))
+	var label := RichTextLabel.new()   # (rich text: the effects in colour - 20 Oct 16:50)
+	label.bbcode_enabled = true
+	label.fit_content = true
+	label.scroll_active = false
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	label.add_theme_font_size_override("normal_font_size", 13)
+	label.add_theme_color_override("default_color", Color("#c9c9d6"))
 	label.custom_minimum_size = Vector2(110, 0)
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT if right else HORIZONTAL_ALIGNMENT_LEFT
@@ -508,13 +523,7 @@ func _build_card(parent: Control, side: String) -> Dictionary:
 	ctl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	ctl.alignment = BoxContainer.ALIGNMENT_CENTER
 	ctl.add_theme_constant_override("separation", 2)
-	var free: Button = null
-	if not right:
-		free = Ui.button("Free", func() -> void: _toggle_free(), 15)
-		free.toggle_mode = true
-		free.custom_minimum_size = Vector2(0, 36)
-		free.add_theme_stylebox_override("pressed", Ui.box(Color("#2b6e4a"), 8))
-		ctl.add_child(free)
+	var free: Button = null   # (no Free switch - 16:59: an attack takes a Free Cancel by itself while there's one)
 	var drow := VBoxContainer.new()
 	drow.add_theme_constant_override("separation", 0)
 	ctl.add_child(drow)
@@ -588,12 +597,12 @@ func select(mid: String) -> void:
 func _select_for(id: int, mid: String) -> void:
 	var c := _pick_of(id)
 	c["move"] = mid
-	if id == me:
-		hold_btn.set_pressed_no_signal(mid == "hold")
 	c["dist"] = 100.0
 	var f := sim.fighters[id]
 	var m := Moves.move(f.character, mid)
-	c["free"] = str(m.get("kind", "")) == "attack" and (f.fc > 0 or f.meter >= Sim.BAR)
+	# (an attack takes a Free Cancel by itself while there's a charge - the crosses over the health bar; never a bar of
+	# meter on its own: 20 Oct 16:59 the Free box went, so nothing spends meter you didn't choose to)
+	c["free"] = str(m.get("kind", "")) == "attack" and f.fc > 0
 	var near := sim.nearest_enemy(f) if id == me else sim.fighters[me]   # (a guess for them: at you)
 	var toward := float(f.facing) if near == null or absf(near.pos.x - f.pos.x) < 1.0 \
 			else signf(near.pos.x - f.pos.x)
@@ -705,7 +714,7 @@ func _show_card(side: String) -> void:
 	if mid == "":   # (no guess for them yet)
 		icon.move_id = ""
 		icon.queue_redraw()
-		(k["label"] as Label).text = "%s: your guess?\nUse their tabs" % fw.name
+		(k["label"] as RichTextLabel).text = "%s: your guess?\nUse their tabs" % fw.name
 		for b in pad_grid.get_children():
 			if b is Button:
 				(b as Button).disabled = true
@@ -718,7 +727,7 @@ func _show_card(side: String) -> void:
 	icon.colour = col
 	icon.face = _face_for(id, c)
 	icon.queue_redraw()
-	(k["label"] as Label).text = "%s\n%s" % [cm["name"], frame_data(cm)] if id == me \
+	(k["label"] as RichTextLabel).text = "%s\n%s" % [cm["name"], frame_data(cm)] if id == me \
 			else "%s: %s\n%s" % [fw.name, cm["name"], frame_data(cm)]
 	var kind := str(cm.get("aim", "none"))
 	var a := Vector2(float(c.get("x", 0.0)), float(c.get("y", 0.0)))
@@ -840,9 +849,9 @@ func _show_busy(k: Dictionary, fw: Fighter, col: Color) -> void:
 	var m := Moves.move(fw.character, mid) if mid != "" else {}
 	if state == "" and not m.is_empty():
 		state = "%s · %df left" % [m["name"], maxi(0, fw.length - fw.frame)]
-		(k["label"] as Label).text = "%s: %s\n%s" % [fw.name, state, frame_data(m)]
+		(k["label"] as RichTextLabel).text = "%s: %s\n%s" % [fw.name, state, frame_data(m)]
 	else:
-		(k["label"] as Label).text = "%s: %s" % [fw.name, state if state != "" else "standing"]
+		(k["label"] as RichTextLabel).text = "%s: %s" % [fw.name, state if state != "" else "standing"]
 	var a := fw.param
 	for n in 9:
 		var dk: Vector2 = DIRS[n]
@@ -865,11 +874,6 @@ func _on_dist(side: String, v: float) -> void:
 		c["pf_set"] = true   # (picked by hand - no more filling it in from the preview)
 	else:
 		c["dist"] = v
-	refresh()
-
-
-func _toggle_free() -> void:
-	choice["free"] = free_btn.button_pressed
 	refresh()
 
 

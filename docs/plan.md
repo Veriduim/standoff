@@ -401,6 +401,18 @@ one stage; each attack aims at a picked target.
   then the Révérence bow - 112 damage on a fresh opponent after combo scaling), Encore a melee flurry (three cuts, the
   last floors them); Gale kept; the Cyclone cut. Bot matches as long as before (1v1 ~97 turns). docs/dancer.md
   rewritten for the melee spacer.
+- 16:50 "The speed increase in the top left. Remove that please. Also ... along with our icons can we use coloured
+  words similar to YOMI to say the effect in the frame data text?"; 16:59 "Our ui is getting cluttered in the fight.
+  Lets remove the free box and then I think hold is fine in movement alone"; 17:00 "Dont we have that information above
+  the health bar? Also can you cancel when its not free?" -> 0.44.0:
+  - The 1x / 2x speed button gone (the playback's always 1x).
+  - The cards' frame data in rich text: hits on, damage, length plain, then each effect as a coloured word with its
+    icon (PickPanel.WORDS): ⚡ Initiative green and 💥 Guard Break orange (YOMI's own), a super's lvl1 / lvl2 / lvl3 in
+    YOMI's cyan / orange / magenta, ✊ Grab, 🔻 Low, Overhead, 🛡 Super Armor, 👻 Invulnerable, 🎯 Projectile, Launcher,
+    Knockdown - no-break spaces so an icon never wraps from its word.
+  - No Free switch and no Hold button on the bar (Hold's in Movement). The Free Cancel charges are the crosses over the
+    health bar; an attack takes one by itself while there's one - and never a bar of meter on its own (with none left a
+    Free Cancel costs a bar - YOMI's rule - so with no switch that's off now).
 
 ## To tune / later
 - **Match length with 6:** bot matches take 120-270 decision points with 6 fighters (50-90 with 2). At ~10 s a decision
