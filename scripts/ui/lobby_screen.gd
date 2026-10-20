@@ -116,7 +116,7 @@ func open(colour: int) -> void:
 		_show("room")
 	else:
 		_show("list")
-		if nearby and not Ui.web:
+		if nearby:
 			finder.start()
 			finder.set_process(true)
 		refresh()
@@ -159,7 +159,6 @@ func _build_list() -> void:
 		var on: bool = m[1]
 		var b := Ui.button(str(m[0]), func() -> void: set_nearby(on), 18)
 		b.name = "ModeNearby" if on else "ModeOnline"
-		b.visible = not (on and Ui.web)   # (a browser can't host or find lobbies on the Wi-Fi - online only)
 		b.toggle_mode = true
 		b.button_group = mode_group
 		b.button_pressed = on == nearby
@@ -249,7 +248,6 @@ func _set_max(n: int) -> void:
 
 ## Online or Nearby. Nearby: no server - the lobbies are phones on this Wi-Fi (or one phone's hotspot) hosting.
 func set_nearby(on: bool) -> void:
-	on = on and not Ui.web
 	nearby = on
 	if not on:
 		LobbyNet.url = LobbyNet.online_url

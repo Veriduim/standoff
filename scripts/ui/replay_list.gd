@@ -88,7 +88,7 @@ func open() -> void:
 		share.name = "Share"
 		share.custom_minimum_size = Vector2(100, 54)
 		row.add_child(share)
-		var keep := Ui.button("Download" if Ui.web else "Save to phone", func() -> void: _export(p), 16)   # (02:19)
+		var keep := Ui.button("Save to phone", func() -> void: _export(p), 16)   # (02:19 "save them to device")
 		keep.name = "Export"
 		keep.custom_minimum_size = Vector2(150, 54)
 		row.add_child(keep)
@@ -113,8 +113,8 @@ func share(path: String) -> void:
 			func(code: int, d: Dictionary) -> void:
 				if code == 200 and str(d.get("code", "")) != "":
 					DisplayServer.clipboard_set(str(d["code"]))
-					_say("Replay code %s%s. Send it to a friend: Replays -> type the code -> Watch code."   # (a browser
-							% [str(d["code"]), "" if Ui.web else " - copied"], true)   # may not let it copy after a wait)
+					_say("Replay code %s - copied. Send it to a friend: Replays -> type the code -> Watch code."
+							% str(d["code"]), true)
 				else:
 					_say(str(d.get("error", "Couldn't share it - no internet?")), false))
 
@@ -156,8 +156,7 @@ func _say(text: String, good: bool) -> void:
 
 func _export(path: String) -> void:
 	var out := Replays.export_to_device(path)
-	var where := "Downloaded" if Ui.web else "Saved to your phone"
-	_note.text = ("%s: %s" % [where, out]) if out != "" else "Couldn't save it"
+	_note.text = ("Saved to your phone: %s" % out) if out != "" else "Couldn't save it to the phone"
 	_note.add_theme_color_override("font_color", Color("#a7e8b8") if out != "" else Color("#ffb86b"))
 
 

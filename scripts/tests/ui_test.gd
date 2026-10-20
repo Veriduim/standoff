@@ -735,8 +735,8 @@ func _test_bar_fits() -> void:
 	g.queue_free()
 
 
-func _test_web() -> void:
-	_section("The web version (11:48 \"The web version makes a lot of sense\"): its own icons, online only, sideways")
+func _test_icon_fonts() -> void:
+	_section("The game's own icons (made for the web version 19 Oct, kept for Android): the same on every phone")
 	Ui.add_icon_fonts()
 	var font := ThemeDB.fallback_font
 	var missing := []
@@ -750,22 +750,9 @@ func _test_web() -> void:
 	for f: Font in font.fallbacks:
 		if f.get_ascent(22) > font.get_ascent(22) + 0.5 or f.get_descent(22) > font.get_descent(22) + 0.5:
 			tall.append(f.resource_path.get_file())
-	_check("every icon in the game's text is in the fonts it carries - none left to a phone's own (a browser has none; "
-			+ "missing: %s), and none of them makes a line taller (%s)" % [missing, tall], missing.is_empty()
+	_check("every icon in the game's text is in the fonts it carries - none left to a phone's own (missing: %s), and "
+			% [missing] + "none of them makes a line taller (%s)" % [tall], missing.is_empty()
 			and tall.is_empty() and font.fallbacks.size() >= Ui.ICON_FONTS.size())
-	Ui.web = true
-	var g := _screen()
-	var lob: LobbyScreen = g.lobby
-	lob.set_nearby(true)
-	var near := lob.find_child("ModeNearby", true, false) as Button
-	g._turned(Vector2(390, 844))
-	var up := (g.get_node("TurnNote") as CanvasLayer).visible
-	g._turned(Vector2(844, 390))
-	_check("in a browser: no Nearby tab, and it stays online (%s); upright, \"Turn your phone sideways\" covers the "
-			% [lob.nearby] + "game, gone once it's turned", not near.visible and not lob.nearby and up
-			and not (g.get_node("TurnNote") as CanvasLayer).visible)
-	Ui.web = false
-	g.queue_free()
 
 
 func _test_big_effects() -> void:

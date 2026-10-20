@@ -156,7 +156,6 @@ func _ready() -> void:
 	home.training.connect(func(c: int) -> void: start_local(1, "ffa", c, true))
 	_build_train_bar()
 	replay_list.picked.connect(watch_saved)
-	_build_turn_note()
 	get_viewport().size_changed.connect(_layout)
 	_layout()
 	_show_start()
@@ -164,33 +163,8 @@ func _ready() -> void:
 		how.open()
 
 
-## A phone held upright (the web version: a browser can't lock the screen sideways the way the app does) - over
-## everything, until it's turned.
-## Held upright: the turn note, until it's sideways.
-func _turned(vp: Vector2) -> void:
-	var turn := get_node_or_null("TurnNote") as CanvasLayer
-	if turn != null:
-		turn.visible = vp.x < vp.y
-
-
-func _build_turn_note() -> void:
-	var layer := CanvasLayer.new()
-	layer.name = "TurnNote"
-	layer.layer = 90
-	add_child(layer)
-	var back := ColorRect.new()
-	back.color = Color("#0b0c11")
-	back.set_anchors_preset(Control.PRESET_FULL_RECT)
-	layer.add_child(back)
-	var phone := TurnPhone.new()
-	phone.set_anchors_preset(Control.PRESET_FULL_RECT)
-	back.add_child(phone)
-	layer.visible = false
-
-
 func _layout() -> void:
 	var vp := get_viewport_rect().size
-	_turned(vp)
 	if train_bar != null:
 		train_bar.position = Vector2(vp.x - 540.0, Ui.CARD_H + 44)
 	banner.position = Vector2(152, Ui.CARD_H + 16)
@@ -1297,31 +1271,3 @@ func _toggle_speed() -> void:
 	speed = 2.0 if speed == 1.0 else 1.0
 	stage.time_scale = speed
 	fast_btn.text = "%dx" % int(speed)
-
-
-## "Turn your phone sideways": a phone outline tipping over, drawn (no glyphs), and the words.
-class TurnPhone:
-	extends Control
-
-	func _process(_delta: float) -> void:
-		if is_visible_in_tree():
-			queue_redraw()
-
-	func _draw() -> void:
-		var c := size / 2.0 - Vector2(0, 40)
-		var k := minf(size.x, size.y) / 900.0
-		var t := fmod(Time.get_ticks_msec() / 1000.0, 2.4)
-		var ang := -PI / 2.0 * clampf((t - 0.6) / 0.8, 0.0, 1.0)   # (upright, then it tips onto its side)
-		var hw := 120.0 * k
-		var hh := 220.0 * k
-		var pts := PackedVector2Array()
-		for p: Vector2 in [Vector2(-hw, -hh), Vector2(hw, -hh), Vector2(hw, hh), Vector2(-hw, hh), Vector2(-hw, -hh)]:
-			pts.append(c + p.rotated(ang))
-		draw_polyline(pts, Color("#e8e8f0"), 10.0 * k, true)
-		draw_circle(c + Vector2(0, hh - 34.0 * k).rotated(ang), 14.0 * k, Color("#e8e8f0"))
-		var font := ThemeDB.fallback_font
-		var fs := int(64.0 * k)
-		var text := "Turn your phone sideways"
-		var w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
-		draw_string(font, Vector2(c.x - w / 2.0, c.y + hh + 140.0 * k), text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs,
-				Color("#e8e8f0"))

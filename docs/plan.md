@@ -300,6 +300,13 @@ one stage; each attack aims at a picked target.
   - The Bruiser rushing in on his own feet: solid grey copies of himself left behind (Fx.afterimage solid, SOLID).
   - Flings and Bull Rush: their ring of air and wind streaks sized by the screen too.
   - Not done (his word): a super that changes the stage's colours.
+- 20 Oct 13:24 "Revert it from being a Web app back to an apk please", 13:26 "I just dont care enough about ios users"
+  -> the web version is gone: GitHub Pages off and the
+  gh-pages branch deleted (veriduim.github.io/standoff no longer serves it), tools/release_web.sh and
+  tools/web_check.mjs removed, the Web export preset removed, and the browser-only code out (no Nearby tab, the turn
+  note, Download, the iPhone tip). Kept, as they help the APK too: the icon fonts (the same icons on every phone) and
+  relay/.gdignore. The lobby server still answers a browser's ask-first (harmless; not worth a redeploy). The APK
+  itself is unchanged - v0.34.0 stays the one to install. To bring the web back: git show 9f168a8 b0e1d32.
 
 ## To tune / later
 - **Match length with 6:** bot matches take 120-270 decision points with 6 fighters (50-90 with 2). At ~10 s a decision
