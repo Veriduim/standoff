@@ -38,7 +38,7 @@ func _test_your_pick() -> void:
 				return Moves.ROSTER.has(f.character)))
 	var names := p.menu_moves()
 	_check("on the ground the tabs hold %d moves - ground attacks, grabs, moves, defence; no air moves, no supers yet"
-			% names.size(), names.size() >= 20 and names.has("sweep") and names.has("fangust") and names.has("roll")
+			% names.size(), names.size() >= 20 and names.has("sweep") and names.has("pirouette") and names.has("roll")
 			and names.has("block") and names.has("pushblock") and not names.has("airkick") and not names.has("cyclone"))
 	var tab_of := func(mid: String) -> String: return str(Moves.move("dancer", mid)["tab"])
 	_check("YOMI's five tabs, Movement right above Defense; Wait is Movement, grabs and air attacks are Attack, Uppercut "

@@ -149,12 +149,23 @@ const DANCER := {
 			"hits": [{"from": 11, "to": 13, "box": [14, -98, 88, 28], "dmg": 40, "stun": 18, "kb": [9.0, -2.0],
 				"block": 12, "chip": 3, "group": 0, "splat": true}],
 			"pose": [[0, "arab_wind"], [11, "arab_hit"], [18, "idle"]], "icon": "arab_hit"},
-		"uppercut": {"name": "Uppercut", "tab": "special", "kind": "attack", "init_invuln": [1, 4],
-			"cancel_into": ["jump", "superjump"], "frames": 26, "where": "ground",
-			"aim": "facing", "motion": [[2, 6, 3.0, 0.0]],
-			"hits": [{"from": 4, "to": 7, "box": [4, -120, 46, 70], "dmg": 38, "stun": 26, "kb": [1.5, -10.5],
+		# (Port de Bras - the anti-air: fans crossed low, then swept up over her head, up on her toes; YOMI's Uppercut,
+		# out on 4, slipping through with initiative)
+		"uppercut": {"name": "Port de Bras", "tab": "special", "kind": "attack", "init_invuln": [1, 4],
+			"cancel_into": ["jump", "superjump"], "frames": 26, "where": "ground", "aim": "facing",
+			"motion": [[2, 6, 3.0, 0.0]], "drawn": true,
+			"hits": [{"from": 4, "to": 7, "box": [-8, -150, 62, 100], "dmg": 38, "stun": 26, "kb": [1.5, -10.5],
 				"block": 12, "chip": 3, "group": 0}],
-			"pose": [[0, "crouch"], [4, "uppercut"], [15, "idle"]]},
+			"pose": [[0, "pdb_wind"], [4, "pdb_hit"], [15, "idle"]], "icon": "pdb_hit"},
+		# (Pirouette - a spinning double cut, stepping in: gathered in, a turn on one foot, then flung wide - her way
+		# back in after holding the space)
+		"pirouette": {"name": "Pirouette", "tab": "special", "kind": "attack", "proration": 1, "frames": 28,
+			"where": "ground", "aim": "facing", "motion": [[2, 12, 6.5, 0.0]], "drawn": true, "no_cancel": true,
+			"hits": [{"from": 8, "to": 9, "box": [-34, -100, 96, 64], "dmg": 16, "stun": 14, "kb": [3.0, -1.0],
+				"block": 8, "chip": 1, "group": 0},
+				{"from": 12, "to": 13, "box": [-10, -104, 102, 44], "dmg": 22, "stun": 18, "kb": [6.0, -3.0],
+				"block": 10, "chip": 2, "group": 1}],
+			"pose": [[0, "pir_prep"], [8, "pir_spin"], [12, "pir_cut"], [20, "idle"]], "icon": "pir_cut"},
 		# (the low: down into a deep plié, the fan swept along the floor - knocks down)
 		"sweep": {"name": "Plié Cut", "tab": "attack", "floor": true, "kind": "attack", "proration": -1, "frames": 22,
 			"where": "ground", "aim": "facing", "motion": [[2, 9, 6.0, 0.0]], "dist": [28, 28, 0.0], "low_profile": [2, 15],
@@ -177,7 +188,7 @@ const DANCER := {
 			"pose": [[0, "fall"], [5, "saute_kick"], [15, "fall"]], "icon": "saute_kick"},
 		# (an air spin: two cuts as she turns)
 		"airknee": {"name": "Tour en l'Air", "tab": "attack", "kind": "attack", "proration": 1, "frames": 18, "where": "air",
-			"aim": "facing", "land_ends": true, "landing": 4, "drawn": true,
+			"aim": "facing", "land_ends": true, "landing": 4, "drawn": true, "no_cancel": true,
 			"hits": [{"from": 6, "to": 7, "box": [-40, -100, 100, 44], "dmg": 14, "stun": 12, "kb": [2.0, -2.0],
 				"block": 6, "chip": 1, "group": 0},
 				{"from": 10, "to": 11, "box": [-40, -100, 100, 44], "dmg": 16, "stun": 16, "kb": [5.0, -4.0],
@@ -196,12 +207,6 @@ const DANCER := {
 			"spawn": {"at": 6, "kind": "fan", "speed": 11.0, "from": [24, -60], "box": [26, 20], "dmg": 18, "stun": 14,
 				"kb": [3.0, 2.0], "block": 8, "chip": 2, "life": 50},
 			"pose": [[0, "throw_wind"], [6, "throw_out"], [14, "fall"]], "icon": "throw_out"},
-		"ripple": {"name": "Ground Ripple", "tab": "special", "kind": "special", "floor": true, "frames": 30,
-			"where": "ground",
-			"aim": "facing",
-			"spawn": {"at": 11, "kind": "ripple", "speed": 6.5, "from": [26, -12], "box": [44, 24], "dmg": 16, "stun": 20,
-				"kb": [2.0, -7.0], "block": 10, "chip": 3, "life": 95, "height": "low", "parry": false},
-			"pose": [[0, "crouch"], [11, "slam"], [22, "idle"]], "icon": "slam"},
 		"mirror": {"name": "Mirror", "tab": "special", "kind": "counter", "frames": 34, "where": "ground", "aim": "none",
 			"window": [3, 24], "counter_move": "mirrorstrike", "reflect": true,
 			"note": "catches a strike and kicks back; turns shots round",
@@ -272,14 +277,13 @@ const DANCER := {
 			],
 			"pose": [[0, "gather"], [4, "twirl_a"], [7, "twirl_b"], [10, "twirl_a"], [12, "throw_high"], [16, "fan_up"],
 				[30, "fan_spread"], [42, "idle"]], "icon": "throw_high"},
-		# ---- fan-dancer moves (Timmy 21:59: "make the dancer cooler and feel like a dancer. With proper fans. Thinking
-		# ---- jade MK series" - MK is study only; our own): a gust off both fans that lifts them, a sliding kick that
-		# ---- passes under / through projectiles
-		"updraft": {"name": "Updraft", "tab": "special", "kind": "special", "frames": 30, "where": "ground",
-			"aim": "facing", "motion": [[2, 8, 4.0, 0.0]], "cue": [{"at": 7, "type": "gust"}, {"at": 7, "type": "sweep_up"}],
-			"hits": [{"from": 8, "to": 11, "box": [10, -130, 92, 130], "dmg": 14, "stun": 36, "kb": [1.5, -15.0],
-				"block": 10, "chip": 2, "group": 0}],
-			"pose": [[0, "fan_low"], [8, "fan_up"], [20, "idle"]], "icon": "fan_up"},
+		# (Grand Jeté - a leap over low hits: a deep coil, the split in the air, landing on a cut; YOMI's dive kick,
+		# out on 12. Clear of a low by frame 7)
+		"updraft": {"name": "Grand Jeté", "tab": "special", "kind": "attack", "frames": 34, "where": "ground",
+			"aim": "facing", "motion": [[3, 9, 8.0, -7.0]], "land_ends": true, "landing": 6, "drawn": true,
+			"hits": [{"from": 12, "to": 30, "box": [6, -64, 78, 80], "dmg": 34, "stun": 20, "kb": [6.0, -2.0],
+				"block": 12, "chip": 3, "group": 0}],
+			"pose": [[0, "jete_prep"], [5, "jete_air"], [12, "jete_land"], [24, "idle"]], "icon": "jete_air"},
 		"glide": {"name": "Silk Glide", "tab": "special", "kind": "attack", "frames": 30, "where": "ground",
 			"aim": "facing", "shot_invuln": [2, 18], "motion": [[3, 18, 15.0, 0.0]], "dist": [30, 30, 0.2],
 			"init_invuln": [2, 8],
@@ -303,30 +307,6 @@ const DANCER := {
 		"recall": {"name": "Recall", "tab": "special", "kind": "special", "xf": "fans", "recall_at": 3, "frames": 12,
 			"where": "both", "aim": "lean", "float": true,   # (no direction: home; a direction: fling them that way first)
 			"pose": [[0, "throw_out"], [3, "throw_wind"], [9, "idle"]], "icon": "throw_wind"},
-		# ---- the zoner's kit (03:32): a trap, wind, a follow-up that sends them back out to her range. Study only -
-		# ---- Wizard's Spark Bomb and Gust in YOMI, Menat's orb, Venom's balls, Kitana's fans (docs/dancer_research.md)
-		# Fan Ward: a fan sent out (any way, as far as the Distance says) that stops and hangs there - it hits anyone
-		# who walks into it, eats a shot, and Recall pulls it home through whoever's between (a pincer)
-		"fanward": {"name": "Fan Ward", "tab": "special", "kind": "special", "xf": "fans", "fans": 1, "frames": 22,
-			"where": "both", "aim": "dir8", "dist": [22, 22, 0.0], "note": "hangs where the Distance puts it - a trap",
-			"spawn": {"at": 7, "kind": "fan", "speed": 12.0, "from": [30, -80], "box": [30, 30], "dmg": 18,
-				"stun": 18, "kb": [3.0, -4.0], "block": 8, "chip": 2, "life": 60, "ward": true},
-			"pose": [[0, "throw_wind"], [7, "ward"], [16, "idle"]], "icon": "ward"},
-		# Fan Gust: both fans swept forward - wind that shoves enemies away (no damage), blows their shots back the
-		# way they came and carries her own fans further (a hanging one drifts on)
-		"fangust": {"name": "Fan Gust", "tab": "special", "kind": "special", "fans": 1, "frames": 28, "where": "both",
-			"aim": "facing", "gust": [8, 15, [0, -150, 240, 170]],
-			"note": "wind: shoves them and their shots away",
-			"cue": [{"at": 7, "type": "sweep"}, {"at": 8, "type": "gustfwd"}],
-			"pose": [[0, "gust_wind"], [7, "gust"], [20, "idle"]], "icon": "gust"},
-		# Fan Flick: right after landing a Fan Slash, the fan flicked out of it - it knocks them back out to her range
-		# and comes home (what the One-Two chain was for a brawler)
-		"fanflick": {"name": "Fan Flick", "tab": "attack", "kind": "special", "xf": "fans", "fans": 1,
-			"after": ["fanslash"], "frames": 20, "where": "ground", "aim": "facing",
-			"note": "after a Fan Slash: knocks them back out to range",
-			"spawn": {"at": 4, "kind": "fan", "speed": 13.0, "from": [34, -78], "box": [26, 20], "dmg": 16, "stun": 16,
-				"kb": [8.0, -2.0], "block": 8, "chip": 2, "life": 60},
-			"pose": [[0, "throw_out"], [2, "throw_back"], [4, "throw_out"], [13, "idle"]], "icon": "throw_back"},
 		# Tempo: a beat for landing or having a move blocked, or dodging through a hit; four = Encore (spends them). Since
 		# 05:03 a zoner's finisher - from range, not a rush in: a pirouette, then three spectral fans in a burst, the last
 		# one floors them (it was a four-kick melee string)

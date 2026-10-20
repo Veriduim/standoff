@@ -6,7 +6,9 @@ I think we need to make up for that with the space we have normally and work tha
 **20 Oct 15:28-16:17 - the rework:** a MELEE spacer now, YOMI's Cowboy the model (15:28 "YOMI is normally a very melee
 focused game"): her fans are her blades, her strikes are dance moves (0.41.0: Fan Tap, Fouetté, Arabesque, Plié Cut,
 Grand Battement, Sauté Kick, Tour en l'Air - each on its nearest YOMI move's frames), the zoning cut down to Fan Throw /
-Air Fan, Recall and Fan Step (next: Port de Bras, Pirouette, Grand Jeté; then the melee supers). The notes below are
+Air Fan, Recall and Fan Step; 0.42.0 her specials: Port de Bras (the anti-air), Pirouette (two cuts stepping in),
+Grand Jeté (a leap over lows, landing on a cut) - Ground Ripple, Fan Ward, Fan Gust and Fan Flick cut. Next: the melee
+supers. The notes below are
 the zoner she was; they go as the rework lands.
 
 **Archetype:** control and spacing. She wins at mid range by holding the space in front of her. Her fans are her prop,

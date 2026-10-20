@@ -25,7 +25,7 @@ const PAGES := [
 		"throws everyone off you. Block: ↑ high, ↓ low.", "burst"],
 	["The Dancer", "A zoner with two war fans. Thrown, they fly back to her hand; Fan Ward leaves one hanging as a " +
 		"trap, and Recall pulls them home through anyone in the way. Fan Gust blows rushers and shots off her. Hits " +
-		"at the fan's edge hurt most; point blank she's weaker - keep them out there.", "fanward"],
+		"at the fan's edge hurt most; point blank she's weaker - keep them out there.", "sidekick"],
 	["The Bruiser", "A rushdown - Muay Thai and a boxer's hands. Jab, Cross, Hook; Bob & Weave slips shots; his big " +
 		"hits send them flying and Chase runs them down. Armour (🛡) takes one hit. Clinch holds them for knees. Grit " +
 		"builds as he trades - full, the K.O. Punch. Floored, he loses half.", "haymaker", "bruiser"],

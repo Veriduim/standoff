@@ -7,20 +7,20 @@ extends RefCounted
 ## and plays the one that went best. Seeded, so a test match plays the same every time.
 
 const GROUND_HITS := ["jab", "straight", "sidekick", "uppercut", "straight", "sweep", "axekick", "stomp",
-	"fanslash", "fanflick", "pop", "snapkick", "windmill", "kipup", "updraft", "glide"]
-const FROM_AFAR := ["fan", "ripple", "fan", "fanward", "recall", "glide", "fanward"]
-const FLOOR := ["windmill", "kipup", "sweep", "sweep", "floorslide", "flowform", "snapform", "block", "roll", "ripple"]
+	"fanslash", "pirouette", "pop", "snapkick", "windmill", "kipup", "updraft", "glide"]
+const FROM_AFAR := ["fan", "fan", "recall", "glide", "dash", "pirouette"]
+const FLOOR := ["windmill", "kipup", "sweep", "sweep", "floorslide", "flowform", "snapform", "block", "roll"]
 const FORM_SWITCH := ["snapform", "floorform", "flowform"]
 const AIR := ["airkick", "airknee", "airdash", "fastfall", "block", "wait", "airfan", "airthrow", "airjump",
-	"fanward"]
+	"airknee"]
 const GRABS := ["grab"]
 const SUPERS := ["fanstorm", "gale", "cyclone", "finale"]
 const CLOSE_IN := ["walk", "dash", "roll", "floorslide", "fanstep"]
 const BACK_OFF := ["backstep", "walk", "dash"]
-## A spacer (the Dancer - 03:32 "the zoner/control space char") plays her range: point blank she makes room...
-const KEEP_OUT := ["fangust", "backstep", "updraft", "uppercut", "fanslash", "fangust"]
-## ...and at her range she pokes, throws, sets a ward or blows them off.
-const MID := ["fanslash", "sidekick", "ripple", "fan", "fanward", "fangust", "straight", "sweep"]
+## A spacer (the Dancer - a melee one since 20 Oct, her fans her blades) plays her range: point blank she makes room...
+const KEEP_OUT := ["backstep", "sidekick", "uppercut", "fanslash", "straight", "backstep"]
+## ...and at her range she pokes - the Arabesque, the Fouetté - throws a fan, cuts in with a Pirouette or leaps a low.
+const MID := ["fanslash", "sidekick", "fan", "straight", "sweep", "pirouette", "updraft", "sidekick"]
 ## The Bruiser - a rushdown (05:03): in at any cost - under shots, over them, through a guard...
 const B_IN := ["dash", "dash", "bob", "bob", "walk", "flyknee", "superman"]
 ## ...and on top of them: his hands, shins and elbows, the clinch, the big armoured swings now and then

@@ -390,6 +390,12 @@ one stage; each attack aims at a picked target.
   new, Poses.P - built from joint angles, her bone lengths kept), YOMI's frames, hit boxes and icons. "drawn": true -
   no exaggeration and no extra coil (posed at full stretch); "fan_open" - Fan Tap pokes with the fan shut. A held
   strike stops at the next key (Tour en l'Air's second spin). Spin Kick and Low Kick gone.
+  0.42.0, group 2 - the specials: Port de Bras (the Uppercut's id: fans swept up overhead, out on 4, through a strike
+  with initiative), the Pirouette (new: steps in, two cuts - "no_cancel" so the first landing doesn't end it; Tour en
+  l'Air too), the Grand Jeté (Updraft's id: a leap - clear of a low by frame 7 - landing on a cut, out on 12). Ground
+  Ripple, Fan Ward, Fan Gust and Fan Flick cut (their code was all data - nothing left behind but generic shot and
+  effect code). Her bots play her range with pokes, a Pirouette in, a Jeté over lows; the zoner-kit test is now
+  the melee-spacer test.
 
 ## To tune / later
 - **Match length with 6:** bot matches take 120-270 decision points with 6 fighters (50-90 with 2). At ~10 s a decision
