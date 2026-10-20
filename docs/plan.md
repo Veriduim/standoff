@@ -347,6 +347,19 @@ one stage; each attack aims at a picked target.
     Tuned on bot matches (24 1v1 + 12 four-way each): a plain x2 made 1v1 39% longer (combos fell out of reach); as
     shipped, 1v1 ~101 turns (was ~100), four-way ~196 (~181, within the noise), the longest combo about the same.
   - Smoke only on the big ones now (SMOKE_PX 11 - an ordinary hit goes 7-10 px a tick at the new pace).
+- 15:10 "Remove the speed lines and the ground shake is way too much know. The animation should only be in the are it
+  effects. If it is the whole arena that needs to be limited to it still showing in the vicinity of the char and then
+  just shake the whole stage lighlty ... We have YOMI now so we may be able to get inspiration for how they do
+  ground/are ground slam attacks" -> 0.38.0:
+  - The speed lines are gone (all their code).
+  - The rule from now on: an effect stays in the area its move reaches; a move reaching the whole stage shows near
+    the one doing it and shakes the stage lightly.
+  - Quake Stomp only hits 90 px either side of his foot, but drew spikes across the whole screen and shook it hardest
+    of anything (kick 9). YOMI's ground pound (its Robot's landing, from the source): a curtain of debris thrown
+    straight up off a strip either side of the impact (64 bits, 3 fighters wide), small shockwaves that run along the
+    floor carrying their own hit, and one short bump of the camera - nothing screen-wide. Now: 14 spikes and 36 bits of
+    debris over its own strip (Fx.QUAKE_REACH 100, world sizes - the tallest by his foot), the floor ring and crack
+    that size, and a light shake (2.5).
 
 ## To tune / later
 - **Match length with 6:** bot matches take 120-270 decision points with 6 fighters (50-90 with 2). At ~10 s a decision

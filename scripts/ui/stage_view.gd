@@ -44,7 +44,7 @@ var shots: Array = []        ## the projectiles on the tick shown (Sim.record_sh
 var _shot_trail := {}        ## projectile (owner, kind, ...) -> its last few screen spots, for the fan's trail
 var you := -1                ## this phone's fighter (a marker over them)
 var deciding: Array = []     ## who's choosing now (a pulse over them)
-var fx := Fx.new()           ## sparks, the freeze, the shake, arcs, speed lines
+var fx := Fx.new()           ## sparks, the freeze, the shake, arcs
 var time_scale := 1.0        ## the playback speed (the effects keep up at 2x)
 var half := Sim.STAGE_HALF   ## the match's half stage width (its rules)
 var cam := Vector2(0, -120)
@@ -124,23 +124,8 @@ func show_tick(rec: Array, events: Array = [], flying: Array = []) -> void:
 			_sfx_style = ""
 	if prev.size() == frame.size():
 		_motion_fx(prev)
-		fx.camera_tick(_middle(frame) - _middle(prev), get_viewport_rect().size.x)
 	_arcs()
 	queue_redraw()
-
-
-## The middle of everyone (what YOMI's camera follows - its speed lines run off how fast this moves).
-func _middle(rows: Array) -> Vector2:
-	var lo := INF
-	var hi := -INF
-	var top := INF
-	var bot := -INF
-	for r: Array in rows:
-		lo = minf(lo, float(r[0]))
-		hi = maxf(hi, float(r[0]))
-		top = minf(top, float(r[1]))
-		bot = maxf(bot, float(r[1]))
-	return Vector2((lo + hi) / 2.0, (top + bot) / 2.0) if not rows.is_empty() else Vector2.ZERO
 
 
 ## What movement shows: a super starting (its flash), fast movers' afterimages, and a launched fighter tumbling.
@@ -453,11 +438,6 @@ func s2w(p: Vector2) -> Vector2:
 func _draw() -> void:
 	var vp := get_viewport_rect().size
 	draw_rect(Rect2(Vector2.ZERO, vp), BG)
-	if not frame.is_empty():   # (speed lines when the camera rushes - in the background, as YOMI's: under everything)
-		var near: Array[Vector2] = []
-		for i in frame.size():
-			near.append(w2s(_chest(i)))
-		fx.draw_lines(self, near)
 	if _glow == null:   # (a soft light behind the action - a radial gradient)
 		var g := Gradient.new()
 		g.set_color(0, Color(0.5, 0.56, 0.85, 0.075))

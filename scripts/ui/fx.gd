@@ -15,10 +15,10 @@ extends RefCounted
 ##             moment and the picture splits into colours (pick 13); KOs split too
 ##   after     fast movers leave fading copies of themselves (pick 8)
 ## The YOMI source study (20 Oct 14:22 "Dont keep the words and damage numbers and lets get these all in"): no words or
-## combo counts on the stage, and no push-in; speed lines when the camera rushes, smoke behind anyone knocked back fast,
-## debris off a wall slam (Standoff Workshop/references/yomi_source_notes.md).
-##   lines     the camera rushing (the fighters' middle moving fast): thin white lines streak across the screen
-##             against it, faded round the fighters - YOMI's speed lines
+## combo counts on the stage, and no push-in; smoke behind anyone knocked back fast, debris off a wall slam
+## (Standoff Workshop/references/yomi_source_notes.md). Its speed lines came and went (15:10 "Remove the speed lines").
+## An effect stays in the area its move reaches (15:10 "The animation should only be in the are it effects") - a move
+## that reaches the whole stage shows near the one doing it and shakes the stage lightly.
 ##   smoke     puffs left behind anyone knocked back fast, every tick
 ##   debris    a wall slam throws big chunks off the wall, a third of the screen
 ## Positions are world px (StageView draws them through its camera). The screens read frozen() before playing on.
@@ -57,30 +57,16 @@ static var _bold: FontVariation
 ## fighters. A screen-sized part ("scr") has its size `s` as a share of the stage band's height.
 var band := 460.0            ## the stage band's height (screen px)
 var view_zoom := 1.0         ## the camera's zoom
-var lines_dir := Vector2.RIGHT   ## the way the camera's moving (screen; the lines run against it)
-var lines_speed := 0.0       ## how fast, screen px a tick
-var lines_k := 0.0           ## the lines' strength target, smoothed (0.05 - 1)
-var lines_on := 0.0          ## seconds the target's stayed high (a jolt doesn't count)
-var lines_move := 0.0        ## how far they've run, screen px
-var _since_tick := 0.0       ## seconds since the last tick played (none in a freeze or a pick: the lines die away)
 var span := 2000.0           ## how much of the stage is in view (world px across)
 var walls := 1400.0          ## the stage's half width (world px)
 const BIG_HIT := 45          ## a hit this hard (after scaling) gets the giant starburst - the big ones only, not every hit
                              ## (06:17 "The only thing i didnt like the circle for was every hit")
-const SPIKES := 40           ## Quake Stomp's wall of spikes
-## Speed lines (YOMI's, from its source - 20 Oct): LINES of them, LINE_MIN to LINE_MAX long (YOMI's 640-wide screen;
-## scaled to ours), full strength when the camera moves LINES_FULL screen widths a second, only once it's kept up
-## LINES_SUSTAIN seconds; faded within LINES_CLEAR of a fighter. In the BACKGROUND, as YOMI has them (14:48 "rework them
-## into the background more like YOMI"): drawn on the dark before the glow, the walls and the floor, at most
-## LINES_ALPHA. Calibrated on our hits since 0.37.0's launch pace: the fighters' middle at its fastest - a Haymaker 29 px
-## a tick, a Roundhouse 23 (full), the K.O. Punch 16, a Flying Knee 17 (most), a dash or Quake Stomp 7 (faint at most).
-const LINES := 100
-const LINE_MIN := 20.0
-const LINE_MAX := 200.0
-const LINES_FULL := 0.75
-const LINES_ALPHA := 0.45
-const LINES_SUSTAIN := 0.05
-const LINES_CLEAR := Vector2(350.0, 250.0)
+## Quake Stomp's shockwave reaches QUAKE_REACH either side of his foot (its hit box: 90), so its spikes and debris stay
+## there - YOMI's ground pound throws a curtain of debris up off the strip it hits and bumps the camera, no screen-wide
+## wall (15:10 "the ground shake is way too much"). QUAKE_SPIKES of them, QUAKE_DEBRIS bits.
+const QUAKE_REACH := 100.0
+const QUAKE_SPIKES := 14
+const QUAKE_DEBRIS := 36
 ## Smoke behind knockback (YOMI: a puff every tick someone hit moves faster than 6.5 px a tick - about its ordinary
 ## hits' speed). Ours since 0.37.0's launch pace: an ordinary hit sends them 7-10 px a tick, a Haymaker 48, a Roundhouse
 ## 41, the K.O. Punch 21 - so the big ones smoke.
@@ -162,16 +148,18 @@ func on_event(type: String, at: Vector2, face: float, dmg: int, by: Color, victi
 			splash(0.45, at)
 			freeze(0.12, victim)
 			kick(7.0)
-		"quake":   # (Quake Stomp: a WALL OF SPIKES bursting up out of the floor across the whole screen, racing out both
-			# ways from his foot - 14:09, the red brawler's stomp in the mod video - and the floor cracking)
-			_add_scr("floorring", Vector2(at.x, 0.0), Vector2.ZERO, 0.55, Color("#e6e9f2"), 0.5)
-			_add("crack", Vector2(at.x, 0.0), Vector2.ZERO, 1.3, Color("#c9ccd8"), 110.0, 0.0)
-			_spike_wall(at.x)
-			for i in 14:
-				var side := 1.0 if i % 2 == 0 else -1.0
-				_add("chip", Vector2(at.x, -4.0), Vector2(side * _rng.randf_range(160.0, 420.0), -_rng.randf_range(120.0, 340.0)),
-						_rng.randf_range(0.3, 0.5), Color("#a9acb8"), _rng.randf_range(3.0, 6.0))
-			kick(9.0)
+		"quake":   # (Quake Stomp: spikes bursting up out of the floor and a curtain of debris thrown up, only over the
+			# strip its shockwave hits - QUAKE_REACH either way from his foot (15:10); the floor cracking; the stage
+			# shaken lightly - YOMI's ground pound)
+			_add("floorring", Vector2(at.x, 0.0), Vector2.ZERO, 0.45, Color("#e6e9f2"), QUAKE_REACH * 0.85)
+			_add("crack", Vector2(at.x, 0.0), Vector2.ZERO, 1.1, Color("#c9ccd8"), QUAKE_REACH, 0.0)
+			_quake_spikes(at.x)
+			for i in QUAKE_DEBRIS:   # (thrown straight up off the strip, the middle highest)
+				var u := _rng.randf_range(-1.0, 1.0)
+				_add("chip", Vector2(at.x + u * QUAKE_REACH, -4.0), Vector2(u * _rng.randf_range(20.0, 90.0),
+						-_rng.randf_range(380.0, 900.0) * (1.0 - 0.45 * absf(u))), _rng.randf_range(0.35, 0.6),
+						Color("#a9acb8") if i % 3 else Color("#d6d9e3"), _rng.randf_range(3.0, 7.0))
+			kick(2.5)
 		"rush":   # (Bull Rush / Chase setting off: dust kicked back, a streak behind)
 			for i in 8:
 				var off := Vector2(0.0, _rng.randf_range(-0.1, 0.07) * band / maxf(view_zoom, 0.05))
@@ -349,24 +337,21 @@ func _wide_rings(at: Vector2, c: Color, n: int) -> void:
 		_add_scr("wring", at, Vector2.ZERO, 0.5, c, share * (1.0 + 0.4 * k), 0.07 * k, 0.45 - 0.1 * k)
 
 
-## Quake Stomp's wall of spikes: grey shards bursting up out of the floor across the screen in view, the nearest first
-## (a wave racing out both ways), some taller than the screen.
-func _spike_wall(x0: float) -> void:
-	var reach := minf(span * 0.95, walls * 2.0)   # (the whole screen, even stamping by a wall)
+## Quake Stomp's spikes: grey shards bursting up out of the floor over the strip it hits, from his foot outwards (world
+## sizes - they stay where they are, whatever the camera does).
+func _quake_spikes(x0: float) -> void:
 	var sp: Array = []
-	for k in SPIKES:
-		var u := _rng.randf_range(-1.0, 1.0)
-		var x := x0 + u * reach
+	for k in QUAKE_SPIKES:
+		var u := (float(k) + _rng.randf_range(0.1, 0.9)) / float(QUAKE_SPIKES) * 2.0 - 1.0   # (spread evenly, -1 to 1)
+		var x := x0 + u * QUAKE_REACH
 		if absf(x) > walls - 10.0:   # (not through the walls)
 			continue
-		var tall := _rng.randf_range(0.3, 0.8) * (1.15 - 0.5 * absf(u))
-		if k % 6 == 0:   # (every sixth runs off the top of the screen)
-			tall = _rng.randf_range(1.05, 1.45)
-		sp.append([x, tall, _rng.randf_range(0.04, 0.1), _rng.randf_range(-0.12, 0.12) + 0.16 * signf(u), absf(u) * 0.26,
+		var tall := _rng.randf_range(34.0, 70.0) * (1.25 - 0.6 * absf(u))   # (tallest by his foot)
+		sp.append([x, tall, _rng.randf_range(9.0, 17.0), _rng.randf_range(-0.1, 0.1) + 0.22 * u, absf(u) * 0.06,
 			_rng.randf()])
 	sp.sort_custom(func(a: Array, b: Array) -> bool: return float(a[1]) > float(b[1]))   # (the tall ones behind)
-	var p := _add_scr("spikes", Vector2(x0, 0.0), Vector2.ZERO, 1.0, Color("#8e92a2"), 1.0)
-	p["sp"] = sp
+	_add("spikes", Vector2(x0, 0.0), Vector2.ZERO, 0.75, Color("#8e92a2"), 1.0)
+	parts[-1]["sp"] = sp
 
 
 ## Someone bursts out of a combo: a white flash bursts out of them, shards and rings fly, everything nearby is blown
@@ -438,28 +423,6 @@ func afterimage(id: int, rec: Array, solid := false) -> void:
 	afters.append({"id": id, "rec": rec.duplicate(), "age": 0.0, "life": 0.5 if solid else 0.32, "solid": solid})
 
 
-## The camera this tick (StageView, each tick played): `moved` = how far the fighters' middle went, world px; `width` =
-## the screen's. YOMI's lines: the strength eases to the speed squared, and needs a few ticks of it.
-func camera_tick(moved: Vector2, width: float) -> void:
-	_since_tick = 0.0
-	var px := moved.length() * view_zoom   # (screen px this tick)
-	if px > 0.01:
-		lines_dir = moved.normalized()
-	lines_speed = px
-	var target := clampf(px * 60.0 / maxf(width, 1.0) / LINES_FULL, 0.05, 1.0)
-	lines_k = lerpf(lines_k, target, 0.95)
-	if target >= 0.5:
-		lines_on = minf(lines_on + 1.0 / 60.0, LINES_SUSTAIN * 2.0)
-	else:
-		lines_on = maxf(lines_on - 1.0 / 60.0, 0.0)
-	lines_move += px * lines_k * lines_k
-
-
-## How strong the lines are now (0 - 1).
-func lines_strength() -> float:
-	return lines_k * lines_k * lerpf(0.25, 1.0, clampf(lines_on / LINES_SUSTAIN, 0.0, 1.0))
-
-
 ## Smoke: a puff or two left where someone knocked back fast is (each tick they're that fast).
 func smoke(at: Vector2, seed_n: int) -> void:
 	_rng.seed = seed_n
@@ -477,35 +440,6 @@ func _debris(at: Vector2, inward: float, n: int) -> void:
 		var c := Color("#c9ccd8") if i % 3 else Color("#eef0f6")
 		_add_scr("chip", at + Vector2(0.0, _rng.randf_range(-0.08, 0.08) * band / maxf(view_zoom, 0.05)), v,
 				_rng.randf_range(0.35, 0.7), c, _rng.randf_range(0.012, 0.032))
-
-
-## The speed lines, across the stage band in the background (StageView, straight after the background - under the
-## glow, the walls, the floor and everyone): `near` = the fighters' screen points (the lines fade round them).
-func draw_lines(st: StageView, near: Array[Vector2]) -> void:
-	var k := lines_strength()
-	if k < 0.01:
-		return
-	var rect := Rect2(st.view_left, st.view_top, st.view_right - st.view_left, st.view_bottom - st.view_top)
-	var sc := rect.size.x / 640.0   # (YOMI's sizes are on a 640-wide screen)
-	var dir := -lines_dir   # (they run against the camera - the world rushing past)
-	var lr := _rng.state
-	_rng.seed = 9137
-	for i in LINES:
-		var bx := _rng.randf()
-		var by := _rng.randf()
-		var var_i := _rng.randf_range(0.3, 1.0)
-		var pos := Vector2(bx * rect.size.x, by * rect.size.y) + dir * lines_move * (0.6 + 0.8 * var_i)
-		pos = rect.position + Vector2(fposmod(pos.x, rect.size.x), fposmod(pos.y, rect.size.y))
-		var clear := 1.0
-		for q: Vector2 in near:
-			var d := Vector2((pos.x - q.x) / (LINES_CLEAR.x * sc), (pos.y - q.y) / (LINES_CLEAR.y * sc)).length()
-			clear = minf(clear, smoothstep(0.25, 1.0, d))
-		var li := k * var_i * clear
-		if li < 0.02:
-			continue
-		var half := dir * lerpf(LINE_MIN, LINE_MAX, li) * sc * 0.5
-		st.draw_line(pos - half, pos + half, Color(1, 1, 1, li * LINES_ALPHA), (1.0 + li) * sc * 0.4, true)
-	_rng.state = lr
 
 
 func freeze(seconds: float, who: int) -> void:
@@ -631,10 +565,6 @@ func update(delta: float) -> void:
 		if dim <= 0.0:
 			dim_id = -1
 	split = maxf(0.0, split - delta * 2.6)
-	_since_tick += delta
-	if _since_tick > 0.05 or dim > 0.0:   # (a freeze, a pick, a super's dim: the camera's still - the lines go)
-		lines_k = lerpf(lines_k, 0.0, 1.0 - pow(0.05, delta * 60.0))
-		lines_on = maxf(0.0, lines_on - delta)
 
 
 # ---------- drawing (through the stage's camera) ----------
@@ -731,7 +661,7 @@ func _draw_back_part(st: StageView, p: Dictionary) -> void:
 		"puff":   # (smoke behind knockback: a soft grey puff swelling and thinning)
 			c.a = 0.42 * (1.0 - t) * (1.0 - t)
 			st.draw_circle(at, float(p["s"]) * z * (0.6 + 0.9 * t), c, true, -1.0, true)
-		"spikes":   # (Quake Stomp's wall: each shard shoots up fast when the wave reaches it, holds, sinks and fades - two
+		"spikes":   # (Quake Stomp's spikes: each shard shoots up fast when the wave reaches it, holds, sinks and fades - two
 			# shades split down the middle, like a facet, and a pale edge)
 			var floor_y := st.w2s(Vector2.ZERO).y
 			var tri := PackedVector2Array()
@@ -743,8 +673,9 @@ func _draw_back_part(st: StageView, p: Dictionary) -> void:
 					continue
 				var rise := 1.0 - pow(1.0 - minf(1.0, lt / 0.07), 3.0)
 				var fall := clampf((lt - 0.24) / 0.42, 0.0, 1.0)
-				var h := float(q[1]) * band * rise * (1.0 - 0.45 * fall * fall)
-				var w := float(q[2]) * band * (1.0 - 0.3 * fall)
+				var zz := band if p.has("scr") else st.zoom   # (Quake Stomp's are world sizes - 15:10, local)
+				var h := float(q[1]) * zz * rise * (1.0 - 0.45 * fall * fall)
+				var w := float(q[2]) * zz * (1.0 - 0.3 * fall)
 				var a := 0.9 * (1.0 - fall)
 				if h < 2.0 or a < 0.02:
 					continue

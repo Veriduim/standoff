@@ -787,11 +787,18 @@ func _test_big_effects() -> void:
 		fx.on_event("hit", Vector2.ZERO, 1.0, 66, Color.RED, 1, Color.BLUE, false, 4)
 		var star: Array = fx.parts.filter(func(p: Dictionary) -> bool: return str(p["k"]) == "bigstar")
 		stars.append(float(star[0]["s"]) * fx.band if not star.is_empty() else 0.0)
-		fx.on_event("quake", Vector2(-1300.0, -6.0), 1.0, 0, Color.RED, 0, Color.RED, false, 5)   # (stamping by a wall)
+		fx.parts.clear()   # (the quake's own parts and shake, apart from the hits before it)
+		fx.shake = 0.0
+		fx.on_event("quake", Vector2(200.0, -6.0), 1.0, 0, Color.RED, 0, Color.RED, false, 5)
 		var wall: Array = fx.parts.filter(func(p: Dictionary) -> bool: return str(p["k"]) == "spikes")
 		var xs: Array = (wall[0]["sp"] as Array).map(func(q: Array) -> float: return float(q[0])) if not wall.is_empty() else [0.0]
-		var tallest: float = (wall[0]["sp"] as Array).map(func(q: Array) -> float: return float(q[1])).max() if not wall.is_empty() else 0.0
-		wall_ok = wall_ok and float(xs.max()) - float(xs.min()) >= 0.8 * minf(fx.span, 2.0 * fx.walls) and tallest >= 1.0
+		var bits: Array = fx.parts.filter(func(p: Dictionary) -> bool: return str(p["k"]) == "chip")
+		var spread := 0.0   # (how far from his foot any of it starts)
+		for b: Dictionary in bits:
+			spread = maxf(spread, absf((b["p"] as Vector2).x - 200.0))
+		wall_ok = (wall_ok and not wall.is_empty() and not wall[0].has("scr") and float(xs.max()) - 200.0 <= Fx.QUAKE_REACH
+				and 200.0 - float(xs.min()) <= Fx.QUAKE_REACH and float(xs.max()) - float(xs.min()) >= Fx.QUAKE_REACH
+				and spread <= Fx.QUAKE_REACH and fx.shake < 5.0)
 		fx.parts.clear()
 		fx.on_event("throw", Vector2.ZERO, 1.0, 20, Color.RED, 1, Color.BLUE, false, 6)
 		var ring: Array = fx.parts.filter(func(p: Dictionary) -> bool: return str(p["k"]) == "wring")
@@ -799,8 +806,9 @@ func _test_big_effects() -> void:
 	_check("a big hit's starburst is as big pulled back as close in (%.0f / %.0f px - over a third of the band), and an "
 			% stars + "ordinary hit gets none", none_small and absf(float(stars[0]) - float(stars[1])) < 1.0
 			and float(stars[0]) >= 0.35 * 420.0)
-	_check("Quake Stomp's wall of spikes covers the screen in view, even stamped by a wall, some taller than it; a grab's "
-			+ "rings are wider than the two fighters at any zoom", wall_ok and rings_ok)
+	_check("Quake Stomp's spikes and debris stay over the strip it hits (15:10 \"The animation should only be in the are "
+			+ "it effects\"), the stage only shaken lightly; a grab's rings are wider than the two fighters at any zoom",
+			wall_ok and rings_ok)
 	var g := _screen()
 	HomeScreen.fighter = "bruiser"
 	g.start_local(1, "ffa")
@@ -821,13 +829,9 @@ func _test_big_effects() -> void:
 			row[0] = float(row[0]) + 40.0
 		rec[1][5] = 1
 		st.show_tick(rec)
-	var rushing := st.fx.lines_strength()
 	var puffs := st.fx.parts.filter(func(p: Dictionary) -> bool: return str(p["k"]) == "puff").size()
-	for k in 30:
-		st.show_tick(rec)
-	_check("the camera rushing after them streaks the screen with speed lines (%.2f), gone once it's still (%.2f); the "
-			% [rushing, st.fx.lines_strength()] + "one knocked back fast leaves smoke behind (%d puffs)" % puffs,
-			rushing > 0.6 and st.fx.lines_strength() < 0.05 and puffs >= 8)
+	_check("the one knocked back fast leaves smoke behind (%d puffs) - and no speed lines (15:10 \"Remove the speed "
+			% puffs + "lines\")", puffs >= 8 and not st.fx.has_method("draw_lines"))
 	HomeScreen.fighter = "dancer"
 	g.queue_free()
 	var fx2 := Fx.new()
