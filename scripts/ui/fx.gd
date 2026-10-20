@@ -6,7 +6,6 @@ extends RefCounted
 ##             big hits; a guard arc on a block, a glint on a parry, an orange flash on a clash, a big double ring on a KO
 ##   freeze    the playback holds still a moment on contact (hitstop) - longer for harder hits; the one hit shakes in
 ##             place; a small screen shake (kept small - in Life After Dark he found a big shake "way too much")
-##   combos    the hit count and damage over whoever is being comboed, in the hitter's colour
 ##   arcs      the striking hand or foot leaves a pale arc while its hit is out
 ## The second, flashier pass (18:35: "Im excited to see the flashy animations and burst effects"; scenery and the floor
 ## reflection left out, "those are mods"):
@@ -15,6 +14,13 @@ extends RefCounted
 ##   supers    the stage dims round the one starting it, light rays and rings burst out of them, everything holds a
 ##             moment and the picture splits into colours (pick 13); KOs split too
 ##   after     fast movers leave fading copies of themselves (pick 8)
+## The YOMI source study (20 Oct 14:22 "Dont keep the words and damage numbers and lets get these all in"): no words or
+## combo counts on the stage, and no push-in; speed lines when the camera rushes, smoke behind anyone knocked back fast,
+## debris off a wall slam (Standoff Workshop/references/yomi_source_notes.md).
+##   lines     the camera rushing (the fighters' middle moving fast): thin white lines streak across the screen
+##             against it, faded round the fighters - YOMI's speed lines
+##   smoke     puffs left behind anyone knocked back fast, every tick
+##   debris    a wall slam throws big chunks off the wall, a third of the screen
 ## Positions are world px (StageView draws them through its camera). The screens read frozen() before playing on.
 
 const YELLOW := Color("#ffd23f")
@@ -24,15 +30,12 @@ const ORANGE := Color("#ff9f1c")
 const TRAIL_KEEP := 10       ## ticks of a limb's path kept for its arc (a longer sweep)
 const TRAIL_FADE := 0.12     ## seconds an arc takes to fade once the hit's over
 const INNER := 0.38          ## a swoosh's inner edge, as a share of the way from the joint to the tip (a fuller crescent)
-const COMBO_HOLD := 0.8      ## seconds a finished combo's count stays up, then fades over COMBO_FADE
-const COMBO_FADE := 0.4
 
 var parts: Array = []        ## {k: kind, p: world pos, v: px/s, age, life, c: colour, s: size, r: angle, w: spin, sp}
 var hitstop := 0.0           ## seconds the playback holds (frozen())
 var jitter: Array = []       ## ids shaking in place during the freeze
 var shake := 0.0             ## screen px, fading
 var offset := Vector2.ZERO   ## this frame's shake (StageView adds it to the camera)
-var combos := {}             ## victim id -> {hits, dmg, by: colour, pop: 1 -> 0, end: -1 live / seconds since it ended}
 var trails := {}             ## fighter id -> {pts: [[tip, pivot], ...], c: colour, fade: -1 live / seconds}
 var flash := {}              ## fighter id -> seconds they're drawn white (the impact frame)
 var afters: Array = []       ## afterimages: {id, rec: Sim.record row, age, life}
@@ -43,7 +46,6 @@ const INK := Color("#3b3f52")    ## the dark starburst behind a hit (23:05)
 var dim := 0.0               ## how dark the stage goes round a super (0-1); `dim_id` is drawn over it
 var dim_id := -1
 var split := 0.0             ## the colour split (0-1, fading) - the screens' post shader reads it
-var punch := 0.0             ## the camera's push-in on a big hit (a share of the zoom, fading)
 var split_at := Vector2.ZERO ## (world) where it splits from
 var style := ""              ## the next hit's look (StageView sets it): "slash" her fans, "wave" the ripple, else blunt
 var cutin := {}              ## a super's cut-in: {id, col, title, pose, face, age, life} (screen space - draw_cutin)
@@ -55,11 +57,31 @@ static var _bold: FontVariation
 ## fighters. A screen-sized part ("scr") has its size `s` as a share of the stage band's height.
 var band := 460.0            ## the stage band's height (screen px)
 var view_zoom := 1.0         ## the camera's zoom
+var lines_dir := Vector2.RIGHT   ## the way the camera's moving (screen; the lines run against it)
+var lines_speed := 0.0       ## how fast, screen px a tick
+var lines_k := 0.0           ## the lines' strength target, smoothed (0.05 - 1)
+var lines_on := 0.0          ## seconds the target's stayed high (a jolt doesn't count)
+var lines_move := 0.0        ## how far they've run, screen px
+var _since_tick := 0.0       ## seconds since the last tick played (none in a freeze or a pick: the lines die away)
 var span := 2000.0           ## how much of the stage is in view (world px across)
 var walls := 1400.0          ## the stage's half width (world px)
 const BIG_HIT := 45          ## a hit this hard (after scaling) gets the giant starburst - the big ones only, not every hit
                              ## (06:17 "The only thing i didnt like the circle for was every hit")
 const SPIKES := 40           ## Quake Stomp's wall of spikes
+## Speed lines (YOMI's, from its source - 20 Oct): LINES of them, LINE_MIN to LINE_MAX long (YOMI's 640-wide screen;
+## scaled to ours), full strength when the camera moves LINES_FULL screen widths a second, only once it's kept up
+## LINES_SUSTAIN seconds; faded within LINES_CLEAR of a fighter. Calibrated on our own hits (ours fly slower than YOMI's
+## for their size): the fighters' middle at its fastest - a Haymaker 17 px a tick (full), a Roundhouse or Flying Knee
+## 12 (most), the K.O. Punch 11, a dash 7 (under the line - faint at most).
+const LINES := 100
+const LINE_MIN := 20.0
+const LINE_MAX := 200.0
+const LINES_FULL := 0.45
+const LINES_SUSTAIN := 0.05
+const LINES_CLEAR := Vector2(350.0, 250.0)
+## Smoke behind knockback (YOMI: a puff every tick someone hit moves faster than 6.5 px a tick - about a fifth of their
+## height; ours move slower for their size, so SMOKE_PX).
+const SMOKE_PX := 6.0
 const SOLID := Color("#8f93a1")   ## the Bruiser's rush copies: solid grey (the red brawler in the 14:09 video)
 const AFTER_SOLID := 4       ## solid copies a fighter at most
 
@@ -71,10 +93,8 @@ func frozen() -> bool:
 func clear() -> void:
 	parts.clear()
 	jitter.clear()
-	combos.clear()
 	trails.clear()
 	flash.clear()
-	punch = 0.0
 	afters.clear()
 	hitstop = 0.0
 	shake = 0.0
@@ -99,11 +119,9 @@ func on_event(type: String, at: Vector2, face: float, dmg: int, by: Color, victi
 			kick(2.0)
 		"shot":   # (a throw: a quick flash at the hand)
 			_add("shock", at, Vector2.ZERO, 0.14, by.lightened(0.5), 26.0)
-		"countered":   # (Mirror: a big white flash and MIRROR)
+		"countered":   # (Mirror: a big white flash)
 			_add("glint", at, Vector2.ZERO, 0.3, Color.WHITE, 80.0)
 			_add("shock", at, Vector2.ZERO, 0.32, by.lightened(0.4), 110.0)
-			_add("text", at + Vector2(0, -70), Vector2(0, -40), 0.7, Color.WHITE, 30.0)
-			parts[-1]["txt"] = "MIRROR!"
 			splash(0.5, at)
 			freeze(0.18, victim)
 			kick(4.0)
@@ -118,22 +136,16 @@ func on_event(type: String, at: Vector2, face: float, dmg: int, by: Color, victi
 		"splat":   # (stuck to the wall: a big impact on it)
 			_add("spokes", at, Vector2.ZERO, 0.22, Color.WHITE, 70.0)
 			_add("shock", at, Vector2.ZERO, 0.3, victim_col.lightened(0.4), 90.0)
-			_add("text", at + Vector2(-face * 70.0, -60), Vector2(0, -30), 0.7, Color.WHITE, 26.0)
-			parts[-1]["txt"] = "WALL SPLAT"
+			_debris(at, -face, 32)
 			splash(0.4, at)
 			freeze(0.12, victim)
 			kick(6.0)
 		"restand":   # (hit as they land from an air combo: back in a ground combo)
-			_add("text", at + Vector2(0, -64), Vector2(0, -40), 0.6, Color("#8fd6ff"), 18.0)
-			parts[-1]["txt"] = "RESTAND"
+			pass   # (no word - 20 Oct 14:22 "Dont keep the words")
 		"ic":   # (an Instant Cancel: a purple snap)
 			_add("shock", at, Vector2.ZERO, 0.18, Color("#c58bff"), 50.0)
-			_add("text", at + Vector2(0, -64), Vector2(0, -40), 0.5, Color("#c58bff"), 18.0)
-			parts[-1]["txt"] = "INSTANT CANCEL"
 		"whiff":   # (a Whiff Cancel: a quick white ring off them)
 			_add("shock", at, Vector2.ZERO, 0.18, Color.WHITE, 46.0)
-			_add("text", at + Vector2(0, -60), Vector2(0, -50), 0.5, Color.WHITE, 18.0)
-			parts[-1]["txt"] = "WHIFF CANCEL"
 		# the Bruiser (05:27 "his effects of slapping an enemy accross map" - the Nakmuay mod, studied; our own drawing)
 		"fling":   # (a big hit sending them off: a tall ring of air bursting out the way they fly, wind streaks, cracks)
 			_add_scr("boom", at + Vector2(face * 10.0, 0.0), Vector2.ZERO, 0.48, by.lightened(0.7), 0.36, 0.0, face)
@@ -170,14 +182,10 @@ func on_event(type: String, at: Vector2, face: float, dmg: int, by: Color, victi
 		"grit":   # (his Grit full - the K.O. Punch is there: a hot flare round him)
 			_add("glow", at, Vector2.ZERO, 0.45, Color("#ff9a3c"), 80.0)
 			_add("shock", at, Vector2.ZERO, 0.3, Color("#ffb766"), 70.0)
-			_add("text", at + Vector2(0, -80), Vector2(0, -36), 0.7, Color("#ffb766"), 18.0)
-			parts[-1]["txt"] = "K.O. READY"
 		"guardbreak":   # (straight through a guard: the guard arc in pieces)
 			for i in 8:
 				_add("chip", at, _fan(face, 1.6) * _rng.randf_range(200.0, 420.0), _rng.randf_range(0.25, 0.4), BLOCK,
 						_rng.randf_range(4.0, 7.0))
-			_add("text", at + Vector2(0, -56), Vector2(0, -40), 0.55, Color("#ff7a7a"), 18.0)
-			parts[-1]["txt"] = "GUARD BREAK"
 		"armored":   # (Super Armor taking it: a hard metal glint on him, no hitstun)
 			_add("glint", at, Vector2.ZERO, 0.24, Color("#ffe7b0"), 46.0)
 			flash[victim] = 0.06
@@ -200,18 +208,14 @@ func on_event(type: String, at: Vector2, face: float, dmg: int, by: Color, victi
 						_rng.randf_range(0.35, 0.5), Color("#dff3ff"), _rng.randf_range(26.0, 44.0))
 		"beat":   # (Tempo: a beat - a small pink flick off her, no word: Tempo's always on now, it'd be noise)
 			_add("glint", at + Vector2(0, -40), Vector2(0, -60), 0.3, Color("#ff7ab6"), 14.0)
-		"onbeat":   # (Tempo full: ON BEAT!)
+		"onbeat":   # (Tempo full: a pink ring)
 			_add("shock", at, Vector2.ZERO, 0.3, Color("#ff7ab6"), 70.0)
-			_add("text", at + Vector2(0, -80), Vector2(0, -40), 0.9, Color("#ff7ab6"), 24.0)
-			parts[-1]["txt"] = "ON BEAT!"
 		"ward":   # (Fan Ward: the fan stops and hangs - a small ring of her colour where it waits)
 			_add("ring", at, Vector2.ZERO, 0.3, by.lightened(0.3), 30.0)
 			_add("glint", at, Vector2.ZERO, 0.22, by.lightened(0.6), 22.0)
-		"reflect":   # (Mirror turns a shot round: a quick glint and a small word - no big circle)
+		"reflect":   # (Mirror turns a shot round: a quick glint - no big circle)
 			_add("glint", at, Vector2.ZERO, 0.26, Color.WHITE, 40.0)
 			_add("shock", at, Vector2.ZERO, 0.22, by.lightened(0.4), 46.0)
-			_add("text", at + Vector2(0, -50), Vector2(0, -40), 0.55, Color.WHITE, 18.0)
-			parts[-1]["txt"] = "REFLECT"
 		"gustfwd":   # (Fan Gust: wind off her fans, rushing out along the way she faces)
 			for k in 12:
 				var off := Vector2(face * _rng.randf_range(0.0, 50.0), _rng.randf_range(-80.0, 50.0))
@@ -223,28 +227,19 @@ func on_event(type: String, at: Vector2, face: float, dmg: int, by: Color, victi
 				_add("hwind", at + off, Vector2(face * _rng.randf_range(500.0, 800.0), 0.0), 0.3, Color("#dff3ff"), 34.0)
 		"catch", "recall":   # (Fans: one back in hand / called home - a gold ring)
 			_add("shock", at, Vector2.ZERO, 0.18, Color("#ffd23f"), 34.0 if type == "catch" else 64.0)
-		"form_snap", "form_floor", "form_flow":   # (Forms: into one - its name)
+		"form_snap", "form_floor", "form_flow":   # (Forms: into one - a pale ring)
 			_add("shock", at, Vector2.ZERO, 0.2, Color("#9fd8ff"), 50.0)
-			_add("text", at + Vector2(0, -70), Vector2(0, -40), 0.6, Color("#9fd8ff"), 20.0)
-			parts[-1]["txt"] = type.trim_prefix("form_").to_upper()
-		"sad":   # (Sadness building: SAD!)
-			_add("text", at + Vector2(0, -80), Vector2(0, -40), 0.9, Color("#7fa6ff"), 24.0)
-			parts[-1]["txt"] = "SAD!"
-		"sadness":   # (SADNESS!: a blue wash and the word)
-			_add("text", at + Vector2(0, -80), Vector2(0, -40), 1.2, Color("#5d7bd6"), 30.0)
-			parts[-1]["txt"] = "SADNESS!"
+		"sad":   # (Sadness building)
+			pass   # (no word - 20 Oct 14:22 "Dont keep the words")
+		"sadness":   # (SADNESS: a blue wash)
 			_add("shock", at, Vector2.ZERO, 0.4, Color("#5d7bd6"), 120.0)
 		"time":   # (the round's out)
-			_add("text", at + Vector2(0, -120), Vector2.ZERO, 1.6, Color.WHITE, 64.0)
-			parts[-1]["txt"] = "TIME!"
 			splash(0.6, at)
 			freeze(0.4, -1)
 		"wall":   # (launched into the wall and off it)
 			_add("shock", at, Vector2.ZERO, 0.2, Color("#9a9daa"), 34.0)
 			_add("spokes", at, Vector2.ZERO, 0.14, Color.WHITE, 40.0)
-			for i in 6:
-				_add("chip", at, Vector2(-face * _rng.randf_range(150.0, 380.0), _rng.randf_range(-300.0, 80.0)),
-						_rng.randf_range(0.3, 0.5), Color("#c9ccd8"), _rng.randf_range(3.0, 6.0))
+			_debris(at, -face, 20)
 			freeze(0.06, victim)
 			kick(3.0)
 		"hit", "throw", "armor":
@@ -271,9 +266,7 @@ func on_event(type: String, at: Vector2, face: float, dmg: int, by: Color, victi
 				_add("star", at, Vector2.ZERO, 0.14, YELLOW, 20.0 * s)
 			else:   # (blunt: a kick, a knee - the spark on the dark starburst)
 				_burst(at, face, s, by, victim_col)
-			if counter:   # (they were mid-attack: a red COUNTER and a harder flash)
-				_add("text", at + Vector2(0, -40), Vector2(0, -50), 0.42, Color("#ff5d5d"), 17.0)   # (small - they're common)
-				parts[-1]["txt"] = "COUNTER"
+			if counter:   # (they were mid-attack: a harder flash)
 				flash[victim] = 0.08
 			if dmg >= 30:   # (a hard one: impact lines in the hitter's colour, the one hit flashes white - no big white
 				# ring any more: 22:57 "I dont love the massive white circle thing")
@@ -285,14 +278,9 @@ func on_event(type: String, at: Vector2, face: float, dmg: int, by: Color, victi
 				_big(at, by)
 			freeze(clampf(0.04 + float(dmg) * 0.0018, 0.05, 0.14), victim)
 			kick(clampf(float(dmg) * 0.1, 1.5, 5.0))
-			if type != "armor":
-				_count(victim, dmg, by, reeling)
-		"block":   # (a guard arc - red when blocked at the wrong height; a big one and PUSH for a Push Block)
+		"block":   # (a guard arc - red when blocked at the wrong height; a big one for a Push Block)
 			_add("guard", at, Vector2.ZERO, 0.2 if not push else 0.3, Color("#ff7a7a") if counter else BLOCK,
 					30.0 if not push else 48.0, -face)
-			if push:
-				_add("text", at + Vector2(0, -50), Vector2(0, -40), 0.5, BLOCK, 18.0)
-				parts[-1]["txt"] = "PUSH"
 			for i in 4:
 				_add("chip", at, _fan(-face, 1.3) * _rng.randf_range(160.0, 320.0), _rng.randf_range(0.2, 0.32),
 						Color.WHITE, _rng.randf_range(2.5, 4.0))
@@ -300,8 +288,6 @@ func on_event(type: String, at: Vector2, face: float, dmg: int, by: Color, victi
 			kick(1.0)
 		"parry":
 			_add("glint", at, Vector2.ZERO, 0.26, Color.WHITE, 58.0)
-			_add("text", at + Vector2(0, -56), Vector2(0, -40), 0.55, Color.WHITE, 22.0)
-			parts[-1]["txt"] = "PARRY"
 			_add("shock", at, Vector2.ZERO, 0.2, BLOCK, 44.0)
 			freeze(0.12, -1)
 			kick(2.0)
@@ -449,6 +435,76 @@ func afterimage(id: int, rec: Array, solid := false) -> void:
 	afters.append({"id": id, "rec": rec.duplicate(), "age": 0.0, "life": 0.5 if solid else 0.32, "solid": solid})
 
 
+## The camera this tick (StageView, each tick played): `moved` = how far the fighters' middle went, world px; `width` =
+## the screen's. YOMI's lines: the strength eases to the speed squared, and needs a few ticks of it.
+func camera_tick(moved: Vector2, width: float) -> void:
+	_since_tick = 0.0
+	var px := moved.length() * view_zoom   # (screen px this tick)
+	if px > 0.01:
+		lines_dir = moved.normalized()
+	lines_speed = px
+	var target := clampf(px * 60.0 / maxf(width, 1.0) / LINES_FULL, 0.05, 1.0)
+	lines_k = lerpf(lines_k, target, 0.95)
+	if target >= 0.5:
+		lines_on = minf(lines_on + 1.0 / 60.0, LINES_SUSTAIN * 2.0)
+	else:
+		lines_on = maxf(lines_on - 1.0 / 60.0, 0.0)
+	lines_move += px * lines_k * lines_k
+
+
+## How strong the lines are now (0 - 1).
+func lines_strength() -> float:
+	return lines_k * lines_k * lerpf(0.25, 1.0, clampf(lines_on / LINES_SUSTAIN, 0.0, 1.0))
+
+
+## Smoke: a puff or two left where someone knocked back fast is (each tick they're that fast).
+func smoke(at: Vector2, seed_n: int) -> void:
+	_rng.seed = seed_n
+	for i in 2:
+		_add("puff", at + Vector2(_rng.randf_range(-14.0, 14.0), _rng.randf_range(-16.0, 16.0)),
+				Vector2(_rng.randf_range(-20.0, 20.0), -_rng.randf_range(10.0, 40.0)), _rng.randf_range(0.3, 0.5),
+				Color("#c9ccd8"), _rng.randf_range(10.0, 17.0))
+
+
+## Debris off a wall slam: big chunks flying back off the wall into the stage (`inward` = the way that is), sized by
+## the screen - a third of it (YOMI's wall slam: 32 large pieces).
+func _debris(at: Vector2, inward: float, n: int) -> void:
+	for i in n:
+		var v := Vector2(inward * _rng.randf_range(350.0, 1300.0), _rng.randf_range(-950.0, 250.0))
+		var c := Color("#c9ccd8") if i % 3 else Color("#eef0f6")
+		_add_scr("chip", at + Vector2(0.0, _rng.randf_range(-0.08, 0.08) * band / maxf(view_zoom, 0.05)), v,
+				_rng.randf_range(0.35, 0.7), c, _rng.randf_range(0.012, 0.032))
+
+
+## The speed lines, across the stage band behind the fighters (StageView, before drawing them): `near` = the fighters'
+## screen points (the lines fade round them).
+func draw_lines(st: StageView, near: Array[Vector2]) -> void:
+	var k := lines_strength()
+	if k < 0.01:
+		return
+	var rect := Rect2(st.view_left, st.view_top, st.view_right - st.view_left, st.view_bottom - st.view_top)
+	var sc := rect.size.x / 640.0   # (YOMI's sizes are on a 640-wide screen)
+	var dir := -lines_dir   # (they run against the camera - the world rushing past)
+	var lr := _rng.state
+	_rng.seed = 9137
+	for i in LINES:
+		var bx := _rng.randf()
+		var by := _rng.randf()
+		var var_i := _rng.randf_range(0.3, 1.0)
+		var pos := Vector2(bx * rect.size.x, by * rect.size.y) + dir * lines_move * (0.6 + 0.8 * var_i)
+		pos = rect.position + Vector2(fposmod(pos.x, rect.size.x), fposmod(pos.y, rect.size.y))
+		var clear := 1.0
+		for q: Vector2 in near:
+			var d := Vector2((pos.x - q.x) / (LINES_CLEAR.x * sc), (pos.y - q.y) / (LINES_CLEAR.y * sc)).length()
+			clear = minf(clear, smoothstep(0.25, 1.0, d))
+		var li := k * var_i * clear
+		if li < 0.02:
+			continue
+		var half := dir * lerpf(LINE_MIN, LINE_MAX, li) * sc * 0.5
+		st.draw_line(pos - half, pos + half, Color(1, 1, 1, li), (1.5 + li) * sc * 0.5, true)
+	_rng.state = lr
+
+
 func freeze(seconds: float, who: int) -> void:
 	hitstop = maxf(hitstop, seconds * 1.35)   # (a hit holds a little longer - it lands harder)
 	if who >= 0 and not jitter.has(who):
@@ -458,7 +514,6 @@ func freeze(seconds: float, who: int) -> void:
 func kick(px: float) -> void:
 	px *= 1.3
 	shake = maxf(shake, px)
-	punch = maxf(punch, clampf(px * 0.012, 0.0, 0.08))
 
 
 ## The burst where a hit lands: a spiky star (the dark starburst goes behind it - on_event).
@@ -475,7 +530,7 @@ func _fan(face: float, spread: float) -> Vector2:
 
 
 func _add(kind: String, at: Vector2, vel: Vector2, life: float, c: Color, size: float, extra := 0.0) -> void:
-	size *= BIG if kind != "text" else 1.12   # (22:40 "We dont do things big enough": every effect bigger)
+	size *= BIG   # (22:40 "We dont do things big enough": every effect bigger)
 	life *= 1.15
 	vel *= BIG
 	var p := {"k": kind, "p": at, "v": vel, "age": 0.0, "life": life, "c": c, "s": size, "r": _rng.randf() * TAU,
@@ -511,27 +566,6 @@ func _add(kind: String, at: Vector2, vel: Vector2, life: float, c: Color, size: 
 			sp.append(_rng.randf_range(0.45, 0.8) + 0.35 * along * (1.0 if cos(ang) * extra > 0.0 else 0.6))
 		p["sp"] = sp
 	parts.append(p)
-
-
-func _count(victim: int, dmg: int, by: Color, reeling: bool) -> void:
-	if victim < 0:
-		return
-	var c: Dictionary = combos.get(victim, {})
-	if reeling and not c.is_empty() and float(c["end"]) < 0.0:
-		c["hits"] = int(c["hits"]) + 1
-		c["dmg"] = int(c["dmg"]) + dmg
-		c["by"] = by
-		c["pop"] = 1.0
-	else:
-		combos[victim] = {"hits": 1, "dmg": dmg, "by": by, "pop": 1.0, "end": -1.0}
-
-
-## A combo ends when its victim stops reeling (or goes down) - the count then stays a moment and fades.
-func settle_combos(frame: Array) -> void:
-	for id: int in combos:
-		var c: Dictionary = combos[id]
-		if float(c["end"]) < 0.0 and (id >= frame.size() or int(frame[id][5]) != 1):
-			c["end"] = 0.0
 
 
 ## A striking limb's tip and the joint it swings from (world), each tick its hit is out.
@@ -577,13 +611,6 @@ func update(delta: float) -> void:
 	if shake < 0.3:
 		shake = 0.0
 	offset = Vector2(_rng.randf_range(-1.0, 1.0), _rng.randf_range(-1.0, 1.0)) * shake
-	for id: int in combos.keys():
-		var c: Dictionary = combos[id]
-		c["pop"] = maxf(0.0, float(c["pop"]) - delta / 0.15)
-		if float(c["end"]) >= 0.0:
-			c["end"] = float(c["end"]) + delta
-			if float(c["end"]) > COMBO_HOLD + COMBO_FADE:
-				combos.erase(id)
 	for id: int in trails.keys():
 		if float(trails[id]["fade"]) >= 0.0:
 			trails[id]["fade"] = float(trails[id]["fade"]) + delta
@@ -601,7 +628,10 @@ func update(delta: float) -> void:
 		if dim <= 0.0:
 			dim_id = -1
 	split = maxf(0.0, split - delta * 2.6)
-	punch = maxf(0.0, punch - delta * 0.25)
+	_since_tick += delta
+	if _since_tick > 0.05 or dim > 0.0:   # (a freeze, a pick, a super's dim: the camera's still - the lines go)
+		lines_k = lerpf(lines_k, 0.0, 1.0 - pow(0.05, delta * 60.0))
+		lines_on = maxf(0.0, lines_on - delta)
 
 
 # ---------- drawing (through the stage's camera) ----------
@@ -663,7 +693,7 @@ func draw_back(st: StageView) -> void:
 		var k := str(p["k"])
 		if float(p["age"]) < 0.0:   # (not started yet - a delayed part)
 			continue
-		if k in ["bubble", "floorring", "ribbon", "crack", "spikes", "bigstar"]:
+		if k in ["bubble", "floorring", "ribbon", "crack", "spikes", "bigstar", "puff"]:
 			_draw_back_part(st, p)
 			continue
 		if k != "ink":
@@ -695,6 +725,9 @@ func _draw_back_part(st: StageView, p: Dictionary) -> void:
 	var at := st.w2s(p["p"])
 	var z := band if p.has("scr") else st.zoom   # (a screen-sized part: its size is a share of the band)
 	match str(p["k"]):
+		"puff":   # (smoke behind knockback: a soft grey puff swelling and thinning)
+			c.a = 0.42 * (1.0 - t) * (1.0 - t)
+			st.draw_circle(at, float(p["s"]) * z * (0.6 + 0.9 * t), c, true, -1.0, true)
 		"spikes":   # (Quake Stomp's wall: each shard shoots up fast when the wave reaches it, holds, sinks and fades - two
 			# shades split down the middle, like a facet, and a pale edge)
 			var floor_y := st.w2s(Vector2.ZERO).y
@@ -795,7 +828,7 @@ func draw_parts(st: StageView) -> void:
 		var c: Color = p["c"]
 		var s := float(p["s"]) * (band if p.has("scr") else z)   # (screen-sized parts: a share of the band)
 		match str(p["k"]):
-			"ink", "bubble", "floorring", "ribbon", "crack", "spikes", "bigstar":   # (behind the fighters - draw_back)
+			"ink", "bubble", "floorring", "ribbon", "crack", "spikes", "bigstar", "puff":   # (behind the fighters - draw_back)
 				pass
 			"wring":   # (a wide thin ring opening out round a big moment; x = how strong)
 				var e := 1.0 - pow(1.0 - t, 2.0)
@@ -943,18 +976,6 @@ func draw_parts(st: StageView) -> void:
 				var e := 1.0 - pow(1.0 - t, 2.0)
 				c.a = 0.95 * (1.0 - t)
 				st.draw_circle(at, s * (0.45 + 0.55 * e), c, true, -1.0, true)
-			"text":   # (a word popping up off a hit - COUNTER)
-				if _bold == null:
-					_bold = FontVariation.new()
-					_bold.base_font = ThemeDB.fallback_font
-					_bold.variation_embolden = 1.1
-				var size := int(float(p["s"]) * (1.25 - 0.25 * minf(1.0, t / 0.15)))
-				var tw := _bold.get_string_size(str(p["txt"]), HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
-				c.a = 1.0 - maxf(0.0, (t - 0.6) / 0.4)
-				var ink := Color(0.02, 0.02, 0.03, c.a)
-				st.draw_string_outline(_bold, at - Vector2(tw / 2.0, 0), str(p["txt"]), HORIZONTAL_ALIGNMENT_LEFT, -1,
-						size, 7, ink)
-				st.draw_string(_bold, at - Vector2(tw / 2.0, 0), str(p["txt"]), HORIZONTAL_ALIGNMENT_LEFT, -1, size, c)
 			"shard":   # (a long triangle flying out, point first)
 				c.a = 1.0 - t * t
 				var dir := (p["v"] as Vector2).normalized() if (p["v"] as Vector2).length() > 1.0 else Vector2.RIGHT
@@ -1100,45 +1121,3 @@ func _star(st: StageView, at: Vector2, s: float, rot: float, sp: Array, c: Color
 	for i in sp.size():
 		pts.append(at + Vector2.from_angle(rot + TAU * float(i) / float(sp.size())) * s * float(sp[i]))
 	st.draw_colored_polygon(pts, c)
-
-
-## The counts over whoever's being comboed (2 hits and up), kept inside the stage band.
-func draw_combos(st: StageView, frame: Array) -> void:
-	if _bold == null:
-		_bold = FontVariation.new()
-		_bold.base_font = ThemeDB.fallback_font
-		_bold.variation_embolden = 1.1
-	var placed: Array[Vector2] = []
-	for id: int in combos:
-		var c: Dictionary = combos[id]
-		if int(c["hits"]) < 2 or id >= frame.size():
-			continue
-		var a := 1.0
-		if float(c["end"]) >= 0.0:
-			a = clampf(1.0 - (float(c["end"]) - COMBO_HOLD) / COMBO_FADE, 0.0, 1.0)
-		var r: Array = frame[id]
-		var p := st.w2s(Vector2(float(r[0]), float(r[1]) - 150.0))
-		p.x = clampf(p.x, st.view_left + 70.0, st.view_right - 70.0)
-		p.y = clampf(p.y, st.view_top + 60.0, st.view_bottom - 50.0)
-		var moved := true
-		while moved:   # (two counts over fighters stood together go one above the other)
-			moved = false
-			for q: Vector2 in placed:
-				if absf(q.x - p.x) < 120.0 and absf(q.y - p.y) < 72.0:
-					p.y = q.y - 76.0
-					moved = true
-		placed.append(p)
-		var size := int(46.0 + 18.0 * float(c["pop"]))
-		var col: Color = c["by"]
-		col = col.lightened(0.15)
-		col.a = a
-		var ink := Color(0.02, 0.02, 0.03, a)
-		var num := str(int(c["hits"]))
-		var nw := _bold.get_string_size(num, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
-		st.draw_string_outline(_bold, p - Vector2(nw / 2.0, 0), num, HORIZONTAL_ALIGNMENT_LEFT, -1, size, 10, ink)
-		st.draw_string(_bold, p - Vector2(nw / 2.0, 0), num, HORIZONTAL_ALIGNMENT_LEFT, -1, size, col)
-		var sub := "HITS  ·  %d" % int(c["dmg"])
-		var sw := _bold.get_string_size(sub, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x
-		var white := Color(1, 1, 1, a)
-		st.draw_string_outline(_bold, p + Vector2(-sw / 2.0, 22), sub, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, 6, ink)
-		st.draw_string(_bold, p + Vector2(-sw / 2.0, 22), sub, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, white)

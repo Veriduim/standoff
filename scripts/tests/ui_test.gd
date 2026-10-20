@@ -134,7 +134,7 @@ func _watch(g: Control, mine: Dictionary) -> Dictionary:
 
 
 func _test_hit_effects() -> void:
-	_section("The hit effects (first style pass): sparks where it lands, the freeze, the arc, combo counts, the HP chunk")
+	_section("The hit effects (first style pass): sparks where it lands, the freeze, the arc, the HP chunk")
 	var g := _screen()
 	g.start_local(1, "ffa")
 	g.bots.clear()   # (the other one just stands there)
@@ -159,9 +159,9 @@ func _test_hit_effects() -> void:
 	_watch(g, {"move": "sweep", "x": 1.0})   # (a sweep leaves them reeling long enough for a jab)
 	g.sim.fighters[0].pos.x = g.sim.fighters[1].pos.x - 66.0
 	_watch(g, {"move": "jab", "x": 1.0})
-	var combo: Dictionary = g.stage.fx.combos.get(1, {})
-	_check("a hit while they still reel counts on as a combo - sweep, jab (%s)" % [combo],
-			not combo.is_empty() and int(combo["hits"]) == 2 and int(combo["dmg"]) > 30)
+	_check("a hit while they still reel counts on as a combo - sweep, jab (%d), with no count or damage drawn over them "
+			% g.sim.fighters[1].combo + "(20 Oct 14:22 \"Dont keep the words and damage numbers\")",
+			g.sim.fighters[1].combo == 2 and g.stage.fx.get("combos") == null)
 	for _i in 4:   # (they get their feet back - the combo's over)
 		if g.sim.reeling(g.sim.fighters[1]):
 			_watch(g, {"move": "wait"})
@@ -169,9 +169,9 @@ func _test_hit_effects() -> void:
 		g._process(1.0)
 		g.stage._process(1.0)
 	var card: Node = g.cards.get_child(1)
-	_check("...and later the white chunk has drained and the count is gone",
+	_check("...and later the white chunk has drained",
 			is_equal_approx((card.find_child("Lag", true, false) as ProgressBar).value,
-			(card.find_child("HP", true, false) as ProgressBar).value) and g.stage.fx.combos.is_empty())
+			(card.find_child("HP", true, false) as ProgressBar).value))
 	g.queue_free()
 
 
@@ -815,8 +815,33 @@ func _test_big_effects() -> void:
 		st.show_tick(rec)
 	var solid := st.fx.afters.filter(func(a: Dictionary) -> bool: return int(a["id"]) == 0 and bool(a.get("solid", false)))
 	_check("the Bruiser rushing in leaves solid grey copies of himself behind (%d)" % solid.size(), solid.size() >= 2)
+	for k in 8:   # (20 Oct, YOMI's: both sent flying across the stage - the camera rushing after them)
+		rec = rec.duplicate(true)
+		for row: Array in rec:
+			row[0] = float(row[0]) + 40.0
+		rec[1][5] = 1
+		st.show_tick(rec)
+	var rushing := st.fx.lines_strength()
+	var puffs := st.fx.parts.filter(func(p: Dictionary) -> bool: return str(p["k"]) == "puff").size()
+	for k in 30:
+		st.show_tick(rec)
+	_check("the camera rushing after them streaks the screen with speed lines (%.2f), gone once it's still (%.2f); the "
+			% [rushing, st.fx.lines_strength()] + "one knocked back fast leaves smoke behind (%d puffs)" % puffs,
+			rushing > 0.6 and st.fx.lines_strength() < 0.05 and puffs >= 8)
 	HomeScreen.fighter = "dancer"
 	g.queue_free()
+	var fx2 := Fx.new()
+	fx2.band = 420.0
+	fx2.view_zoom = 0.5
+	for ev: String in ["splat", "parry", "grit", "onbeat", "sadness", "time", "countered", "restand", "sad", "ic",
+			"guardbreak", "form_snap", "reflect", "whiff"]:
+		fx2.on_event(ev, Vector2(1390.0, -60.0), 1.0, 0, Color.RED, 1, Color.BLUE, false, 7)
+	fx2.on_event("hit", Vector2.ZERO, 1.0, 40, Color.RED, 1, Color.BLUE, true, 8, true)   # (a counter hit)
+	fx2.on_event("block", Vector2.ZERO, 1.0, 0, Color.RED, 1, Color.BLUE, false, 9, false, true)   # (a Push Block)
+	var words := fx2.parts.filter(func(p: Dictionary) -> bool: return str(p["k"]) == "text").size()
+	var debris := fx2.parts.filter(func(p: Dictionary) -> bool: return str(p["k"]) == "chip" and p.has("scr")).size()
+	_check("no words or numbers on the stage (%d) and no push-in on big hits; a wall splat throws %d big chunks off the "
+			% [words, debris] + "wall (YOMI's wall slam)", words == 0 and debris >= 30 and fx2.get("punch") == null)
 
 
 ## Every character past plain ASCII inside the game's strings (as tools/icon_fonts.py scans: comments aren't shown).
@@ -908,6 +933,16 @@ func _test_strike_timeline() -> void:
 	_check("the Haymaker: its fist pulled back past the wind-up (%.0f vs %.0f), and landing it swings on past the strike "
 			% [fist.call(coil), fist.call(a)] + "(%.0f px over all joints)" % moved, fist.call(coil) < fist.call(a) - 2.0
 			and moved > 15.0)
+	var same := func(p: Dictionary, q: Dictionary) -> bool:
+		for j: String in Poses.JOINTS:
+			if ((p[j] as Vector2) - (q[j] as Vector2)).length() > 0.01:
+				return false
+		return true
+	var h19: Dictionary = Poses._strike(m, keys, 19)
+	var r21: Dictionary = Poses._strike(m, keys, 21)
+	_check("held like YOMI's drawings (20 Oct): the wind-up holds still (frames 3 and 9), the strike stays out (15 and 19), "
+			+ "then a recovery pose holds (21 and 23) before the snap on", same.call(Poses._strike(m, keys, 3), coil)
+			and same.call(held, h19) and same.call(r21, Poses._strike(m, keys, 23)) and not same.call(h19, r21))
 	var look := Poses.for_record("dancer", [0.0, 0.0, 1, "", 0, 1, 100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0,
 		Sim.LOOKS.find("body"), 8])
 	var head := Poses.for_record("dancer", [0.0, 0.0, 1, "", 0, 1, 100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0,

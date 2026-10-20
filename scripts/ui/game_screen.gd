@@ -5,6 +5,7 @@ extends Control
 ## One character for now - everyone is the Dancer, in their own colour (Timmy 17:52).
 
 const FONT := 22
+const NARROW_CARD := 230.0   ## a top card narrower than this (five or six players) keeps its marks short
 const SMALL := 17
 const LAG_HOLD := 0.45     ## seconds the HP lost stays showing (white) before it drains (pick 10)
 const LAG_SPEED := 0.6     ## how fast it drains, in whole bars a second
@@ -380,6 +381,7 @@ func _build_cards() -> void:
 		var p := PanelContainer.new()
 		p.custom_minimum_size = Vector2(w, Ui.CARD_H - 8)
 		p.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		p.set_meta("narrow", w < NARROW_CARD)
 		var st := Ui.box(Color("#1e2029dd"), 10)
 		st.set_content_margin_all(6)
 		st.border_color = stage.colour_of(f.id)
@@ -557,7 +559,8 @@ func _update_cards(rec: Array = []) -> void:
 		var airs := int(rec[f.id][10]) if not rec.is_empty() and rec[f.id].size() > 10 else Sim.AIR_OPTIONS - f.air_moves
 		var ex := card.find_child("Extras", true, false) as RichTextLabel
 		var text := "[right]%s[color=#46d17a]%s[/color][color=#3a3d4d]%s[/color] [color=#e8e8f0]%s[/color][color=#3a3d4d]%s[/color][/right]" \
-				% [_trial_marks(f, rec[f.id] if not rec.is_empty() else []), "✕".repeat(fcs), "✕".repeat(Sim.FC_MAX - fcs),
+				% [_trial_marks(f, rec[f.id] if not rec.is_empty() else [], bool(card.get_meta("narrow", false))),
+				"✕".repeat(fcs), "✕".repeat(Sim.FC_MAX - fcs),
 				"●".repeat(airs), "●".repeat(Sim.AIR_OPTIONS - airs)]
 		if ex.text != text:
 			ex.text = text
@@ -577,8 +580,9 @@ func _predicted() -> Dictionary:
 
 
 ## A fighter's own systems on their card: the form (Flow / Snap / Floor), the beats (pink), the fans in hand (gold) -
-## the Dancer's; the Bruiser's Grit (orange, ten pips; K.O. when it's full).
-func _trial_marks(f: Fighter, row: Array) -> String:
+## the Dancer's; the Bruiser's Grit (orange, ten pips; K.O. when it's full - five on a narrow card, each worth two:
+## 20 Oct, at six players his ten took the whole card and his name went).
+func _trial_marks(f: Fighter, row: Array, narrow := false) -> String:
 	var out := ""
 	var has := row.size() > 16
 	if sim.has_xf(f, "forms"):
@@ -592,11 +596,12 @@ func _trial_marks(f: Fighter, row: Array) -> String:
 		out += "[color=#ffd23f]%s[/color][color=#3a3d4d]%s[/color] " % ["◆".repeat(fn), "◆".repeat(Sim.FANS_MAX - fn)]
 	if sim.has_xf(f, "grit"):
 		var g := int(row[17]) if row.size() > 17 else f.grit
-		var pips := clampi(int(floor(float(g) * 10.0 / float(Sim.GRIT_MAX))), 0, 10)
+		var most := 5 if narrow else 10
+		var pips := clampi(int(floor(float(g) * float(most) / float(Sim.GRIT_MAX))), 0, most)
 		if g >= Sim.GRIT_MAX:
 			out += "[color=#ffb766]K.O.[/color] "
 		else:
-			out += "[color=#ff9a3c]%s[/color][color=#3a3d4d]%s[/color] " % ["▮".repeat(pips), "▮".repeat(10 - pips)]
+			out += "[color=#ff9a3c]%s[/color][color=#3a3d4d]%s[/color] " % ["▮".repeat(pips), "▮".repeat(most - pips)]
 	return out
 
 

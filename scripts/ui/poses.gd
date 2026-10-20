@@ -269,11 +269,11 @@ static func _ease(t: float) -> float:
 
 
 ## Hit reactions (06:22): the pose for how the hit landed - snapped past it for the first frames (the blow landing), then
-## easing off toward a reeling guard as the hitstun goes on. In the air: the launch pose, unless they were flung.
+## held through the hitstun (20 Oct, YOMI's held drawings: it used to ease off toward a reeling guard). In the air: the
+## launch pose, unless they were flung.
 const HURT := {"head": "hurt", "body": "hurt_body", "low": "hurt_low", "crush": "hurt_crush", "slide": "hurt_slide",
 	"air": "hurt_air"}
 const IMPACT := 3        ## frames the reaction snaps past its pose
-const SETTLE := 16       ## ...then this long easing off it
 
 
 static func _hurt_pose(character: String, r: Array, air: bool) -> Dictionary:
@@ -285,17 +285,21 @@ static func _hurt_pose(character: String, r: Array, air: bool) -> Dictionary:
 	var reel := blend(hit, get_pose("guard"), 0.45)   # (where it eases off to - and what the blow snaps past it from)
 	if t < IMPACT:   # (the blow: past the pose, coming back to it)
 		return push(reel, hit, 0.6 * (1.0 - float(t) / float(IMPACT)))
-	if look == "air":
-		return hit
-	return blend(hit, reel, _ease(float(t - IMPACT) / float(SETTLE)))
+	return hit
 
 
-## A strike's timeline (06:22 "Lets try 1 and 2" - more to every move): from its wind-up key it coils further back, then
-## snaps through to the strike, which overshoots a touch as it lands; it holds while it's out, follows through past it
-## and only then eases back to the next key. Null when the move's keys don't fit that (no key before the strike).
+## A strike's timeline (06:22 "Lets try 1 and 2"; 20 Oct held like YOMI's drawings - "lets get these all in"): it snaps
+## into its wind-up coiled further back and HOLDS it still, snaps through to the strike in one in-between (the smear
+## fills it) a frame before it lands, overshoots a touch, holds the strike while it's out and HOLD_ON past it, then
+## snaps to a recovery pose (RECOVER of the way back) and holds that until it snaps to the next key. Null when the
+## move's keys don't fit that (no key before the strike).
 const COIL := 0.32       ## the wind-up pulled this much further back
 const OVERSHOOT := 0.22  ## the strike landing this much past its pose
-const FOLLOW := 0.14     ## ...and following through this much past it on the way back
+const HOLD_ON := 4       ## frames the strike stays out after its hit's over (YOMI holds the drawing on)
+const RECOVER := 0.45    ## the recovery pose: this much of the way from the strike back to the next key
+## Between any two keys a pose holds, then snaps to the next over SNAP frames, arriving on its key (YOMI: no in-betweens
+## at all - each drawing held). It used to ease the whole way.
+const SNAP := 2
 
 
 static func _strike(m: Dictionary, keys: Array, f: int) -> Variant:
@@ -316,22 +320,20 @@ static func _strike(m: Dictionary, keys: Array, f: int) -> Variant:
 		return null
 	var wind := get_pose(str(keys[wk][1]))
 	var hit := get_pose(str(keys[hk][1]))
-	if f < f_h:   # (coiling back, then the snap through)
+	if f < f_h:   # (the wind-up: snapped into, coiled, held - then one in-between through to the strike)
 		var coil := push(hit, wind, COIL)
-		var u := float(f - f_w) / float(maxi(1, f_h - f_w))
-		if u < 0.7:
-			return blend(wind, coil, _ease(u / 0.7))
-		return blend(coil, hit, (u - 0.7) / 0.3)
+		if f == f_h - 1 and f > f_w:
+			return blend(coil, hit, 0.5)
+		return coil
 	if f <= f_h + 1:   # (landing past it)
 		return push(wind, hit, OVERSHOOT * (1.0 if f == f_h else 0.5))
-	if f <= f_hold:
+	if f <= f_hold + HOLD_ON:
 		return hit
 	var nxt := get_pose(str(keys[hk + 1][1])) if hk + 1 < keys.size() else get_pose("idle")
-	var follow := push(wind, hit, FOLLOW)
-	var v := float(f - f_hold) / float(maxi(1, f_n - f_hold))
-	if v < 0.3:
-		return blend(hit, follow, _ease(v / 0.3))
-	return blend(follow, nxt, _ease((v - 0.3) / 0.7))
+	var back := blend(hit, nxt, RECOVER)
+	if f > f_n - SNAP:   # (the snap on to the next key)
+		return blend(back, nxt, float(f - (f_n - SNAP)) / float(SNAP))
+	return back
 
 
 static func exaggerate(pose: Dictionary) -> Dictionary:
@@ -404,10 +406,8 @@ static func _for_record(character: String, r: Array) -> Dictionary:
 			nxt = k
 	if nxt.is_empty() or int(nxt[0]) <= int(cur[0]):
 		return get_pose(str(cur[1]))
-	var t := float(f - int(cur[0])) / float(int(nxt[0]) - int(cur[0]))
-	# strikes hold the pose most of the way and snap to the next near the keyframe (hits read as hits, not floaty);
-	# moving, guarding, getting up and the like ease the whole way (smooth)
-	var kind := str(Moves.move(character, mv).get("kind", ""))
-	if kind in ["attack", "super", "grab", "burst"]:
-		t = clampf((t - 0.6) / 0.4, 0.0, 1.0)
+	# (every key held, then a snap to the next over SNAP frames - 20 Oct, YOMI's held drawings; strikes used to snap
+	# over their last 40% and everything else eased the whole way)
+	var gap := int(nxt[0]) - int(cur[0])
+	var t := clampf(float(f - (int(nxt[0]) - mini(SNAP, gap))) / float(mini(SNAP, gap)), 0.0, 1.0)
 	return blend(get_pose(str(cur[1])), get_pose(str(nxt[1])), t * t * (3.0 - 2.0 * t))

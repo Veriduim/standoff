@@ -2,7 +2,7 @@ class_name StageView
 extends Node2D
 ## The stage on screen. It draws a near-black stage with one white floor line marked every 100 px, every fighter as a
 ## chunky figure in their own colour (Stick), the ghost of a picked move looping over them, the hit effects (Fx: sparks,
-## the freeze on contact, a small shake, combo counts and limb arcs), and a camera that keeps everyone in frame. It draws
+## the freeze on contact, a small shake and limb arcs), and a camera that keeps everyone in frame. It draws
 ## one recorded tick at a time (Sim.record) and knows nothing about turns.
 ## This look is the first style pass (Timmy, 18 Oct 18:07: "Your suggestion looks good"). It covers picks 1, 3, 4, 5,
 ## 6, 9 and 10 from the YOMI study in Standoff Workshop/references/yomi/_study/NOTES.md. The study was reference only;
@@ -44,7 +44,7 @@ var shots: Array = []        ## the projectiles on the tick shown (Sim.record_sh
 var _shot_trail := {}        ## projectile (owner, kind, ...) -> its last few screen spots, for the fan's trail
 var you := -1                ## this phone's fighter (a marker over them)
 var deciding: Array = []     ## who's choosing now (a pulse over them)
-var fx := Fx.new()           ## sparks, the freeze, the shake, combo counts, arcs
+var fx := Fx.new()           ## sparks, the freeze, the shake, arcs, speed lines
 var time_scale := 1.0        ## the playback speed (the effects keep up at 2x)
 var half := Sim.STAGE_HALF   ## the match's half stage width (its rules)
 var cam := Vector2(0, -120)
@@ -124,9 +124,23 @@ func show_tick(rec: Array, events: Array = [], flying: Array = []) -> void:
 			_sfx_style = ""
 	if prev.size() == frame.size():
 		_motion_fx(prev)
-	fx.settle_combos(frame)
+		fx.camera_tick(_middle(frame) - _middle(prev), get_viewport_rect().size.x)
 	_arcs()
 	queue_redraw()
+
+
+## The middle of everyone (what YOMI's camera follows - its speed lines run off how fast this moves).
+func _middle(rows: Array) -> Vector2:
+	var lo := INF
+	var hi := -INF
+	var top := INF
+	var bot := -INF
+	for r: Array in rows:
+		lo = minf(lo, float(r[0]))
+		hi = maxf(hi, float(r[0]))
+		top = minf(top, float(r[1]))
+		bot = maxf(bot, float(r[1]))
+	return Vector2((lo + hi) / 2.0, (top + bot) / 2.0) if not rows.is_empty() else Vector2.ZERO
 
 
 ## What movement shows: a super starting (its flash), fast movers' afterimages, and a launched fighter tumbling.
@@ -147,6 +161,8 @@ func _motion_fx(prev: Array) -> void:
 		if fast and int(_after_n[i]) % 3 == 1:   # (a fading copy every third tick they're quick - fx keeps them longer;
 			# the Bruiser rushing in on his own feet leaves solid grey ones - 14:09 "The red guy could help with bruiser")
 			fx.afterimage(i, r, _char(i) == "bruiser" and int(r[5]) == 0 and speed > 5.5)
+		if int(r[5]) == 1 and speed > Fx.SMOKE_PX:   # (knocked back fast: smoke left behind - YOMI's, every tick)
+			fx.smoke(Vector2(float(r[0]), float(r[1]) - 50.0), _tick_n * 17 + i)
 		var tr := str(trails[i]) if i < trails.size() else "None"   # (their Style's trail, while they move)
 		if tr != "None" and int(r[5]) != 4 and (speed > 2.0 or float(r[1]) < -12.0) and (_tick_n + i) % 2 == 0:
 			fx.trail_bit(tr, Vector2(float(r[0]), float(r[1]) - 40.0), colour_of(i), _tick_n * 11 + i)
@@ -219,8 +235,6 @@ func _effect(e: Dictionary, prev: Array) -> void:
 	if type == "countered":   # (Mirror / Catch: the strike caught and turned)
 		fx.on_event(type, (_chest(a) + _chest(d)) / 2.0 if d >= 0 else _chest(a), face, 0, colour_of(a), d,
 				colour_of(d) if d >= 0 else Color.WHITE, false, n + a)
-		if str(e.get("name", "")) != "" and not fx.parts.is_empty() and str(fx.parts[-1]["k"]) == "text":
-			fx.parts[-1]["txt"] = str(e["name"]).to_upper() + "!"
 		return
 	if type == "time":
 		fx.on_event(type, cam, 1.0, 0, Color.WHITE, -1, Color.WHITE, false, n)
@@ -420,7 +434,7 @@ func _follow(delta: float) -> void:
 	want.y = maxf(want.y, -floor_room / want_zoom)
 	var k := 1.0 - pow(0.02, delta)
 	cam = cam.lerp(want, k)
-	zoom = lerpf(zoom, want_zoom * (1.0 + fx.punch), k)   # (a big hit pushes the camera in a touch)
+	zoom = lerpf(zoom, want_zoom, k)   # (no push-in on big hits - 20 Oct: YOMI's camera never zooms in)
 
 
 ## The camera's centre sits a little above the band's middle (the floor near its foot).
@@ -470,6 +484,10 @@ func _draw() -> void:
 		draw_line(Vector2(x, floor_y), Vector2(x, floor_y + (16.0 if i % 4 == 0 else 9.0)), LINE, 2.0)
 	if frame.is_empty():
 		return
+	var near: Array[Vector2] = []   # (speed lines when the camera rushes, behind everyone - clear of the fighters)
+	for i in frame.size():
+		near.append(w2s(_chest(i)))
+	fx.draw_lines(self, near)
 	for i in frame.size():   # (a faint spot under anyone in the air, so heights read)
 		var r: Array = frame[i]
 		var lift := clampf(-float(r[1]) / 300.0, 0.0, 0.8)
@@ -518,7 +536,6 @@ func _draw() -> void:
 		for i in rows.size():
 			_boxes(i, rows[i])
 	fx.draw_parts(self)
-	fx.draw_combos(self, frame)
 	_advantage_labels()
 
 

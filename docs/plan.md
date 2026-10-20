@@ -313,6 +313,29 @@ one stage; each attack aims at a picked target.
   starts 840 apart (7.8 heights, YOMI's), the camera never closer than 20 heights across (VIEW_MIN 2120 - fighters
   ~52 px tall on his 20:9 at your pick, ~64 while a turn plays). Six players: unchanged - they already filled it.
   The lobby's start distance goes to 1200.
+- 14:04 "pull that repo as reference and see how it does some of its animations to see if we are missing something or
+  overdoing something" - the study: Standoff Workshop/references/yomi_source_notes.md (hit pause, shake and spark
+  already match; YOMI also has speed lines, knockback smoke, held drawings, wall debris; we also had words, combo
+  counts, a camera push-in). 14:22 "Dont keep the words and damage numbers and lets get these all in then and see how
+  it is" -> 0.36.0:
+  - No words on the stage (COUNTER, WALL SPLAT, PARRY, PUSH, GUARD BREAK, ON BEAT!, K.O. READY, SAD!, SADNESS!, TIME!,
+    the form names, the cancels, a super's name) and no combo count or damage over whoever's comboed. The effects
+    under them stay. Still there: the pick's own labels (Ready in, the +/- advantage) and a super's cut-in title.
+  - No push-in on big hits (Fx.punch) - YOMI's camera never zooms in.
+  - Speed lines (Fx.draw_lines, camera_tick): when the fighters' middle rushes - the camera chasing a launch - 100 thin
+    white lines streak across the band against it, faded round the fighters; they need a few ticks of speed (a jolt
+    doesn't count) and die away in a freeze, a pick or a super's dim. Calibrated on ours (LINES_FULL): a Haymaker full,
+    a Roundhouse or Flying Knee most of the way, a dash faint at most.
+  - Smoke behind knockback (Fx.smoke): two grey puffs a tick while someone hit moves faster than SMOKE_PX (6) a tick -
+    a Haymaker leaves 35 ticks of it, a jab none.
+  - Wall slams throw debris (Fx._debris): 32 big chunks off the wall back into the stage (20 bouncing off it).
+  - Held poses (Poses): every key held, then a 2-frame snap to the next (SNAP; it eased the whole way). A strike snaps
+    into its wind-up coiled and holds it still, one in-between to the strike, a small overshoot, held while it's out
+    and HOLD_ON (4) past, then a recovery pose held until the snap on. A hit reaction holds its pose through the
+    hitstun (it eased off toward a guard).
+  - Six players: the Bruiser's Grit took the whole top card and hid the name - five pips on a narrow card now.
+  - Found, not changed: YOMI's knockback is ~4x ours for the fighters' size (5-8 px a tick for a 32-tall fighter; ours
+    ~4 for 106) and its gravity ~2-3x - its launches cross the screen far faster.
 
 ## To tune / later
 - **Match length with 6:** bot matches take 120-270 decision points with 6 fighters (50-90 with 2). At ~10 s a decision
