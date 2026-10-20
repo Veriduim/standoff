@@ -642,6 +642,19 @@ func _test_floor_on_screen() -> void:
 			floor_y <= g.stage.view_bottom - 20.0)
 	g.stage.ghost = []
 	g.queue_free()
+	var one := _screen()   # (20 Oct 14:04 "C is the best" - YOMI's scale: the camera never comes in close)
+	one.start_local(1, "ffa")
+	one.sim.fighters[0].pos = Vector2(-50, 0)
+	one.sim.fighters[1].pos = Vector2(50, 0)
+	one.stage.show_tick(one.sim.record())
+	one.stage.ghost = []
+	for _i in 120:
+		one.stage._follow(0.05)
+	var w: float = one.stage.view_right - one.stage.view_left
+	var across: float = w / one.stage.zoom
+	_check("point blank in a 1v1, the camera still shows %.0f across - 20 fighter heights, YOMI's scale (or as far as it "
+			% across + "pulls back, on a narrow screen)", across >= minf(StageView.VIEW_MIN, w / StageView.ZOOM_MIN) - 1.0)
+	one.queue_free()
 
 
 func _test_replay_codes() -> void:

@@ -1331,9 +1331,10 @@ func _test_bruiser() -> void:
 	_check("Quake Stomp: a shockwave along the floor that picks her up off it (%s)" % [_types(evs)],
 			_types(evs).has("hit") and q.fighters[1].hp < 450)
 	var wide := Sim.create([{"character": "bruiser"}, {"character": "dancer"}])
-	_check("the stage is wider (05:27 \"I feel our map is small\"): %.0f px, one on one still starting %.0f apart"
-			% [wide.half * 2.0, wide.fighters[1].pos.x - wide.fighters[0].pos.x], wide.half * 2.0 == 2800.0
-			and is_equal_approx(wide.fighters[1].pos.x - wide.fighters[0].pos.x, 600.0))
+	_check("the stage is wider (05:27 \"I feel our map is small\"): %.0f px, one on one starting %.0f apart (20 Oct "
+			% [wide.half * 2.0, wide.fighters[1].pos.x - wide.fighters[0].pos.x] + "\"move them further apart\": "
+			+ "YOMI's 7.8 heights)", wide.half * 2.0 == 2800.0
+			and is_equal_approx(wide.fighters[1].pos.x - wide.fighters[0].pos.x, 840.0))
 	# the universal blocking rule he leans on
 	var bl := _duel("bruiser", "dancer", 60.0)
 	bl.apply({0: {"move": "jab"}, 1: {"move": "block"}})

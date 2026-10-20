@@ -94,8 +94,13 @@ the rules of play. The names, art, characters and code are not ours to take, and
   ~~the **parry lock-out**~~ - it IS universal after all (the Basics page: "missing a block disables the ability to
   parry, but also makes all guardbreaks no longer break guard"; a guard break can be parried on its frame). 0.30.0:
   someone in blockstun blocks a guard break and can't parry; a Block parries a guard break on its frame.
-- **Stage width** 2800 by default since 0.30.0 (05:27 "I feel our map is small"; YOMI's default is 800 in its own
-  units, with much smaller fighters); 1v1 still starts 600 apart.
+- **Stage width** 2800 by default since 0.30.0 (05:27 "I feel our map is small"). **Spacing and the camera** since
+  0.35.0 at YOMI's scale, from its own source (GitHub uzkbwza/hustle - study only): its fighters are 32 tall (hurtbox
+  28 x 32), the lobby default puts them 250 apart (Start Distance 125 = each side of the middle) on a stage 1600 across
+  (Stage Width 800 = half), they can never be more than 600 apart, and the camera is a fixed 640 x 360 that never zooms
+  in. In fighter heights: 7.8 apart, a screen 20 wide, a stage 50 wide. Ours are ~106 tall: 1v1 starts 840 apart
+  (Sim.START_1V1, was 600), and the camera never shows less than 2120 across (StageView.VIEW_MIN = 20 heights, was
+  400 - it came in to ~9 heights in a 1v1). The stage stays 2800 (26 heights) - six fighters fill it.
 - Step 3 - much cooler moves (projectiles, a stance with its own moves, rekka chains, a command grab, a launcher route,
   a counter stance, supers with their own animation); ~~step 4 - effects per move~~ (0.20.0: a hit looks like what
   made it - `StageView._hit_style`: her fans cut (Fx "slash"), kicks and knees thump (the spark on the dark starburst),

@@ -18,6 +18,11 @@ const LINE := Color("#ececf2")     ## the floor
 const WALL := Color("#2a2c36")
 const GHOST_ALPHA := 0.55
 const PAD := 170.0          ## world px kept round everyone
+## The least the camera shows across, world px (20 Oct 13:54 "zoom out from the chars and move them further apart";
+## 14:04 "I do think C is the best" = YOMI's scale): 20 fighter heights, as YOMI's screen is 20 of its fighters wide, and
+## it never comes in closer, however near they stand (YOMI's camera doesn't zoom in at all). It still pulls back further
+## to fit everyone.
+const VIEW_MIN := 2120.0
 const ZOOM_MIN := 0.4         ## (a wider stage since 05:27 - six spread across it still fit)
 const ZOOM_MAX := 1.8        ## (22:40 "really small": in close, the camera comes right in)
 const TIPS := ["hand_f", "hand_b", "foot_f", "foot_b"]
@@ -405,7 +410,7 @@ func _follow(delta: float) -> void:
 		lo = minf(lo, float(r[0]))
 		hi = maxf(hi, float(r[0]))
 		top = minf(top, float(r[1]))
-	var span := maxf(hi - lo + PAD * 2.0, 400.0)
+	var span := maxf(hi - lo + PAD * 2.0, VIEW_MIN)
 	var tall := absf(top) + 260.0
 	var want_zoom := clampf(minf((view_right - view_left) / span, (view_bottom - view_top) / tall), ZOOM_MIN, ZOOM_MAX)
 	var want := Vector2((lo + hi) / 2.0, top * 0.5 - 70.0)

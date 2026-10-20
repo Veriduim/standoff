@@ -17,7 +17,7 @@ signal invited_away          ## an invite while the lobby's hidden (a rematch on
 const SETTINGS := "user://settings.cfg"
 ## The rules the owner can set: [key, label, min, max, step, shown as].
 const RULE_ROWS := [["turn", "Turn clock", 10, 120, 5, "%d s"], ["round", "Round", 20, 120, 10, "%d s"],
-	["start", "Start distance (1v1)", 0, 600, 50, "%d"], ["width", "Stage width", 1200, 4800, 400, "%d"],
+	["start", "Start distance (1v1)", 0, 1200, 50, "%d"], ["width", "Stage width", 1200, 4800, 400, "%d"],
 	["damage", "Damage", 0.5, 2.0, 0.25, "x%.2f"], ["hitstun", "Hitstun", 0.5, 2.0, 0.25, "x%.2f"],
 	["meter", "Starting meter", 0.0, 3.0, 0.5, "%.1f bars"], ["ceiling", "Ceiling", 400, 2000, 100, "%d"]]
 const PRESETS := {"Default": {}, "Quick": {"round": 2400, "damage": 1.25}, "Thinking": {"turn": 90},

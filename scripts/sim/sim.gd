@@ -151,7 +151,9 @@ const PRESS_PUSH := 0.35
 ## How a hit landed (06:22 "Lets try 1 and 2" - hit reactions by type): the head snapped back, doubled over at the body,
 ## the legs taken (a low), crushed down (an overhead), flung sliding, sent up into the air. Recorded for the screen.
 const LOOKS := ["head", "body", "low", "crush", "slide", "air"]
-const START_1V1 := 600.0      ## one on one: how far apart they start (the stage itself is wider since 05:27)
+## One on one: how far apart they start (20 Oct 13:54 "move them further apart": YOMI's default is 250 apart with 32-tall
+## fighters, 7.8 heights - ours are ~106 tall). The stage itself is wider (05:27).
+const START_1V1 := 840.0
 ## A fling (05:27 "his effects of slapping an enemy accross map and being able to rush them down" - the Nakmuay mod,
 ## studied): the one hit slides along the floor on FLING_FRICTION instead of stopping short, for FLING_TICKS
 const FLING_FRICTION := 0.95

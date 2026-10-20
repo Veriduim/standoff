@@ -307,6 +307,12 @@ one stage; each attack aims at a picked target.
   note, Download, the iPhone tip). Kept, as they help the APK too: the icon fonts (the same icons on every phone) and
   relay/.gdignore. The lobby server still answers a browser's ask-first (harmless; not worth a redeploy). The APK
   itself is unchanged - v0.34.0 stays the one to install. To bring the web back: git show 9f168a8 b0e1d32.
+- 13:54 "Lets zoom out from the chars and move them further apart. Have you found the sizes from YOMIH wiki on their
+  base stage sizes and char sizes?" - YOMI's own source is public (GitHub uzkbwza/hustle; numbers in docs/mechanics.md).
+  A sheet of three: A now, B between, C YOMI's scale. 14:04 "I do think C is the best personally" -> 0.35.0: 1v1
+  starts 840 apart (7.8 heights, YOMI's), the camera never closer than 20 heights across (VIEW_MIN 2120 - fighters
+  ~52 px tall on his 20:9 at your pick, ~64 while a turn plays). Six players: unchanged - they already filled it.
+  The lobby's start distance goes to 1200.
 
 ## To tune / later
 - **Match length with 6:** bot matches take 120-270 decision points with 6 fighters (50-90 with 2). At ~10 s a decision
