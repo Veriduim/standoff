@@ -249,6 +249,45 @@ func _test_both_away() -> void:
 	LobbyNet.use_loop = false
 
 
+func _test_restart_back() -> void:
+	_section("Android closes the app mid-match (21 Oct - the gap in 0.46.0): started again, \"Back in\" - its own " +
+			"place, its seat, the match from the phone running it, to the same end")
+	var ab := _two_in_a_match()
+	var a: Control = ab[0]
+	var b: Control = ab[1]
+	var b_id: int = b.lobby.net.id
+	b.lobby.net.session_path = "user://test_session.cfg"
+	b.lobby.net.save_session()
+	b._save_match()
+	var saved := LobbyNet.saved_session("user://test_session.cfg")
+	_drop(b)   # (the app gone - its line with it)
+	b.queue_free()
+	for _i in 10:
+		_poll([a], 2)
+		a.finish_playback()
+	var c := _screen()   # (started again)
+	c.lobby.net.session_path = "user://test_session.cfg"
+	c.lobby.offer_resume(saved)
+	var offered: bool = c.lobby.modal.visible and c.lobby.modal.find_child("BackIn", true, false) != null
+	(c.lobby.modal.find_child("BackIn", true, false) as Button).pressed.emit()
+	for _i in 6:
+		_poll([a, c])
+		await get_tree().create_timer(0.05).timeout
+	_check("it offers to go back (%s, the match %s), and back in it has its own place (id %d = %d)" % [saved.get("code"),
+			saved.get("match"), c.lobby.net.id, b_id], offered and c.lobby.net.id == b_id and not saved.is_empty())
+	_check("...its seat and the match as it is now, from the phone running it (seat %d, tick %d / %d)" % [c.me,
+			c.sim.tick if c.sim != null else -1, a.sim.tick], c.net_match != null and c.me == 1 and c.sim != null
+			and int(a.net_match.seats[1]["peer"]) == b_id and not a.net_match.bots.has(1))
+	if c.net_match != null:
+		c.auto_me = true
+		c._next()
+	_check("...and the match plays out to the same end on both (%s / %s)" % [a.phase, c.phase], _play_out(a, c))
+	c.lobby.net.clear_session()
+	for g: Control in [a, c]:
+		g.queue_free()
+	LobbyNet.use_loop = false
+
+
 func _test_host_alone_back() -> void:
 	_section("The host alone with bots, minimised and back: nobody else can run it - it waits, and on it goes")
 	LobbyNet.use_loop = true

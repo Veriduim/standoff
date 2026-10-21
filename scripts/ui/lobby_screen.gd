@@ -60,6 +60,7 @@ var finder: LanFinder         ## (Nearby) the lobbies around
 var host: LanHost             ## (Nearby) the lobby this phone hosts
 var _list_t := 0.0
 var _tries := 0               ## reconnect tries since the line dropped
+var _resume_match := {}       ## (started again after Android closed the app) the match to get back into: {ch, host, seat}
 var in_match := {}            ## this phone's member status while it's in a match (put back after a drop)        ## accepted - waiting for the host to start
 
 
@@ -369,7 +370,10 @@ func _on_status(state: String, detail: String) -> void:
 			else:   # (back after a drop, mid-match: still in it - the game asks the host for its seat)
 				net.set_member(in_match.merged({"colour": my_colour, "outline": Style.outline, "trail": Style.trail,
 					"character": HomeScreen.fighter}))
-				rejoined.emit()
+				if not _resume_match.is_empty():   # (started again: no match on this phone - fetch it)
+					_back_to_match()
+				else:
+					rejoined.emit()
 			_show("room")
 		"ended":   # (the nearby host closed it: off the list, and why)
 			finder.found.erase(net.last_code)
@@ -390,6 +394,60 @@ func _on_status(state: String, detail: String) -> void:
 			note.text = detail
 			if view == "room":
 				_show("list")
+
+
+## Started again after Android closed the app (a saved session - LobbyNet.saved_session): "Back in?" - the lobby, and
+## the match if it was in one.
+func offer_resume(s: Dictionary) -> void:
+	visible = true
+	_show("list")
+	var m: Dictionary = s.get("match", {}) if s.get("match") is Dictionary else {}
+	_modal(func(b: VBoxContainer) -> void:
+		b.add_child(Ui.label("You were in lobby %s%s" % [str(s["code"]), " - in a match" if not m.is_empty() else ""], 20,
+			Color("#f2f2f7")))
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 8)
+		var yes := _main(Ui.button("Back in", func() -> void: resume(s), 18))
+		yes.name = "BackIn"
+		row.add_child(yes)
+		var no := Ui.button("No", func() -> void:
+			net.clear_session()
+			modal.visible = false
+			refresh(), 18)
+		no.name = "NotBack"
+		row.add_child(no)
+		b.add_child(row))
+
+
+func resume(s: Dictionary) -> void:
+	modal.visible = false
+	note.text = "Getting back in..."
+	var m: Dictionary = s.get("match", {}) if s.get("match") is Dictionary else {}
+	if not m.is_empty():
+		in_match = {"status": "in a match", "match": str(m["ch"]), "host": int(m["host"])}
+		_resume_match = m
+	net.resume_session(s)
+
+
+## (on the way back in after a restart) the match this phone was in: its seat from whoever runs it now.
+func _back_to_match() -> void:
+	var m := _resume_match
+	_resume_match = {}
+	var nm := NetMatch.new()
+	add_child(nm)
+	_waiting = nm
+	nm.begun.connect(_on_begun)
+	nm.ended.connect(func(_why: String) -> void:   # (it's over, or nobody has it)
+		if _waiting == nm:
+			_waiting = null
+			nm.finish()
+			nm.queue_free()
+			in_match = {}
+			net.session_match = {}
+			net.save_session()
+			net.set_member({"status": "idle", "match": "", "host": 0, "bots": 0})
+			note.text = "That match is over")
+	nm.rejoin(net, str(m["ch"]), int(m["host"]), int(m["seat"]), my_name)
 
 
 func _retry() -> void:

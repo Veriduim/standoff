@@ -159,6 +159,10 @@ func _ready() -> void:
 	_show_start()
 	if HowToPlay.auto and not HowToPlay.seen():   # (the first launch: the cards once, by themselves)
 		how.open()
+	var back := LobbyNet.saved_session() if HowToPlay.auto else {}   # (Android closed the app while it was in a lobby)
+	if not back.is_empty():
+		home.visible = false
+		lobby.offer_resume(back)
 
 
 func _layout() -> void:
@@ -613,6 +617,7 @@ func start_online(nm: NetMatch) -> void:
 	bots.clear()
 	sim = Sim.from_dict(nm.start_snap)
 	nm.sim = sim   # (the match as this phone has it - any phone may have to run it: 20 Oct 18:13)
+	_save_match()
 	_replay_log.clear()
 	me = nm.mine
 	stage.setup(sim.fighters.map(func(f: Fighter) -> String: return f.character),
@@ -709,6 +714,7 @@ func _on_lobby_back() -> void:
 func _on_host_changed(h: int) -> void:
 	if net_match == null or phase == "over":
 		return
+	_save_match()
 	if not lobby.in_match.is_empty():
 		lobby.in_match["host"] = h
 		lobby.net.set_member({"host": h})
@@ -716,6 +722,13 @@ func _on_host_changed(h: int) -> void:
 		banner.text = ""
 	if net_match.is_host() and phase in ["pick", "wait"]:
 		net_match.open_turn(sim)
+
+
+## The match this phone's in, saved with its lobby (Android may close the app in the background - back in from there).
+func _save_match() -> void:
+	if net_match != null and net_match.mine >= 0:
+		lobby.net.session_match = {"ch": net_match.ch, "host": net_match.host, "seat": net_match.mine}
+		lobby.net.save_session()
 
 
 ## The host's line dropped and no other phone can run the match (the rest are bots): it waits for them.
@@ -767,6 +780,8 @@ func _on_net_turn(t: int, picks: Dictionary, snap: Dictionary) -> void:
 func _on_net_end(reason: String) -> void:
 	if phase == "over":
 		return
+	lobby.net.session_match = {}
+	lobby.net.save_session()
 	phase = "over"
 	pick.close()
 	(over_panel.find_child("Result", true, false) as Label).text = reason if reason != "" else "The match ended"

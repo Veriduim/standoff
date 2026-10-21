@@ -43,6 +43,10 @@ var _pinged := 0.0           ## (s) since the last ping
 var _unanswered := 0         ## (ms) when a ping went out with nothing heard since (0 = none waiting)
 
 const PING_EVERY := 15.0     ## a ping this often keeps a quiet line open (and the server knows it's alive)
+const SESSION := "user://session.cfg"   ## the lobby (and match) this phone is in - back in after Android closes the app
+const SESSION_KEEP := 570    ## (s) a saved session's good this long after the app was last up (the place: 10 min)
+var session_path := SESSION  ## (the tests: their own file; the in-process lobby saves nothing to the real one)
+var session_match := {}      ## the match this phone's in: {ch, host, seat} - saved with the lobby
 const DEAD_AFTER := 8000     ## (ms) a ping unanswered this long: the line's dead - back in from scratch
 
 
@@ -93,6 +97,50 @@ func is_owner() -> bool:
 
 func in_lobby() -> bool:
 	return id != 0
+
+
+## The lobby (and match) this phone is in, saved - Android may close the app in the background; started again within
+## SESSION_KEEP it offers to go back (the place is kept 10 min). Not a Nearby lobby this phone hosts (it goes with it).
+func save_session() -> void:
+	if not in_lobby() or (use_loop and session_path == SESSION) or url.begins_with("ws://127.0.0.1:%d" % LanHost.WS_PORT):
+		return
+	var c := ConfigFile.new()
+	for kv in [["url", url], ["code", last_code], ["name", last_name], ["id", id], ["key", key],
+			["at", int(Time.get_unix_time_from_system())], ["match", session_match]]:
+		c.set_value("session", kv[0], kv[1])
+	c.save(session_path)
+
+
+func clear_session() -> void:
+	if use_loop and session_path == SESSION:
+		return
+	if FileAccess.file_exists(session_path):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(session_path))
+
+
+## A saved session still good: {url, code, name, id, key, match} - {} if none.
+static func saved_session(path := SESSION) -> Dictionary:
+	var c := ConfigFile.new()
+	if c.load(path) != OK:
+		return {}
+	var out := {}
+	for k in ["url", "code", "name", "id", "key", "at", "match"]:
+		out[k] = c.get_value("session", k, null)
+	if out["code"] == null or int(Time.get_unix_time_from_system()) - int(out.get("at", 0)) > SESSION_KEEP:
+		return {}
+	return out
+
+
+## Back to a saved session's place (its id and key).
+func resume_session(s: Dictionary) -> void:
+	if not use_loop:
+		url = str(s["url"])
+	last_code = str(s["code"])
+	last_name = str(s["name"])
+	last_id = int(s["id"])
+	key = str(s["key"])
+	session_match = s.get("match", {}) if s.get("match") is Dictionary else {}
+	rejoin()
 
 
 ## A member whose line dropped - their place kept for them (20 Oct 18:13).
@@ -149,6 +197,7 @@ func rejoin() -> void:
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_PAUSED:   # (put aside: the others are told at once - they go on without it)
 		if in_lobby():
+			save_session()   # (now: if Android closes the app in the background, it's back in from here)
 			send({"t": "away"})
 			was_away = true
 			if ws != null:
@@ -182,6 +231,8 @@ func leave() -> void:
 	want_back = false
 	last_id = 0
 	key = ""
+	session_match = {}
+	clear_session()
 	if loop != null:
 		loop.leave(self)
 		loop = null
@@ -284,6 +335,7 @@ func _handle(d: Dictionary) -> void:
 			for m: Dictionary in d["members"]:
 				members[int(m["id"])] = {"name": str(m["name"]), "data": m.get("data", {}), "away": bool(m.get("away", false))}
 			want_back = true
+			save_session()
 			status.emit("open", "")
 		"joined":
 			members[int(d["id"])] = {"name": str(d["name"]), "data": {}}

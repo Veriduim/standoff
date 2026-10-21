@@ -432,6 +432,14 @@ one stage; each attack aims at a picked target.
   https://github.com/Veriduim/standoff/releases/latest/download/Standoff.apk is always the newest (release_apks.sh
   uploads a copy named Standoff.apk too, since 0.44.4). 0.45.0: the Bruiser's strikes as full-body Muay Thai / boxing
   shapes (docs/bruiser.md "His strikes") - his moves were the generic poses next to her dance.
+- 18:13 "before addressing those i want to work on lobby/online play. So basically I find the lobby dies too wuickly
+  and in the match I minimised it to text someone and it killed the match" (18:48 "This will keep a lobby and game
+  alive for 5 minutes or so right?", 18:50 "If we both leave the game") -> 0.46.0: pings every 15 s (the server cut
+  quiet lines after ~60 s), places kept 10 min, empty lobbies 10 min, the match moving to another phone when its host
+  is away, a bot in an away player's seat; both away - the one furthest on runs it. docs/lobby.md "Kept places".
+  0.46.1 (21 Oct): Android closing the app in the background - started again, "Back in" to the lobby and the match.
+  The live check (`-- --awaycheck`) passed on the live server: a player minimised, the host minimised, the phone
+  running it going silent (found in ~55 s), the same ending.
 - Seen in the tests (not new - it was there at 0.43.0 too): Godot now and then crashes in the Nearby play test (a LAN
   host and finder) before the summary prints - rerun, it passes; the same crash usually lands after the summary.
 

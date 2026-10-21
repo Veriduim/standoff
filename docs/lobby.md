@@ -20,7 +20,8 @@ That was for study only: the screens here are our own layout, built from the sam
 - **Server:** `relay/` is a Cloudflare Worker with Durable Objects. One `Lobby` object per code holds the members, the
   owner, the rules and the last 50 chat lines. It passes on direct messages (`to` -> `from`) and match channels
   (`sub` / `chan`). `Directory` keeps the public list (`GET /lobbies`); it drops entries older than 3 min and empty
-  lobbies. When the owner leaves, the lowest id becomes owner. Run it locally with `npx wrangler dev --port 8787`; check
+  lobbies. When the owner leaves, the lowest id becomes owner. A dropped line keeps its place (0.46.0 - "Kept places"
+  below). Run it locally with `npx wrangler dev --port 8787`; check
   it with `node test.mjs` (14 checks).
 - **Client:** `scripts/net/lobby_net.gd` (`LobbyNet`) talks to the server over a WebSocket. With `use_loop` it uses
   `LoopLobby` instead: the same rules in-process, every message JSON-round-tripped, used by the tests and the screenshot
@@ -50,6 +51,54 @@ That was for study only: the screens here are our own layout, built from the sam
   - a private lobby, chat, a challenge with a bot, one phone watching;
   - played to the end, and all three must end the same;
   - first run 20:59: everything passed, the match took 30.6 s.
+
+## Kept places: a phone put aside (0.46.0)
+Timmy, 20 Oct 18:13: "I find the lobby dies too wuickly and in the match I minimised it to text someone and it killed
+the match"; 18:50 "If we both leave the game i mean for keeping it alive".
+
+**Why it died.** The live server cut any WebSocket that was quiet for about a minute (probed: a silent one closed at
+62 s with 1006; one sending a ping every 20 s stayed up 7 min), and the game sent nothing while a lobby sat idle - so
+idle phones dropped every minute and came back as someone new. In a match, the host's line dropping ended it for
+everyone, and a phone that got back in had a new id, so its seat was only handed back by name.
+
+**Now:**
+- **Pings.** Each phone sends a bare `ping` every 15 s (`LobbyNet.PING_EVERY`); the relay answers `pong` itself
+  without waking the lobby (`setWebSocketAutoResponse`). A ping unanswered for 8 s (`DEAD_AFTER`) = a dead line that
+  never closed - the phone drops it and gets back in. Back from another app, it pings at once to check.
+- **Kept places.** A phone joins with `r=1`; its welcome carries a `key`. When its line drops, its place is kept
+  10 min (`AWAY_MS`): everyone gets `{t:"away", id}`, the members list shows it greyed "away - back soon". It comes
+  back with `resume=<id>&key=<key>`: the same id, its member data and match channels (`{t:"back", ...}` to the rest).
+  A line that died unseen is replaced the same way (a ghost - nobody's told anything). After 10 min it's `left`. A
+  phone that leaves on purpose sends `{t:"leave"}`: gone at once. Old phones (no `r=1`) are gone at once, as before.
+- **The server finds dead lines.** Every 30 s (`TICK_MS`) a lobby checks: a phone that pinged before and hasn't for 45 s
+  (`DEAD_MS`) is dropped (place kept). So a phone that loses signal is noticed within 45-75 s.
+- **Minimised.** Android pausing the app sends `{t:"away"}` at once (its line still up); resuming sends `{t:"here"}`.
+- **Lobbies** wait 10 min empty (`GRACE`, was 2), and a lobby with places kept isn't empty. The lobby screen keeps
+  trying to get back in while the place is kept (it gave up after 8 tries, ~12 s).
+- **The match** (`NetMatch`):
+  - a player away: the host's bot plays their seat at once; back (`sync` on the match channel), the seat's theirs and
+    they get the state;
+  - **the host away: the match moves** to the first seat (in order) whose phone is here - every phone works out the
+    same one from the same events, and every phone has the same state, so it goes on from where it is. The old host
+    comes back as a player, its seat back. Nobody to take it on (the rest are bots): the match waits for the host
+    ("Waiting for X to come back...");
+  - a phone back asks on the match channel (`sync {f, name, tick}`) - whoever runs it answers with `state {host, ...}`.
+    Nobody answering after 3 asks 4 s apart (`_settle`): the one running it here but quiet - ask again (a while); away
+    with its place kept - wait for it; this phone ran it, or it's gone - **of the phones asking, the one furthest on
+    (highest tick, then the first seat) runs it** and says `again {t, f, snap}`; the rest follow. Two phones running it
+    at once: the one behind gives way (the same rule);
+  - the host leaving the lobby moves the match too (it ended it). Leaving the match from its menu still ends it.
+- **Tests:** `online_test` - `_test_match_moves`, `_test_both_away`, `_test_host_alone_back`, and the earlier rejoin
+  tests on kept places; `relay/test.mjs` 27 checks (ping, away / back with the key, a ghost replaced, a wrong key,
+  leave, all away); `godot --headless --path . -- --awaycheck [--lobbies=<url>]` (`scripts/dev/away_check.gd`) - two
+  phones on real sockets: a player minimised, the host minimised, the phone running it going silent (found dead by the
+  server), played to the same end.
+- **Android closing the app** in the background (0.46.1): the lobby and match this phone is in are saved
+  (`user://session.cfg` - code, place id + key, the match's channel, who runs it, the seat; saved again whenever the
+  app goes to the background). Started again within 9.5 min (`SESSION_KEEP` - the place is kept 10): "You were in lobby
+  1234 - in a match" / Back in / No. Back in = its own place, and `NetMatch.rejoin` asks the match channel for its seat
+  - whoever runs it sends the match as it is now. Leaving on purpose clears it; a Nearby lobby this phone hosted isn't
+  saved (it went with the app). Test: `online_test` `_test_restart_back`.
 
 ## Back into a match after a drop (0.18.0)
 Timmy 01:32 ("3 makes sense"). The phone already gets back into its lobby by itself (00:11). Now, if it was in a match:
@@ -102,4 +151,4 @@ Timmy, 19 Oct 00:38: "Whats local multiplayer over Bluetooth or the likes?". The
 - Character select (there is one character).
 - Rating / ranked.
 - A friends list.
-- A host who drops can't get back into their match (it ends for everyone, as before).
+- (Done in 0.46.0: a host who drops - the match moves to another phone; they come back as a player.)

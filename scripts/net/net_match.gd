@@ -50,6 +50,7 @@ var _asking := 0.0           ## back after a drop: time to the next ask (0 = not
 var _asks := 0
 var _rounds := 0
 var _heard := {}             ## back after a drop, nobody answering: the others asking too - peer -> [tick, seat]
+var _my_name := ""
 var _reclaiming := false     ## asked where the match is (back after a drop), not answered yet
 var aside := false           ## the app put aside mid-match (20 Oct 18:13) - when it's back, it asks where the match is
 
@@ -97,6 +98,20 @@ func host_start(lobby_net: LobbyNet, channel_name: String, the_seats: Array, the
 func join_start(lobby_net: LobbyNet, channel_name: String, host_id: int) -> void:
 	_bind(lobby_net, channel_name)
 	host = host_id
+
+
+## The app started again after Android closed it mid-match: back to its seat - whoever runs the match now sends where it
+## is (`begun`), or `ended` if nobody does.
+func rejoin(lobby_net: LobbyNet, channel_name: String, host_id: int, seat: int, my_name: String) -> void:
+	_bind(lobby_net, channel_name)
+	host = host_id
+	mine = seat
+	_my_name = my_name
+	_reclaiming = true
+	_asks = 0
+	_rounds = 0
+	_heard.clear()
+	_ask(my_name)
 
 
 ## A spectator: ask the host for where the match is now.
@@ -223,6 +238,8 @@ func _on_direct(from: int, msg: Dictionary) -> void:
 			if msg.has("seats"):
 				seats = msg["seats"]
 			if not live:
+				_reclaiming = false
+				_asking = 0.0
 				_take_start(msg)
 			elif _reclaiming:   # (back after a drop: from here)
 				_reclaiming = false
@@ -324,6 +341,7 @@ func reclaim(my_name: String) -> void:
 		_resume_hosting()                                              # nobody else could run it: on it goes)
 		return
 	_reclaiming = true
+	_my_name = my_name
 	_asks = 0
 	_rounds = 0
 	_heard.clear()
@@ -350,8 +368,10 @@ func _ask(my_name := "") -> void:
 	_asks += 1
 	_asking = ask_every
 	if mine >= 0:
-		net.on_channel(ch, {"k": "sync", "f": mine, "name": my_name if my_name != "" else str(seats[mine]["name"]),
-			"tick": sim.tick if sim != null else -1})
+		var who := my_name if my_name != "" else _my_name
+		if who == "" and mine < seats.size():
+			who = str(seats[mine]["name"])
+		net.on_channel(ch, {"k": "sync", "f": mine, "name": who, "tick": sim.tick if sim != null else -1})
 	else:
 		net.to(host, {"k": "hello", "ch": ch})
 
@@ -364,6 +384,15 @@ func _settle() -> void:
 	_asks = 0
 	if mine < 0:   # (watching: nothing to run)
 		_give_up()
+		return
+	if sim == null:   # (started again - no copy of the match here: wait for the one that has it, while it's kept)
+		if net.is_away(host) and _rounds < 50:
+			host_away.emit(str(net.members[host]["name"]))
+			_ask()
+		elif net.members.has(host) and _rounds < ROUNDS:
+			_ask()
+		else:
+			_give_up()
 		return
 	var host_seated := false
 	for st: Dictionary in seats:
