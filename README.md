@@ -18,6 +18,7 @@ https://github.com/Veriduim/standoff/releases/latest/download/Standoff.apk (ever
   - `scripts/net/`: lobbies and online matches.
   - `relay/`: the Cloudflare lobby server.
 - **Docs:**
+  - `docs/status.md`: where it stands (parked 21 Oct 2026) and how to pick it up again - start here.
   - `docs/plan.md`: the plan and every call made so far, with Timmy's words.
   - `docs/mechanics.md`: the fighting systems - YOMI's rules, frame data, clashes, launch pace, the camera's scale.
   - `docs/dancer.md`, `docs/bruiser.md`: the two fighters - their moves, looks, strengths and limits.

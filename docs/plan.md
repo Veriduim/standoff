@@ -443,6 +443,10 @@ one stage; each attack aims at a picked target.
 - Seen in the tests (not new - it was there at 0.43.0 too): Godot now and then crashes in the Nearby play test (a LAN
   host and finder) before the summary prints - rerun, it passes; the same crash usually lands after the summary.
 
+- 21 Oct 09:59 "No issues at all. But just document everything on this and park it for now as we swtich back to Life
+  after Dark" -> PARKED at 0.46.1 (the friend test of the online fixes: no issues). docs/status.md = where it stands
+  and how to pick it up.
+
 ## To tune / later
 - **Match length with 6:** bot matches take 120-270 decision points with 6 fighters (50-90 with 2). At ~10 s a decision
   that's far too long - lower HP or more damage with more players (a lobby setting), and a turn timer.
