@@ -792,7 +792,7 @@ func _test_big_effects() -> void:
 		var kinds := func() -> Array: return fx.parts.map(func(p: Dictionary) -> String: return str(p["k"]))
 		fx.on_event("hit", Vector2.ZERO, 1.0, 18, Color.RED, 1, Color.BLUE, false, 3)
 		none_small = none_small and not kinds.call().has("bigstar")
-		fx.on_event("hit", Vector2.ZERO, 1.0, 66, Color.RED, 1, Color.BLUE, false, 4)
+		fx.on_event("hit", Vector2.ZERO, 1.0, 80, Color.RED, 1, Color.BLUE, false, 4)   # (knockout-size: 23 Oct, 45+ was "way too much")
 		var star: Array = fx.parts.filter(func(p: Dictionary) -> bool: return str(p["k"]) == "bigstar")
 		stars.append(float(star[0]["s"]) * fx.band if not star.is_empty() else 0.0)
 		fx.parts.clear()   # (the quake's own parts and shake, apart from the hits before it)
@@ -811,8 +811,8 @@ func _test_big_effects() -> void:
 		fx.on_event("throw", Vector2.ZERO, 1.0, 20, Color.RED, 1, Color.BLUE, false, 6)
 		var ring: Array = fx.parts.filter(func(p: Dictionary) -> bool: return str(p["k"]) == "wring")
 		rings_ok = rings_ok and not ring.is_empty() and float(ring[0]["s"]) * fx.band >= 2.0 * 60.0 * z * 1.4
-	_check("a big hit's starburst is as big pulled back as close in (%.0f / %.0f px - over a third of the band), and an "
-			% stars + "ordinary hit gets none", none_small and absf(float(stars[0]) - float(stars[1])) < 1.0
+	_check("a knockout-size hit's starburst is as big pulled back as close in (%.0f / %.0f px - over a third of the band), "
+			% stars + "and an ordinary hit gets none", none_small and absf(float(stars[0]) - float(stars[1])) < 1.0
 			and float(stars[0]) >= 0.35 * 420.0)
 	_check("Quake Stomp's spikes and debris stay over the strip it hits (15:10 \"The animation should only be in the are "
 			+ "it effects\"), the stage only shaken lightly; a grab's rings are wider than the two fighters at any zoom",

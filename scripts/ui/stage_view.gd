@@ -146,6 +146,11 @@ func _motion_fx(prev: Array) -> void:
 		_after_n[i] = int(_after_n.get(i, 0)) + 1 if fast else 0
 		if mv == "fanstep" and speed > 60.0:   # (Fan Step's blink: her spin left fading where she was - 23 Oct)
 			fx.afterimage(i, p)
+		# (23 Oct, step 4 - her petals, Umbra's: a spin sheds a ring of them; a throw / Fan Slash slaps a cone out)
+		if _char(i) == "dancer" and mv in SPINS and _crossed(p, r, mv, 1):
+			fx.petal_dance(Vector2(float(r[0]), float(r[1]) - 50.0), colour_of(i), _tick_n * 11 + i)
+		elif _char(i) == "dancer" and mv in ["fan", "airfan", "fanslash"] and _crossed(p, r, mv, Moves.startup(Moves.move("dancer", mv))):
+			fx.petal_slap(Vector2(float(r[0]) + float(r[2]) * 30.0, float(r[1]) - 62.0), float(r[2]), colour_of(i), _tick_n * 11 + i)
 		# (23 Oct, step 2 - YOMI's movement particles: a jump's burst, a dash's spray, an air jump's puff)
 		var feet := Vector2(float(r[0]), float(r[1]))
 		if mv in ["jump", "superjump"] and _crossed(p, r, mv, 5 if mv == "superjump" else 1):
@@ -263,16 +268,31 @@ func _effect(e: Dictionary, prev: Array) -> void:
 func _hit_style(e: Dictionary, a: int) -> String:
 	var src := str(e.get("src", ""))
 	if src != "":
-		return "wave" if src == "ripple" else ("slash" if src in ["fan", "airfan", "fanstorm", "finale", "cyclone",
+		return "wave" if src == "ripple" else ("fan" if src in ["fan", "airfan", "fanstorm", "finale", "cyclone",
 				"fanward", "fanflick"]
 				else "blunt")
 	var mv := str(frame[a][3])
-	if _char(a) == "bruiser":   # (his elbows cut; fists, shins and knees thump)
-		return "slash" if mv in ["elbow", "clinchelbow"] else "blunt"
+	if mv != "" and Moves.move(_char(a), mv).has("hitfx"):   # (a move can name its look)
+		return str(Moves.move(_char(a), mv)["hitfx"])
+	if mv in OVERHEADS:   # (step 3: chops and stomps - the crescent sweeping down)
+		return "overhead"
+	if _char(a) == "bruiser":   # (his elbows cut; fists burst; shins and knees: the kick's cone and wave)
+		if mv in ["elbow", "clinchelbow"]:
+			return "slash"
+		var btip := _striking(a, mv, int(frame[a][4])) if mv != "" else ""
+		return "kick" if btip.begins_with("foot") or btip.begins_with("knee") else "blunt"
 	if mv == "" or _char(a) != "dancer":
 		return "blunt"
 	var tip := _striking(a, mv, int(frame[a][4]))
-	return "slash" if tip.begins_with("hand") else "blunt"
+	return "fan" if tip.begins_with("hand") else "kick"   # (her fans: crescents + her petals - step 4)
+
+
+## Step 4 (23 Oct): her spins - they shed a ring of petals (Umbra's petal dance).
+const SPINS := ["pirouette", "straight", "airknee", "fanstorm", "finale", "encore", "taunt", "fanstep"]
+
+
+## Step 3 (23 Oct): the strikes that come down on them - Nakmuay's overhead crescent.
+const OVERHEADS := ["axekick", "stomp", "elbowdrop", "quake"]
 
 
 func _char(i: int) -> String:

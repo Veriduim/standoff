@@ -59,7 +59,8 @@ var band := 460.0            ## the stage band's height (screen px)
 var view_zoom := 1.0         ## the camera's zoom
 var span := 2000.0           ## how much of the stage is in view (world px across)
 var walls := 1400.0          ## the stage's half width (world px)
-const BIG_HIT := 45          ## a hit this hard (after scaling) gets the giant starburst - the big ones only, not every hit
+const BIG_HIT := 45          ## a hit this hard (after scaling) gets Nakmuay's breaking ring
+const HUGE_HIT := 70         ## ...and this hard the giant screen-sized starburst (23 Oct: it was every 45+, "way too much")
                              ## (06:17 "The only thing i didnt like the circle for was every hit")
 ## Quake Stomp's shockwave reaches QUAKE_REACH either side of his foot (its hit box: 90), so its spikes and debris stay
 ## there - YOMI's ground pound throws a curtain of debris up off the strip it hits and bumps the camera, no screen-wide
@@ -248,11 +249,22 @@ func on_event(type: String, at: Vector2, face: float, dmg: int, by: Color, victi
 			_add("ink", at, Vector2.ZERO, 0.42, INK, 60.0 + 26.0 * s, face)
 			var look := style
 			style = ""
+			if look == "fan" and type == "hit":   # (her fan's cut: the crescents, and her petals thrown out - Umbra's)
+				petal_burst(at, by, int(at.x * 7.0 + at.y * 3.0) + dmg)
+				look = "slash"
 			if look == "slash" and type == "hit":   # (step 4: a fan's cut - two thin crescents across it, no star)
 				_add("slash", at, Vector2.ZERO, 0.24, by.lightened(0.3), 62.0 + 18.0 * s, face)
 				parts[-1]["w"] = 0.0
 				_add("slash", at + Vector2(0, 6), Vector2.ZERO, 0.2, by.lightened(0.55), 44.0 + 12.0 * s, -face * 0.5)
 				parts[-1]["w"] = 0.0
+			elif look == "kick" and type == "hit":   # (step 3, Nakmuay's angle hit: a cone of spikes along the blow and
+				# a side-on shock wave pushed out ahead of it)
+				_add("cone", at, Vector2.ZERO, 0.17, Color.WHITE, 40.0 * s, face)
+				_add("pring", at + Vector2(face * 10.0, 0.0), Vector2(face * 180.0, 0.0), 0.18, Color.WHITE, 30.0 * s, face)
+			elif look == "overhead" and type == "hit":   # (step 3, Nakmuay's overhead: a thin crescent sweeping down
+				# over the hit, and a small bloom where it lands)
+				_add("crescent", at + Vector2(-face * 6.0, -10.0), Vector2.ZERO, 0.2, Color.WHITE, 42.0 * s, face)
+				_add("bloom", at, Vector2.ZERO, 0.15, Color.WHITE, 18.0 * s)
 			elif look == "wave" and type == "hit":   # (the ground ripple: dust thrown up round their feet)
 				var feet := Vector2(at.x, maxf(at.y, -20.0))
 				for i in 10:
@@ -264,14 +276,16 @@ func on_event(type: String, at: Vector2, face: float, dmg: int, by: Color, victi
 				_burst(at, face, s, by, victim_col)
 			if counter:   # (they were mid-attack: a harder flash)
 				flash[victim] = 0.08
-			if dmg >= 30:   # (a hard one: impact lines in the hitter's colour, the one hit flashes white - no big white
+			if dmg >= 45:   # (a hard one: impact lines in the hitter's colour, the one hit flashes white - no big white
 				# ring any more: 22:57 "I dont love the massive white circle thing")
 				_add("spokes", at, Vector2.ZERO, 0.14, by.lightened(0.55), 34.0 * s)
 				flash[victim] = 0.06
 			if dmg >= 45:
 				splash(0.35, at)
-			if dmg >= BIG_HIT and type != "armor":   # (14:09: a giant starburst and rings, sized by the screen)
-				_big(at, by)
+			if dmg >= BIG_HIT and type != "armor":   # (step 3: Nakmuay's ring, thinning, breaking)
+				_add("rring", at, Vector2.ZERO, 0.26, Color.WHITE, 48.0 * s)
+			if dmg >= HUGE_HIT and type != "armor":   # (14:09 19 Oct: a giant starburst and rings, sized by the screen -
+				_big(at, by)                           # 23 Oct "way too much": the knockout-size hits only)
 			freeze(clampf(0.04 + float(dmg) * 0.0018, 0.05, 0.14), victim)
 			kick(clampf(float(dmg) * 0.1, 1.5, 5.0))
 		"block":   # (a guard arc - red when blocked at the wrong height; a big one for a Push Block)
@@ -363,17 +377,18 @@ func _quake_spikes(x0: float) -> void:
 ## back (the sim), it holds a moment and splits.
 func burst_out(id: int, at: Vector2, col: Color, seed_n: int) -> void:
 	_rng.seed = seed_n
-	_add("flash", at, Vector2.ZERO, 0.32, Color.WHITE, 150.0)
-	_add("shock", at, Vector2.ZERO, 0.42, col.lightened(0.5), 210.0)
-	_add("rays", at, Vector2.ZERO, 0.35, Color.WHITE, 170.0)
-	for i in 18:
-		var dir := Vector2.from_angle(TAU * float(i) / 18.0 + _rng.randf_range(-0.15, 0.15))
-		_add("shard", at + dir * 30.0, dir * _rng.randf_range(420.0, 820.0), _rng.randf_range(0.35, 0.6),
-				Color("#9fe8ff") if i % 3 else col.lightened(0.5), _rng.randf_range(10.0, 20.0))
+	# (23 Oct 13:49 "way too much": about half the size, fewer shards, a shorter hold - the Nakmuay fight's scale)
+	_add("flash", at, Vector2.ZERO, 0.24, Color.WHITE, 85.0)
+	_add("shock", at, Vector2.ZERO, 0.3, col.lightened(0.5), 120.0)
+	_add("rays", at, Vector2.ZERO, 0.24, Color.WHITE, 95.0)
+	for i in 10:
+		var dir := Vector2.from_angle(TAU * float(i) / 10.0 + _rng.randf_range(-0.15, 0.15))
+		_add("shard", at + dir * 24.0, dir * _rng.randf_range(260.0, 480.0), _rng.randf_range(0.25, 0.4),
+				Color("#9fe8ff") if i % 3 else col.lightened(0.5), _rng.randf_range(8.0, 14.0))
 	flash[id] = 0.1   # (no confetti rings or white ring - 23:11, 00:22)
-	splash(0.9, at)
-	freeze(0.3, -1)
-	kick(5.0)
+	splash(0.5, at)
+	freeze(0.2, -1)
+	kick(3.0)
 
 
 ## Someone starts a super: the stage dims round them, rays and rings burst out, it all holds a moment and splits.
@@ -382,14 +397,15 @@ func super_start(id: int, at: Vector2, col: Color, seed_n: int, title := "", pos
 	pass   # (no banner or name - 03:03 "I dont like the big on screen super banner ... they definitely do not have those")
 	dim = 0.62
 	dim_id = id
-	_add("rays", at, Vector2.ZERO, 0.4, col.lightened(0.45), 190.0)
-	_add("glow", at, Vector2.ZERO, 0.45, col, 95.0)
-	_add("shock", at, Vector2.ZERO, 0.4, col.lightened(0.3), 170.0)
-	_add("floorring", Vector2(at.x, 0.0), Vector2.ZERO, 1.1, col, 130.0)   # (a ring of her colour glowing on the floor -
+	# (23 Oct 13:49 "way too much": the rays and ring about half, a lighter colour split - the dim and the hold carry it)
+	_add("rays", at, Vector2.ZERO, 0.3, col.lightened(0.45), 100.0)
+	_add("glow", at, Vector2.ZERO, 0.4, col, 70.0)
+	_add("shock", at, Vector2.ZERO, 0.3, col.lightened(0.3), 95.0)
+	_add("floorring", Vector2(at.x, 0.0), Vector2.ZERO, 1.1, col, 100.0)   # (a ring of her colour glowing on the floor -
 	# Yharim's; no confetti shapes - 23:11)
-	splash(1.0, at)
+	splash(0.45, at)
 	freeze(0.3, -1)
-	kick(3.0)
+	kick(2.0)
 
 
 ## A stretch of ribbon along the floor (Silk Glide), from a to b (world), fading from where it was laid.
@@ -413,6 +429,46 @@ func _dots(at: Vector2, dir: Vector2, spread_deg: float, n: int, speed: float, l
 			off = Vector2.from_angle(_rng.randf() * TAU) * _rng.randf() * sphere * YS
 		_add("dot", at + off, Vector2.from_angle(a) * speed * YS * _rng.randf_range(0.15, 1.0),
 				life * _rng.randf_range(0.25, 1.0), c, size * YS * _rng.randf_range(0.45, 1.0), 35.8 * YS * BIG)
+
+
+## Her petals, after the Umbra mod (study only - its petal hit, slap and dance; Timmy 13:45 "With the petals matching
+## her colour"): in her colour, a little lighter and darker so they read as petals, each spinning.
+func _petal_col(c: Color) -> Color:
+	return c.lightened(_rng.randf_range(0.0, 0.35)) if _rng.randf() < 0.7 else c.darkened(_rng.randf_range(0.0, 0.2))
+
+
+## A fan hit: petals thrown out every way, spinning fast, slowing, gone in under a second.
+func petal_burst(at: Vector2, c: Color, seed_n: int, n := 14) -> void:
+	_rng.seed = seed_n
+	for i in n:
+		var v := Vector2.from_angle(_rng.randf() * TAU) * 162.0 * YS * _rng.randf_range(0.2, 1.0)
+		_add("upetal", at, v, _rng.randf_range(0.3, 0.7), _petal_col(c), _rng.randf_range(9.0, 15.0), 260.0 * YS * BIG)
+		parts[-1]["w"] = _rng.randf_range(-12.0, 12.0)
+
+
+## A throw / a fan's slash: a dense cone of petals flung out the way she faces that stops almost at once and hangs.
+func petal_slap(at: Vector2, face: float, c: Color, seed_n: int, n := 34) -> void:
+	_rng.seed = seed_n
+	for i in n:
+		var a := Vector2(face, 0.0).angle() + deg_to_rad(_rng.randf_range(-30.0, 30.0))
+		var v := Vector2.from_angle(a) * 1000.0 * YS * 0.18 * _rng.randf_range(0.2, 1.0)
+		_add("upetal", at, v, _rng.randf_range(0.45, 0.9), _petal_col(c), _rng.randf_range(8.0, 13.0), 2600.0 * BIG)
+		parts[-1]["w"] = _rng.randf_range(-5.0, 5.0)
+
+
+## A spin: petals circling round her, drifting outward as they go.
+func petal_dance(center: Vector2, c: Color, seed_n: int, n := 18) -> void:
+	_rng.seed = seed_n
+	for i in n:
+		var th := _rng.randf() * TAU
+		var rad := _rng.randf_range(30.0, 60.0)
+		_add("opetal", center + Vector2.from_angle(th) * rad, Vector2.ZERO, _rng.randf_range(0.5, 1.0), _petal_col(c),
+				_rng.randf_range(8.0, 12.0))
+		parts[-1]["th"] = th
+		parts[-1]["rad"] = rad
+		parts[-1]["om"] = _rng.randf_range(5.0, 8.0) * (1.0 if _rng.randf() < 0.8 else -1.0)
+		parts[-1]["c0"] = center
+		parts[-1]["w"] = _rng.randf_range(-6.0, 6.0)
 
 
 ## A jump leaving the floor: a burst straight down off the feet, a little spray along the floor both ways.
@@ -508,7 +564,9 @@ func kick(px: float) -> void:
 ## (23:11 "remove the random shapes on hit as well": no flying rings, squares or chips - the spark and the dark
 ## starburst behind it carry the hit)
 func _burst(at: Vector2, _face: float, s: float, _by: Color, _victim_col: Color) -> void:
-	_add("star", at, Vector2.ZERO, 0.15 + 0.05 * s, YELLOW, 30.0 * s)
+	# (step 3, 23 Oct - Nakmuay's hit sheet as the model: a white spiky burst that blooms and hollows out into streaks;
+	# the yellow star kept small at its heart)
+	_add("bloom", at, Vector2.ZERO, 0.17, Color.WHITE, 26.0 * s)   # (13:49 "way too much": one small spark, no star)
 
 
 ## A direction fanned round the way a hit goes (a little upward).
@@ -523,6 +581,13 @@ func _add(kind: String, at: Vector2, vel: Vector2, life: float, c: Color, size: 
 	vel *= BIG
 	var p := {"k": kind, "p": at, "v": vel, "age": 0.0, "life": life, "c": c, "s": size, "r": _rng.randf() * TAU,
 		"w": _rng.randf_range(-9.0, 9.0), "x": extra}
+	if kind in ["bloom", "cone"]:   # (their spikes' lengths)
+		var sp2: Array = []
+		for i in 22:
+			sp2.append(_rng.randf_range(0.45, 1.0))
+		p["sp"] = sp2
+	if kind == "rring":   # (where the ring breaks as it thins)
+		p["gaps"] = [_rng.randf() * TAU, _rng.randf() * TAU, _rng.randf() * TAU]
 	if kind == "star":
 		var sp: Array = []
 		for i in 12:
@@ -587,6 +652,14 @@ func update(delta: float) -> void:
 		if p["k"] == "chip":
 			v.y += 1100.0 * delta
 			v *= pow(0.3, delta)
+		elif p["k"] == "upetal":   # (Umbra's petals: slowed steadily to a stop, still spinning - x = the damping)
+			var sp2 := v.length()
+			v = v / sp2 * maxf(0.0, sp2 - float(p["x"]) * delta) if sp2 > 0.0 else v
+		elif p["k"] == "opetal":   # (a dance petal: circling her, drifting out - theta, radius, its centre)
+			p["th"] = float(p["th"]) + float(p["om"]) * delta
+			p["rad"] = float(p["rad"]) + 26.0 * delta
+			var to: Vector2 = (p["c0"] as Vector2) + Vector2.from_angle(float(p["th"])) * float(p["rad"]) * Vector2(1.0, 0.45)
+			v = (to - (p["p"] as Vector2)) / maxf(delta, 0.001)
 		elif p["k"] == "dot":   # (YOMI's particles: no gravity, slowed steadily to a stop - x = the damping)
 			var sp := v.length()
 			v = v / sp * maxf(0.0, sp - float(p["x"]) * delta) if sp > 0.0 else v
@@ -825,6 +898,20 @@ func draw_parts(st: StageView) -> void:
 		match str(p["k"]):
 			"ink", "bubble", "floorring", "ribbon", "crack", "spikes", "bigstar", "puff", "mline":   # (behind the fighters - draw_back)
 				pass
+			"upetal", "opetal":   # (Umbra's petal in her colour: a pointed oval, spinning, fading - 23 Oct)
+				var fade := 1.0 - maxf(0.0, (t - 0.55) / 0.45)
+				c.a = fade
+				var r := float(p["r"])
+				var pts := PackedVector2Array()
+				for k in 10:
+					var a := TAU * k / 10.0
+					var w := 0.42 * (1.0 - 0.55 * absf(cos(a)) * (1.0 if cos(a) > 0.0 else 0.0))   # (pointed at one end)
+					pts.append(at + Vector2(cos(a) * s * 0.5, sin(a) * s * w).rotated(r))
+				st.draw_colored_polygon(pts, c)
+				var hi := c.lightened(0.45)
+				hi.a = fade * 0.7
+				st.draw_line(at - Vector2(s * 0.3, 0.0).rotated(r), at + Vector2(s * 0.3, 0.0).rotated(r), hi,
+						maxf(1.0, s * 0.08), true)
 			"dot":   # (YOMI's round particle in their colour, shrinking away)
 				st.draw_circle(at, maxf(0.6, s * 0.5 * (1.0 - t)), c, true, -1.0, true)
 			"wring":   # (a wide thin ring opening out round a big moment; x = how strong)
@@ -902,6 +989,61 @@ func draw_parts(st: StageView) -> void:
 			"ring":
 				c.a = 1.0 - t * t
 				st.draw_arc(at, s, 0.0, TAU, 14, c, maxf(1.5, 3.0 * z), true)
+			"bloom", "cone":   # (step 3: spikes out of the hit - bloomed out solid in the first third, then hollowing:
+				# their inner ends race out after the tips, thinning; a cone keeps to 40 degrees round the way it went)
+				var sp: Array = p["sp"]
+				var cone := str(p["k"]) == "cone"
+				var grow := minf(1.0, t / 0.3)
+				var hollow := maxf(0.0, (t - 0.25) / 0.75)
+				c.a = 1.0 - hollow * hollow
+				var n := 14 if cone else 22
+				for k in n:
+					var ang := float(p["r"]) + TAU * k / float(n)
+					if cone:
+						ang = Vector2(float(p["x"]), 0.0).angle() + lerpf(-0.7, 0.7, float(k) / float(n - 1))
+					var dir := Vector2.from_angle(ang)
+					var ln := s * float(sp[k]) * (0.45 + 0.55 * grow) * (1.0 + 0.35 * hollow)
+					var inner := ln * hollow * 0.85
+					var side := Vector2(-dir.y, dir.x) * maxf(0.8, s * (0.05 if cone else 0.07)) * (1.0 - 0.7 * hollow)
+					var o := at + dir * (s * 0.35 * hollow if cone else 0.0)
+					st.draw_colored_polygon(PackedVector2Array([o + dir * inner + side, o + dir * ln, o + dir * inner - side]),
+							c)
+			"pring":   # (step 3: a side-on shock wave - an upright ellipse, thick at first, thinning as it goes)
+				var rx := s * (0.22 + 0.25 * t)
+				var ry := s * (0.75 + 0.45 * t)
+				c.a = 1.0 - t * t
+				var pts := PackedVector2Array()
+				for k in 33:
+					var a := TAU * k / 32.0
+					pts.append(at + Vector2(cos(a) * rx, sin(a) * ry))
+				st.draw_polyline(pts, c, maxf(1.0, s * 0.16 * (1.0 - t)), true)
+			"crescent":   # (step 3: an overhead's thin crescent sweeping down round the hit; x = the way they face)
+				var face := float(p["x"])
+				var e := 1.0 - pow(1.0 - t, 3.0)
+				var mid := lerpf(-1.9, 0.5, e)   # (the arc's middle swinging from up over to the front-down)
+				c.a = 1.0 - maxf(0.0, (t - 0.5) / 0.5)
+				var pts := PackedVector2Array()
+				for k in 13:
+					var a := mid + lerpf(-0.55, 0.55, k / 12.0)
+					pts.append(at + Vector2(cos(a) * face, sin(a)) * s)
+				for k in 12:   # (thick in the middle, thin at both tips)
+					var w := maxf(1.0, s * 0.11 * sin(PI * (k + 0.5) / 12.0) * (1.0 - 0.6 * t))
+					st.draw_line(pts[k], pts[k + 1], c, w, true)
+			"rring":   # (step 3: a big hit's thick rough ring - thinning, then breaking into pieces as it fades)
+				var gaps: Array = p["gaps"]
+				var rad := s * (0.7 + 0.45 * (1.0 - pow(1.0 - t, 2.0)))
+				c.a = 1.0 - t * t
+				var w := maxf(1.0, s * 0.2 * (1.0 - t))
+				var gap := 0.15 + 1.2 * t   # (each break widening)
+				var gs: Array = gaps.duplicate()
+				gs.sort()
+				for g in 3:
+					var a0 := float(gs[g]) + gap / 2.0
+					var a1 := float(gs[(g + 1) % 3]) - gap / 2.0
+					if a1 < a0:
+						a1 += TAU
+					if a1 - a0 > 0.05:
+						st.draw_arc(at, rad, a0, a1, 24, c, w, true)
 			"box":
 				c.a = 1.0 - t * t
 				var pts := PackedVector2Array()
