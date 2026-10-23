@@ -537,7 +537,7 @@ const BRUISER := {
 			"pose": [[0, "b_rush_set"], [2, "b_rush_paw"], [4, "b_rush"], [8, "b_rush_2"], [12, "b_rush"], [16, "b_rush_2"],
 				[20, "b_rush"], [24, "b_rush_2"], [27, "b_rush_stop"], [34, "b_idle"]], "icon": "b_rush"},
 		"bullrush_hit": {"name": "Bull Rush", "tab": "special", "drawn": true, "kind": "attack", "hidden": true, "frames": 22,
-			"where": "ground", "aim": "facing", "pose": [[0, "b_ram"], [8, "b_ram_through"], [18, "b_idle"]]},
+			"where": "ground", "aim": "facing", "pose": [[0, "b_ram"], [6, "b_ram_drive"], [12, "b_ram_settle"], [18, "b_idle"]]},
 		# (15:11 / 15:23 Timmy: "the first hit lands. Then he does a short dash like movement and hits with the left.
 		# Then repeat right. Then end on the high cross bounce" - five hooks, right to the body, left to the head, each
 		# knocking them back and a dash in after it, about a quarter of the stage in all; then the high left cross wound
