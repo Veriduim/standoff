@@ -1,14 +1,15 @@
 # Where Standoff stands - parked again 23 Oct 2026
 
 Timmy, 23 Oct 15:52: "Lets get our changes in now. Doc and note everything and then push to guthub and we will go back
-to LAD". It was back on from 12:42 for an animation and effects pass - YOMI and its character mods (Nakmuay for him,
-Umbra for her) the study, nothing copied. **All of it is pushed to master but NOT released: the newest APK is still
-0.46.1.** (It's a game for him and his friends - 13:30 "Their is no standoff release" - GitHub is how they get it.)
+to LAD" (15:56 "I meant make a release for Standoff"). It was back on from 12:42 for an animation and effects pass -
+YOMI and its character mods (Nakmuay for him, Umbra for her) the study, nothing copied. **Released as 0.47.0
+(versionCode 79).** (It's a game for him and his friends - 13:30 "Their is no standoff release" - GitHub is how they
+get it.)
 
 Before that, 21 Oct 09:59: "No issues at all. But just document everything on this and park it for now as we swtich
 back to Life after Dark". The online fixes (0.46.0 / 0.46.1) were tested with a friend on real phones: no issues.
 
-## 23 Oct: the animation and effects pass (on master, not in an APK yet)
+## 23 Oct: the animation and effects pass (0.47.0)
 - **Every move its own drawings** (`docs/animations.md` is the checklist): tumbles and flips with a bendable spine
   ("bend" at 1/4, 1/2, 3/4) and loose shoulders, grabbed / wall-splat / pinned-flat looks, taunt routines, his hand
   wraps, the movement moves, her borrowed moves redrawn after Umbra, his after Nakmuay.
@@ -32,7 +33,7 @@ back to Life after Dark". The online fixes (0.46.0 / 0.46.1) were tested with a 
   (drawings), hell_lab (strengths side by side), limb_check (limbs lost in the body), fist_heights (where a strike lands
   on them), barrage_probe, his_poses.py / her_poses.py (the pose builders - joint angles in, `Poses.P` lines out).
 
-**Latest release:** 0.46.1 (versionCode 78).
+**Latest release:** 0.47.0 (versionCode 79), 23 Oct.
 - Download, always the newest: https://github.com/Veriduim/standoff/releases/latest/download/Standoff.apk
 - Repo (public): github.com/Veriduim/standoff. Every APK is a GitHub release.
 - The lobby server (`relay/`) is deployed on his Cloudflare account. `docs/lobby.md` says how to deploy it.
@@ -91,7 +92,6 @@ back to Life after Dark". The online fixes (0.46.0 / 0.46.1) were tested with a 
    apart, a dash between hits, hits landing mid body / head, impact on every hit, nothing through the floor).
 2. Her supers the same way - Fouetté Storm, Gale, Grand Finale.
 3. Her ranged ideas (`docs/dancer.md`): more fans, going further, moves through her fans, a giant-fan super.
-4. A release when he wants one (0.47.0 = this pass).
 
 Older (my list from 20 Oct 17:47):
 1. Better hit reactions for both fighters. Each is one held drawing now, as in YOMI (since 23 Oct: bent drawings for
