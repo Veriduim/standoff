@@ -1741,6 +1741,13 @@ func _hurt(a: Fighter, d: Fighter, e: Dictionary, type: String, src := "", side_
 	if e.has("impact"):   # (the screen: its freeze and shake this many times over - 15:36 "impact on each hit")
 		extra["impact"] = float(e["impact"])
 	_event(type, a, d, dmg, extra)
+	if type == "hit" and src == "" and a.move == mv and Moves.move(a.character, mv).has("hit_move"):   # (a move with
+		var into := str(Moves.move(a.character, mv)["hit_move"])   # its own follow-through when it lands - Bull Rush's
+		a.move = into                                               # ram, 15:42; Nakmuay's Rhino's Charge hit)
+		a.frame = 0
+		a.length = int(Moves.move(a.character, into)["frames"])
+		a.instance += 1
+		a.hit_done.clear()
 
 
 ## A grab connects on someone standing who isn't reeling; two grabs meeting push apart (a tech).

@@ -531,9 +531,13 @@ const BRUISER := {
 			"cost": 125, "armor": [0, 30], "armor_hits": 3, "motion": [[4, 26, 12.0, 0.0]], "cue": {"at": 4, "type": "rush"},
 			"note": "Super Armor for three hits - through shots and all",
 			"hits": [{"from": 8, "to": 26, "box": [10, -106, 52, 98], "dmg": 40, "stun": 40, "kb": [16.0, -4.0],
-				"block": 16, "chip": 6, "group": 0, "splat": true, "fling": true}],
-			"pose": [[0, "b_idle"], [4, "b_rush"], [8, "b_rush_2"], [12, "b_rush"], [16, "b_rush_2"], [20, "b_rush"],
-				[24, "b_rush_2"], [27, "b_rush_stop"], [34, "b_idle"]], "icon": "b_rush"},
+				"block": 16, "chip": 6, "group": 0, "splat": true, "fling": true, "impact": 2.2}],
+			# (15:42: set like a bull, the back foot scraping, then the run; landing it, "bullrush_hit" - the ram)
+			"hit_move": "bullrush_hit",
+			"pose": [[0, "b_rush_set"], [2, "b_rush_paw"], [4, "b_rush"], [8, "b_rush_2"], [12, "b_rush"], [16, "b_rush_2"],
+				[20, "b_rush"], [24, "b_rush_2"], [27, "b_rush_stop"], [34, "b_idle"]], "icon": "b_rush"},
+		"bullrush_hit": {"name": "Bull Rush", "tab": "special", "drawn": true, "kind": "attack", "hidden": true, "frames": 22,
+			"where": "ground", "aim": "facing", "pose": [[0, "b_ram"], [8, "b_ram_through"], [18, "b_idle"]]},
 		# (15:11 / 15:23 Timmy: "the first hit lands. Then he does a short dash like movement and hits with the left.
 		# Then repeat right. Then end on the high cross bounce" - five hooks, right to the body, left to the head, each
 		# knocking them back and a dash in after it, about a quarter of the stage in all; then the high left cross wound
