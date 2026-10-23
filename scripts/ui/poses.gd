@@ -206,6 +206,8 @@ const P := {
 	"b_rush_stop": {"head": [-6, -93], "neck": [-6, -81], "hip": [0, -49], "elbow_f": [6, -67], "hand_f": [9, -83], "elbow_b": [0, -64], "hand_b": [3, -80], "knee_f": [23, -36], "foot_f": [33, -14], "knee_b": [-7, -24], "foot_b": [-11, 0], "bend": [-1, -2, -1]},
 	"b_fl_a": {"head": [10, -89], "neck": [7, -77], "hip": [0, -45], "elbow_f": [22, -86], "hand_f": [36, -77], "elbow_b": [16, -62], "hand_b": [17, -78], "knee_f": [17, -25], "foot_f": [19, -1], "knee_b": [-15, -24], "foot_b": [-19, 0], "bend": [1, 2, 1]},
 	"b_fl_b": {"head": [21, -84], "neck": [17, -72], "hip": [0, -44], "elbow_f": [23, -55], "hand_f": [23, -71], "elbow_b": [32, -81], "hand_b": [46, -73], "knee_f": [20, -27], "foot_f": [18, -3], "knee_b": [-17, -24], "foot_b": [-19, 0], "bend": [4, 7, 4]},
+	"b_over_load": {"head": [-5, -91], "neck": [-5, -79], "hip": [0, -46], "elbow_f": [4, -63], "hand_f": [7, -79], "elbow_b": [-20, -88], "hand_b": [-5, -94], "knee_f": [15, -25], "foot_f": [19, -1], "knee_b": [-11, -23], "foot_b": [-18, 0], "bend": [-2, -3, -2]},
+	"b_overhand": {"head": [27, -77], "neck": [18, -69], "hip": [0, -42], "elbow_f": [15, -52], "hand_f": [13, -67], "elbow_b": [36, -73], "hand_b": [40, -57], "knee_f": [18, -24], "foot_f": [23, 0], "knee_b": [-17, -22], "foot_b": [-27, 0], "bend": [4, 7, 4]},
 	# hit reactions by how it landed (06:22 "Lets try 1 and 2"): they face whoever hit them (+x toward them). Doubled
 	# over at the body; the front leg taken from under them, pitching forward; crushed down under an overhead, arms over
 	# the head; flung - thrown back, arms and feet trailing; sent up - arched, everything flung out
