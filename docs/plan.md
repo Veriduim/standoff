@@ -447,6 +447,29 @@ one stage; each attack aims at a picked target.
   after Dark" -> PARKED at 0.46.1 (the friend test of the online fixes: no issues). docs/status.md = where it stands
   and how to pick it up.
 
+- 23 Oct 12:42 "Ok. Lets pause this and go back to StandOff" -> back on. 12:53 YOMI's Ninja / Cowboy studied (licence:
+  study only) - "Lets fill the gaps in our two": tumbles ("I should see that back bend", "The body contracts too much
+  into a blob" -> an open pike, "His body needs to be able to bend in the middle and at the 3/4 and 1/4 mark" -> the
+  spine), "Wraps yes / Tumble E / Elbow C", 13:25 "we need an animation basically for everything" (docs/animations.md).
+- 13:30 "This game. Is just for me and my friends to play together. Their is no standoff release" / "We need to carry
+  with effects too!" -> the effects plan, steps 1-6, "Yeah. Sounds good. Go ahead". "Just use YOMI and its Char Mods
+  as inspiration", "our effects should be cool and snappy", "these are way too much" (toned to Nakmuay's video),
+  "Umbra is probably close to what we want. With the petals matching her colour", "I like the spin hits", her range
+  ideas noted for later (docs/dancer.md), "Continue through 4 and 5 for now though".
+- 14:33 "Barrage launching upwards is weird" -> a ground bounce. 14:49 "special and supers should be exaggerated to
+  hell!" -> `Poses._hell`; 14:59 "Hell2 is looking good. Some limbs need further extended like flying knee is in his
+  stomach" -> limb check, redraws; "Show me their moves in a video replay" -> `--replay`.
+- 15:11-15:40 the Barrage, call by call: "move them about 1/4 of the way accross the field", "move over to the other
+  leg after each hit", "splatter them into the ground for a frame or two before they bounce back up to about his head
+  height and a half"; "F35 we should see his elbow to the left. F40 ... his left elbow above his head about to come
+  down. F41 his right arm should hang down"; "These do not flow at all"; "a short dash like movement"; "more mid
+  body/head"; "send the opponent forward a little"; "clipping through the ground" -> fixed, cracks linger; "more impact
+  by slowing it down"; "not as many after images. Like half them"; "That is feeling good!"
+- 15:42 "Lets try bull rush. Maybe drop clinch fury" + "a lot of our specials are kind of boring" -> Bull Rush done
+  (15:49 no back-swing), five special ideas offered (docs/status.md "Waiting on him").
+- 15:52 "Lets get our changes in now. Doc and note everything and then push to guthub and we will go back to LAD" ->
+  pushed to master, not released (still 0.46.1).
+
 ## To tune / later
 - **Match length with 6:** bot matches take 120-270 decision points with 6 fighters (50-90 with 2). At ~10 s a decision
   that's far too long - lower HP or more damage with more players (a lobby setting), and a turn timer.

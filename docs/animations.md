@@ -22,6 +22,14 @@ Standoff Workshop/tools (frames_sheet.gd draws a move's frames as the game poses
   Rush's speed lines off his back and dust (Rhino's Charge), Elbow Drop slamming the floor; both elbows trace their
   arc from the elbow
 
+- Specials and supers exaggerated (14:49 "special and supers should be exaggerated to hell!"): `Poses._hell`, his pick
+  strength 2 - more lean, a wider stance, more spine, the striking limb stretched while it hits; limbs lost in the body
+  found with Standoff Workshop/tools/limb_check.gd and fixed (the Flying Knee and the clinch knee redrawn)
+- The Barrage (15:11-15:40): five hooks with a dash-in drawing between every two (the next arm cocked), right to the
+  body / left to the head, the punching shoulder turned through; the high left cross cocked (elbow out to the left),
+  the elbow up over his head, smashed down with the right arm hanging; the one hit pinned flat (`floor_splat`)
+- Bull Rush (15:42-15:49): set like a bull, the back foot scraping; the ram, the drive through, a crouched guard
+
 ## No drawing of their own (stand, crouch, dash, jump, fall borrowed)
 - Dash, Jump, Super Jump, Fast Fall, Back Step, Air Dash: their own since step 2
 - Dancer: Flow Form

@@ -55,7 +55,7 @@ Everything below is study only. No move, name, art or number is copied; each ide
 | **Specials** | **Rising Uppercut** (invulnerable start with initiative), **Haymaker** (Super Armor, lunges by the Distance, a fling), **Flying Knee** (leaps in - breaks a guard, clears the Ripple), **Superman Punch** (a leaping overhead), **Catch** (catches a strike and dumps them - not shots) |
 | **Grit** | His gauge: dealing damage fills it (0.12 a point), taking it fills it faster (0.4 a point - tanked on armour too). Full: **K.O. Punch** - f5, through a guard, 100 damage, floors them; 36 frames open if it misses. Floored, he loses half his Grit. |
 | **Air** (weak) | Air Knee, Air Hook, Elbow Drop (an overhead straight down) |
-| **Supers** | **Bull Rush** (1 bar - armour for three hits, through shots; a fling), **Barrage** (2 bars - five jabs and an uppercut), **Clinch Fury** (3 bars - a clinch that won't let go: three knees and an elbow) |
+| **Supers** | **Bull Rush** (1 bar - armour for three hits, through shots; a fling; 23 Oct: set like a bull, landing it the ram and a drive through), **Barrage** (2 bars - 23 Oct, rebuilt with Timmy: five hooks, right to the body, left to the head, a dash in after each, about a quarter of the stage; the high left cross pins them flat a moment and bounces them up about 1.5x his height), **Clinch Fury** (3 bars - a clinch that won't let go: three knees and an elbow; 23 Oct: to be dropped - "its kind of boring") |
 | **Rushdown trait** | Point blank (70 px) his strikes do 10% more and stun 2 longer; a blocked one barely pushes the blocker off - he stays on them |
 
 **His limits:** nothing at range (no projectile); a weak air game; his big swings are slow and punishable; armour takes
