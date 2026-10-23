@@ -174,6 +174,7 @@ const START_1V1 := 840.0
 const FLING_FRICTION := 0.95
 const FLING_TICKS := 40
 const CHASE_MAX := 32.0       ## ...and Chase runs after them up to this fast
+const DASH_IN_MAX := 70.0     ## a move's "follow" dash (Barrage's) at most this fast
 const HOLD_PX := 38.0         ## the Clinch: the one held stands this far in front of him, his knees landing
 
 var fighters: Array[Fighter] = []
@@ -779,13 +780,17 @@ func _motion(f: Fighter) -> void:
 				return
 			f.vel.x = float(f.facing) * clampf((dx - near) * 0.5 + maxf(gv, 0.0), 6.0, CHASE_MAX)
 			return
-	if m.has("follow") and f.frame >= int(m["follow"][0]) and f.frame <= int(m["follow"][1]):   # (15:11: Barrage
-		var g := _ahead(f)   # stays on them as each hit drives them back - keeping "follow"[2] px off them)
-		if g != null:
-			var dx := (g.pos.x - f.pos.x) * float(f.facing)
-			var gv := g.vel.x * float(f.facing)
-			f.vel.x = float(f.facing) * clampf((dx - float(m["follow"][2])) * 0.6 + maxf(gv, 0.0), 0.0, CHASE_MAX)
-			return
+	if m.has("follow"):   # (15:23 Barrage: "a short dash like movement" after each hit - in each window he dashes
+		var fw: Dictionary = m["follow"]   # back in on whoever's in front, "near" px off them by the window's end)
+		for w: Array in fw["at"]:
+			if f.frame >= int(w[0]) and f.frame <= int(w[1]):
+				var g := _ahead(f)
+				if g != null:
+					var dx := (g.pos.x - f.pos.x) * float(f.facing)
+					var gv := g.vel.x * float(f.facing)
+					var left := float(int(w[1]) - f.frame + 1)
+					f.vel.x = float(f.facing) * clampf((dx - float(fw["near"])) / left + maxf(gv, 0.0), 0.0, DASH_IN_MAX)
+				return
 	for seg: Array in m.get("motion", []):
 		if f.frame >= int(seg[0]) and f.frame <= int(seg[1]):
 			var vx := _val(seg[2], f) * k
