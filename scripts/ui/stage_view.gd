@@ -331,7 +331,7 @@ func _arcs() -> void:
 		if not _swinging.has(i) and sfx != null:   # (an attack's arc starting: its swish)
 			sfx.play("swing", -2.0, randf_range(0.9, 1.1))
 		_swinging[i] = true
-		var pose := Poses.for_record(_char(i), r)
+		var pose := Poses.for_record(_char(i), r, _backward(i, r))
 		var pivot := "hip" if tip.begins_with("foot") else "neck"
 		var tip_w := _world(i, r, pose[tip])
 		if tip.begins_with("hand") and _char(i) == "dancer":   # (her fan's edge, not her hand: the slash a fan leaves -
@@ -724,7 +724,7 @@ func _figure(i: int, r: Array, alpha: float, bare := false, tint := Color(0, 0, 
 		col = Color.WHITE
 	var head_r := Stick.head(h * zoom)
 	var ink: Color = outlines[i] if i < outlines.size() else Stick.INK   # (their Style's outline)
-	var pose := Poses.for_record(ch, r)
+	var pose := Poses.for_record(ch, r, _backward(i, r))
 	if alpha >= 1.0 and int(r[5]) == 0 and (str(r[3]) == "" or str(r[3]) == "wait") and float(r[1]) >= -1.0:
 		var bob := sin(_time * 3.2 + i * 1.3) * 1.6   # (standing free: breathing - the top half rises and falls)
 		for j: String in ["head", "neck", "elbow_f", "hand_f", "elbow_b", "hand_b"]:
@@ -960,3 +960,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			best = i
 	if best >= 0:
 		fighter_tapped.emit(best)
+
+
+## Moving away from the way they face (23 Oct - a back jump flips backward, a backward dodge rolls backward).
+func _backward(i: int, r: Array) -> bool:
+	return float(_vx.get(i, 0.0)) * float(r[2]) < -1.0

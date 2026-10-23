@@ -45,6 +45,8 @@ const INK := Color(0.02, 0.02, 0.03)   ## the outline by default (Style's "Ink")
 static func draw(ci: CanvasItem, pose: Dictionary, origin: Vector2, scale: float, facing: float, col: Color,
 		thick: float, head_r: float, edge := true, ink_col := INK, ch := "") -> Dictionary:
 	var pts := _place(pose, origin, scale, facing)
+	var back := _arms(BACK, pts)
+	var front := _arms(FRONT, pts)
 	var build: Dictionary = BUILD.get(ch, {})
 	var glove := bool(build.get("glove", false))
 	var gap := float(style.get("gap", 0.0)) * thick
@@ -61,7 +63,7 @@ static func draw(ci: CanvasItem, pose: Dictionary, origin: Vector2, scale: float
 	if edge:
 		var ink := Color(ink_col.r, ink_col.g, ink_col.b, col.a)   # (the outline - your Style's, 02:28)
 		var ew := maxf(1.5, thick * float(style["ink"]))
-		for b: Array in BACK + FRONT:
+		for b: Array in back + front:
 			_bone(ci, pts[b[0]], pts[b[1]], _w(b, 0, thick, taper) + ew * 2.0, _w(b, 1, thick, taper) + ew * 2.0, ink)
 		if toe > 0.0:
 			for s: String in ["f", "b"]:
@@ -77,7 +79,7 @@ static func draw(ci: CanvasItem, pose: Dictionary, origin: Vector2, scale: float
 		else:
 			ci.draw_circle(pts["head"], head_r + ew, ink, true, -1.0, true)
 	var far := col.darkened(FAR)
-	for b: Array in BACK:
+	for b: Array in back:
 		_bone(ci, pts[b[0]], pts[b[1]], _w(b, 0, thick, taper), _w(b, 1, thick, taper), far)
 	if toe > 0.0:
 		_toe(ci, pts, "b", facing, toe, thick * (1.0 - 0.55 * taper), far)
@@ -88,7 +90,7 @@ static func draw(ci: CanvasItem, pose: Dictionary, origin: Vector2, scale: float
 	if foot > 0.0:
 		_foot(ci, pts, "b", facing, foot, thick, far)
 	_torso(ci, pts, chest, thick * float(style.get("waist", 0.0)), hips, col)
-	for b: Array in FRONT:
+	for b: Array in front:
 		_bone(ci, pts[b[0]], pts[b[1]], _w(b, 0, thick, taper), _w(b, 1, thick, taper), col)
 	if foot > 0.0:
 		_foot(ci, pts, "f", facing, foot, thick, col)
@@ -165,7 +167,22 @@ static func _place(pose: Dictionary, origin: Vector2, scale: float, facing: floa
 		else:
 			v = v + Vector2(0, drop)
 		pts[j] = origin + Vector2(v.x * facing, v.y) * scale
+	# (23 Oct, Timmy on the Elbow: "we can cheat a little and disconnect the shoulder so the elbow can go forward") a pose
+	# may hang an arm from a shoulder off the neck; without one the arm starts at the neck as always
+	for s: String in ["shoulder_f", "shoulder_b"]:
+		if pose.has(s):
+			var v: Vector2 = pose[s]
+			pts[s] = origin + Vector2(v.x * facing, v.y + drop) * scale
 	return pts
+
+
+## The arm bones from the shoulder when the pose has one (else the neck).
+static func _arms(bones: Array, pts: Dictionary) -> Array:
+	var out := []
+	for b: Array in bones:
+		var root := "shoulder_" + str(b[1]).right(1)
+		out.append([root if b[0] == "neck" and pts.has(root) else b[0], b[1]])
+	return out
 
 
 ## A limb: a line from a to b, wa thick at a and wb at b, with round ends.

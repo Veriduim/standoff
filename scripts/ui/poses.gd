@@ -210,6 +210,17 @@ const P := {
 		"elbow_b": [-24, -92], "hand_b": [-36, -100], "knee_f": [14, -34], "foot_f": [10, -12], "knee_b": [-10, -30],
 		"foot_b": [-22, -14]},
 	"hurt": {"head": [-24, -82], "neck": [-14, -74], "hip": [-2, -44], "elbow_f": [-2, -90], "hand_f": [6, -104], "elbow_b": [-30, -84], "hand_b": [-40, -96], "knee_f": [10, -22], "foot_f": [16, 0], "knee_b": [-12, -22], "foot_b": [-24, -4]},
+	# (23 Oct, Timmy: "Lets fill the gaps in our two" - YOMI's fighters have these, ours didn't. Built by Standoff
+	# Workshop/tools/gap_poses.py.) tuck: a ball, knees to the chest - turned a quarter at a time ("tuck@90") it's every
+	# roll and flip; grabbed: held in a throw or the clinch, doubled over, the head pulled down, grabbing at the arm; splat: upright
+	# against the wall behind, one arm up it, one down it, the head knocked back, a knee buckling.
+	"tuck": {"head": [35, -77], "neck": [23, -75], "hip": [0, -50], "elbow_f": [21, -55], "hand_f": [6, -50], "elbow_b": [28, -56], "hand_b": [12, -53], "knee_f": [12, -73], "foot_f": [7, -48], "knee_b": [7, -75], "foot_b": [-3, -51]},
+	"grabbed": {"head": [38, -68], "neck": [27, -71], "hip": [0, -50], "elbow_f": [46, -64], "hand_f": [61, -70], "elbow_b": [41, -57], "hand_b": [57, -56], "knee_f": [8, -26], "foot_f": [4, 0], "knee_b": [-16, -30], "foot_b": [-26, -6]},
+	"splat": {"head": [-10, -94], "neck": [-4, -84], "hip": [0, -50], "elbow_f": [-16, -100], "hand_f": [-30, -108], "elbow_b": [-18, -70], "hand_b": [-34, -65], "knee_f": [12, -27], "foot_f": [0, -4], "knee_b": [-3, -24], "foot_b": [-6, 2]},
+	# (13:05 "I should see that back bend": YOMI turns one ball for every tumble - ours open into the move first) arch: a
+	# back flip's take-off, the back bent, head thrown back, arms reaching back over; sitback: a backward roll's start.
+	"arch": {"head": [-29, -83], "neck": [-18, -79], "hip": [0, -50], "elbow_f": [-35, -89], "hand_f": [-51, -90], "elbow_b": [-33, -92], "hand_b": [-49, -96], "knee_f": [-8, -25], "foot_f": [-24, -5], "knee_b": [-4, -24], "foot_b": [-17, -2]},
+	"sitback": {"head": [-16, -64], "neck": [-16, -52], "hip": [0, -22], "elbow_f": [4, -51], "hand_f": [19, -55], "elbow_b": [4, -55], "hand_b": [18, -63], "knee_f": [25, -30], "foot_f": [28, -5], "knee_b": [26, -26], "foot_b": [27, 0]},
 	"down": {"head": [-44, -8], "neck": [-32, -8], "hip": [0, -8], "elbow_f": [-20, -18], "hand_f": [-8, -24],
 		"elbow_b": [-28, -2], "hand_b": [-16, 0], "knee_f": [18, -14], "foot_f": [36, -6], "knee_b": [18, -4],
 		"foot_b": [38, 0]},
@@ -357,11 +368,35 @@ const P := {
 
 ## The joints for a pose name (unknown -> idle), as Vector2s.
 static func get_pose(pose_name: String) -> Dictionary:
+	if pose_name.contains("@"):   # ("tuck@90": the pose turned 90 degrees forward round its middle; "@90g" on the floor)
+		return _turned(pose_name)
 	var src: Dictionary = P.get(pose_name, P["idle"])
 	var out := {}
 	for j: String in JOINTS:
 		var v: Array = src[j]
 		out[j] = Vector2(float(v[0]), float(v[1]))
+	return out
+
+
+## A pose turned (23 Oct - the rolls and flips YOMI draws as four drawings): "name@deg" turns it deg degrees forward (the
+## head going over the way they face) round the middle of its joints; "@degg" then sets its lowest point on the floor.
+static func _turned(spec: String) -> Dictionary:
+	var arg := spec.get_slice("@", 1)
+	var ground := arg.ends_with("g")
+	var p := get_pose(spec.get_slice("@", 0))
+	var mid := Vector2.ZERO
+	for j: String in JOINTS:
+		mid += p[j]
+	mid /= float(JOINTS.size())
+	var a := deg_to_rad(float(arg.trim_suffix("g")))
+	var out := {}
+	var low := -INF
+	for j: String in JOINTS:
+		out[j] = mid + ((p[j] as Vector2) - mid).rotated(a)
+		low = maxf(low, (out[j] as Vector2).y)
+	if ground:
+		for j: String in JOINTS:
+			out[j] = (out[j] as Vector2) + Vector2(0.0, -low)
 	return out
 
 
@@ -411,15 +446,18 @@ static func _ease(t: float) -> float:
 ## held through the hitstun (20 Oct, YOMI's held drawings: it used to ease off toward a reeling guard). In the air: the
 ## launch pose, unless they were flung.
 const HURT := {"head": "hurt", "body": "hurt_body", "low": "hurt_low", "crush": "hurt_crush", "slide": "hurt_slide",
-	"air": "hurt_air"}
+	"air": "hurt_air", "throw": "grabbed", "hold": "grabbed", "wall": "splat"}
+const GRIPPED := 6       ## ticks a thrown fighter shows the grip before they fly (23 Oct)
 const IMPACT := 3        ## frames the reaction snaps past its pose
 
 
 static func _hurt_pose(character: String, r: Array, air: bool) -> Dictionary:
 	var look: String = Sim.LOOKS[clampi(int(r[18]), 0, Sim.LOOKS.size() - 1)] if r.size() > 19 else "head"
-	if air and look != "slide":
-		look = "air"
 	var t := int(r[19]) if r.size() > 19 else 99
+	if look == "throw" and t >= GRIPPED:   # (the grip shown, then they fly like any launch)
+		look = "head"
+	if air and not look in ["slide", "hold", "wall", "throw"]:
+		look = "air"
 	var hit := get_pose(str(HURT[look]))
 	var reel := blend(hit, get_pose("guard"), 0.45)   # (where it eases off to - and what the blow snaps past it from)
 	if t < IMPACT:   # (the blow: past the pose, coming back to it)
@@ -505,17 +543,28 @@ static func idle_of(character: String) -> String:
 	return str(Moves.stats(character).get("idle", "idle")) if Moves.ROSTER.has(character) else "idle"
 
 
-static func for_record(character: String, r: Array) -> Dictionary:
-	var pose := _for_record(character, r)
+## back: they're moving away from the way they face (the view knows) - a move's "pose_back" keys if it has them (the
+## back flip, the backward roll - 23 Oct).
+static func for_record(character: String, r: Array, back := false) -> Dictionary:
+	var pose := _for_record(character, r, back)
 	var state := int(r[5])
 	if state == 4 or state == 5 or (str(r[3]) in ["", "wait"] and state == 0):   # (lying down and standing: as drawn)
 		return pose
 	if state in [0, 3] and str(r[3]) != "" and bool(Moves.move(character, str(r[3])).get("drawn", false)):
 		return pose   # (her dance moves are posed at full stretch already - 20 Oct)
+	if state in [0, 3] and str(r[3]) != "" and _turns(character, str(r[3]), back):
+		return pose   # (a roll or flip's turned ball: stretched, its limbs flew out - 23 Oct)
 	return exaggerate(pose)
 
 
-static func _for_record(character: String, r: Array) -> Dictionary:
+## The move's keys (back ones when moving back) have turned drawings - "tuck@90".
+static func _turns(character: String, mv: String, back: bool) -> bool:
+	var m := Moves.move(character, mv)
+	var keys: Array = m.get("pose_back" if back and m.has("pose_back") else "pose", [])
+	return keys.any(func(k: Array) -> bool: return str(k[1]).contains("@"))
+
+
+static func _for_record(character: String, r: Array, back := false) -> Dictionary:
 	var state := int(r[5])
 	var air := float(r[1]) < -2.0
 	var mv := str(r[3])
@@ -531,7 +580,7 @@ static func _for_record(character: String, r: Array) -> Dictionary:
 		return get_pose("snap" if form == 1 else "floor")
 	if mv == "":
 		return get_pose("fall" if air else ("crouch" if state == 3 else idle_of(character)))
-	var keys: Array = Moves.move(character, mv).get("pose", [[0, "idle"]])
+	var keys: Array = Moves.move(character, mv).get("pose_back" if back and Moves.move(character, mv).has("pose_back") 			else "pose", [[0, "idle"]])
 	var f := int(r[4])
 	var mk := str(Moves.move(character, mv).get("kind", ""))
 	if mk in ["attack", "super", "grab", "special"] and keys.size() >= 2:   # (a strike: wind-up, overshoot, follow-through)

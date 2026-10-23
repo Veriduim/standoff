@@ -164,7 +164,7 @@ const PRESS_STUN := 2
 const PRESS_PUSH := 0.35
 ## How a hit landed (06:22 "Lets try 1 and 2" - hit reactions by type): the head snapped back, doubled over at the body,
 ## the legs taken (a low), crushed down (an overhead), flung sliding, sent up into the air. Recorded for the screen.
-const LOOKS := ["head", "body", "low", "crush", "slide", "air"]
+const LOOKS := ["head", "body", "low", "crush", "slide", "air", "throw", "hold", "wall"]   ## (the last three: 23 Oct)
 ## One on one: how far apart they start (20 Oct 13:54 "move them further apart": YOMI's default is 250 apart with 32-tall
 ## fighters, 7.8 heights - ours are ~106 tall). The stage itself is wider (05:27).
 const START_1V1 := 840.0
@@ -1665,7 +1665,8 @@ func _hurt(a: Fighter, d: Fighter, e: Dictionary, type: String, src := "", side_
 	if d.restand > 0:   # (hit as they land from an air combo: back in a ground combo - the count carries on)
 		d.restand = 0
 		_event("restand", a, d)
-	d.hit_look = _look(a, d, e)   # (how it landed - their reaction on screen)
+	# (how it landed - their reaction on screen; 23 Oct: held in the clinch or thrown shows the grip, YOMI's Grabbed)
+	d.hit_look = "hold" if bool(e.get("hold", false)) else ("throw" if type == "throw" else _look(a, d, e))
 	d.hit_t = 0
 	if d.pos.y < -10.0 or d.vel.y < -6.0 * LAUNCH_LIFT:   # (sent up, or hit up there: an air combo - landing can end it)
 		d.launched = true
@@ -1749,7 +1750,7 @@ func record() -> Array:
 		var low := 1 if (f.move == "block" or f.blockstun > 0) and f.param.y > 0.0 else 0
 		out.append([f.pos.x, f.pos.y, f.facing, mv, fr, state, f.hp, f.meter, f.burst, f.fc,
 			AIR_OPTIONS - f.air_moves, sad, 1 if f.actionable() else 0, low, maxi(0, FORMS.find(f.form)), f.tempo, f.fans,
-			f.grit, maxi(0, LOOKS.find(f.hit_look)), f.hit_t])
+			f.grit, maxi(0, LOOKS.find("wall" if f.splat > 0 else f.hit_look)), f.hit_t])   # (stuck to the wall: its pose)
 	return out
 
 
