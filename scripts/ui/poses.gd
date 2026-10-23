@@ -212,7 +212,7 @@ const P := {
 	"b_clinch_knee": {"head": [-1, -95], "neck": [-3, -83], "hip": [0, -50], "elbow_f": [15, -81], "hand_f": [25, -69], "elbow_b": [15, -78], "hand_b": [23, -64], "knee_f": [25, -57], "foot_f": [17, -34], "knee_b": [-2, -24], "foot_b": [-4, 0], "bend": [-1, -2, -1]},
 	"b_over_load": {"head": [-4, -93], "neck": [-3, -81], "hip": [0, -48], "elbow_f": [-21, -77], "hand_f": [-15, -93], "elbow_b": [15, -84], "hand_b": [31, -84], "knee_f": [17, -28], "foot_f": [26, -6], "knee_b": [-10, -24], "foot_b": [-14, 0], "bend": [-3, -6, -3]},
 	"b_over_top": {"head": [-3, -90], "neck": [-3, -78], "hip": [0, -45], "elbow_f": [9, -103], "hand_f": [-7, -103], "elbow_b": [13, -69], "hand_b": [21, -55], "knee_f": [17, -25], "foot_f": [21, -2], "knee_b": [-13, -23], "foot_b": [-21, 0], "bend": [1, 2, 1], "shoulder_f": [3, -86]},
-	"b_overhand": {"head": [27, -77], "neck": [18, -69], "hip": [0, -42], "elbow_f": [36, -73], "hand_f": [40, -57], "elbow_b": [17, -51], "hand_b": [14, -36], "knee_f": [18, -24], "foot_f": [23, 0], "knee_b": [-17, -22], "foot_b": [-27, 0], "bend": [4, 7, 4]},
+	"b_overhand": {"head": [18, -85], "neck": [12, -74], "hip": [0, -44], "elbow_f": [30, -78], "hand_f": [34, -62], "elbow_b": [11, -57], "hand_b": [8, -41], "knee_f": [17, -24], "foot_f": [21, 0], "knee_b": [-15, -23], "foot_b": [-23, 0], "bend": [2, 4, 2]},
 	# hit reactions by how it landed (06:22 "Lets try 1 and 2"): they face whoever hit them (+x toward them). Doubled
 	# over at the body; the front leg taken from under them, pitching forward; crushed down under an overhead, arms over
 	# the head; flung - thrown back, arms and feet trailing; sent up - arched, everything flung out
@@ -280,9 +280,10 @@ const P := {
 	"air_throw": {"head": [27, -86], "neck": [18, -79], "hip": [0, -50], "elbow_f": [28, -62], "hand_f": [31, -46], "elbow_b": [25, -60], "hand_b": [23, -44], "knee_f": [-9, -26], "foot_f": [-33, -17], "knee_b": [-15, -29], "foot_b": [-41, -24], "bend": [5, 9, 5]},
 	"pushblock": {"head": [10, -91], "neck": [7, -79], "hip": [0, -46], "elbow_f": [27, -81], "hand_f": [43, -81], "elbow_b": [27, -78], "hand_b": [43, -77], "knee_f": [17, -26], "foot_f": [17, 0], "knee_b": [-17, -26], "foot_b": [-37, -9], "bend": [2, 3, 2]},
 	# (15:11 "splatter them into the ground": slammed flat on their front, arms flung out past the head, a heel kicked up)
-	"floor_splat": {"head": [-46, -7], "neck": [-34, -6], "hip": [2, -6], "elbow_f": [-50, -2], "hand_f": [-64, -2],
-		"elbow_b": [-22, -2], "hand_b": [-10, -1], "knee_f": [20, -3], "foot_f": [36, -2], "knee_b": [18, -8],
-		"foot_b": [30, -16], "bend": [0, -1, 0]},
+	# (15:32 "They are clipping through the ground on that slam": the limbs' thickness kept above the floor)
+	"floor_splat": {"head": [-46, -11], "neck": [-34, -10], "hip": [2, -10], "elbow_f": [-50, -6], "hand_f": [-64, -6],
+		"elbow_b": [-22, -6], "hand_b": [-10, -5], "knee_f": [20, -7], "foot_f": [36, -6], "knee_b": [18, -12],
+		"foot_b": [30, -20], "bend": [0, -1, 0]},
 	"down": {"head": [-44, -8], "neck": [-32, -8], "hip": [0, -8], "elbow_f": [-20, -18], "hand_f": [-8, -24],
 		"elbow_b": [-28, -2], "hand_b": [-16, 0], "knee_f": [18, -14], "foot_f": [36, -6], "knee_b": [18, -4],
 		"foot_b": [38, 0]},
@@ -561,7 +562,8 @@ static func _hurt_pose(character: String, r: Array, air: bool) -> Dictionary:
 		look = "air"
 	var hit := get_pose(str(HURT[look]))
 	var reel := blend(hit, get_pose("guard"), 0.45)   # (where it eases off to - and what the blow snaps past it from)
-	if t < IMPACT:   # (the blow: past the pose, coming back to it)
+	if t < IMPACT and look != "floor":   # (the blow: past the pose, coming back to it - not flat on the floor: past it
+		# is through it, 15:32 "They are clipping through the ground on that slam")
 		return push(reel, hit, 0.6 * (1.0 - float(t) / float(IMPACT)))
 	return hit
 
@@ -655,6 +657,8 @@ static func for_record(character: String, r: Array, back := false) -> Dictionary
 	var state := int(r[5])
 	if state == 4 or state == 5 or (str(r[3]) in ["", "wait"] and state == 0):   # (lying down and standing: as drawn)
 		return pose
+	if state == 1 and float(r[1]) >= -2.0 and r.size() > 18 			and Sim.LOOKS[clampi(int(r[18]), 0, Sim.LOOKS.size() - 1)] == "floor":   # (pinned flat on the floor: as
+		return pose   # drawn - the stretch turned her on down through it, 15:32 "clipping through the ground")
 	if state in [0, 3] and str(r[3]) != "" and bool(Moves.move(character, str(r[3])).get("drawn", false)):
 		return _hell(character, str(r[3]), int(r[4]), pose)   # (her dance moves are posed at full stretch already -
 		# 20 Oct; a special or super still goes past it - _hell)

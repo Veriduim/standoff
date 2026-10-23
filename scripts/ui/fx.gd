@@ -512,7 +512,8 @@ func charge(at: Vector2, face: float, c: Color, seed_n: int) -> void:
 func slam(at: Vector2, c: Color, seed_n: int) -> void:
 	_rng.seed = seed_n
 	_add("floorring", Vector2(at.x, 0.0), Vector2.ZERO, 0.4, c.lightened(0.4), 60.0)
-	_add("crack", Vector2(at.x, 0.0), Vector2.ZERO, 0.9, Color("#c9ccd8"), 60.0, 0.0)
+	_add("crack", Vector2(at.x, 0.0), Vector2.ZERO, 1.8, Color("#c9ccd8"), 72.0, 0.0)   # (the floor's damage stays a
+	# while, then fades - 15:32 "leave a temp damage effect")
 	dust(Vector2(at.x, 0.0), 0.8, seed_n)
 
 
