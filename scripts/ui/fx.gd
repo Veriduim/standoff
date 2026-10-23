@@ -48,6 +48,7 @@ var dim_id := -1
 var split := 0.0             ## the colour split (0-1, fading) - the screens' post shader reads it
 var split_at := Vector2.ZERO ## (world) where it splits from
 var style := ""              ## the next hit's look (StageView sets it): "slash" her fans, "wave" the ripple, else blunt
+var impact := 1.0            ## the next hit's freeze and shake, this many times over (a move's hit can ask - Barrage's)
 var cutin := {}              ## a super's cut-in: {id, col, title, pose, face, age, life} (screen space - draw_cutin)
 var _rng := RandomNumberGenerator.new()
 static var _bold: FontVariation
@@ -73,7 +74,7 @@ const QUAKE_DEBRIS := 36
 ## 41, the K.O. Punch 21 - so the big ones smoke.
 const SMOKE_PX := 11.0
 const SOLID := Color("#8f93a1")   ## the Bruiser's rush copies: solid grey (the red brawler in the 14:09 video)
-const AFTER_SOLID := 4       ## solid copies a fighter at most
+const AFTER_SOLID := 2       ## solid copies a fighter at most (15:37 "not as many after images. Like half them")
 
 
 func frozen() -> bool:
@@ -290,8 +291,9 @@ func on_event(type: String, at: Vector2, face: float, dmg: int, by: Color, victi
 				_add("rring", at, Vector2.ZERO, 0.26, Color.WHITE, 48.0 * s)
 			if dmg >= HUGE_HIT and type != "armor":   # (14:09 19 Oct: a giant starburst and rings, sized by the screen -
 				_big(at, by)                           # 23 Oct "way too much": the knockout-size hits only)
-			freeze(clampf(0.04 + float(dmg) * 0.0018, 0.05, 0.14), victim)
-			kick(clampf(float(dmg) * 0.1, 1.5, 5.0))
+			freeze(clampf(0.04 + float(dmg) * 0.0018, 0.05, 0.14) * impact, victim)
+			kick(clampf(float(dmg) * 0.1, 1.5, 5.0) * impact)
+			impact = 1.0
 		"block":   # (a guard arc - red when blocked at the wrong height; a big one for a Push Block)
 			_add("guard", at, Vector2.ZERO, 0.2 if not push else 0.3, Color("#ff7a7a") if counter else BLOCK,
 					30.0 if not push else 48.0, -face)

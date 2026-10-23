@@ -1248,7 +1248,7 @@ func _test_bruiser() -> void:
 	var br_x := []
 	var br_pin := 0
 	var br_top := 0.0
-	for _i in 100:
+	for _i in 130:
 		br.events.clear()
 		br.step()
 		for br_ev: Dictionary in br.events:

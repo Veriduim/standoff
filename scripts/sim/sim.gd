@@ -1738,6 +1738,8 @@ func _hurt(a: Fighter, d: Fighter, e: Dictionary, type: String, src := "", side_
 		extra["spot"] = int(e["spot"])
 	if e.get("fling", false):   # (the screen: a ring of air where it lands, cracks in the floor)
 		extra["fling"] = true
+	if e.has("impact"):   # (the screen: its freeze and shake this many times over - 15:36 "impact on each hit")
+		extra["impact"] = float(e["impact"])
 	_event(type, a, d, dmg, extra)
 
 

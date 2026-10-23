@@ -537,26 +537,28 @@ const BRUISER := {
 		# (15:11 / 15:23 Timmy: "the first hit lands. Then he does a short dash like movement and hits with the left.
 		# Then repeat right. Then end on the high cross bounce" - five hooks, right to the body, left to the head, each
 		# knocking them back and a dash in after it, about a quarter of the stage in all; then the high left cross wound
-		# right back that pins them flat a frame or two and bounces them up to about one and a half times his height)
-		"barrage": {"name": "Barrage", "tab": "super", "drawn": true, "kind": "super", "frames": 56, "where": "ground", "aim": "facing",
+		# right back that pins them flat a frame or two and bounces them up to about one and a half times his height.
+		# 15:36 "more impact by slowing it down or adding more frames... impact on each hit": a 10-frame beat - the punch
+		# held on contact, then the dash - and every hit freezes and shakes harder ("impact"))
+		"barrage": {"name": "Barrage", "tab": "super", "drawn": true, "kind": "super", "frames": 76, "where": "ground", "aim": "facing",
 			"cost": 250, "invuln": [0, 8], "motion": [[2, 7, 3.0, 0.0]],
-			"follow": {"near": 46.0, "at": [[11, 13], [17, 19], [23, 25], [29, 31], [35, 37]]},
+			"follow": {"near": 46.0, "at": [[13, 16], [23, 26], [33, 36], [43, 46], [53, 55]]},
 			"note": "dashes them back across the stage - then pins them to the floor and they bounce",
 			"hits": [
-				{"from": 8, "to": 9, "box": [8, -82, 70, 30], "dmg": 12, "stun": 18, "kb": [17.4, 0.0], "block": 6, "chip": 2, "group": 0, "tip": "hand_b"},
-				{"from": 14, "to": 15, "box": [8, -100, 70, 30], "dmg": 12, "stun": 18, "kb": [17.4, 0.0], "block": 6, "chip": 2, "group": 1, "tip": "hand_f"},
-				{"from": 20, "to": 21, "box": [8, -82, 70, 30], "dmg": 12, "stun": 18, "kb": [17.4, 0.0], "block": 6, "chip": 2, "group": 2, "tip": "hand_b"},
-				{"from": 26, "to": 27, "box": [8, -100, 70, 30], "dmg": 12, "stun": 18, "kb": [17.4, 0.0], "block": 6, "chip": 2, "group": 3, "tip": "hand_f"},
-				{"from": 32, "to": 33, "box": [8, -82, 70, 30], "dmg": 12, "stun": 18, "kb": [17.4, 0.0], "block": 6, "chip": 2, "group": 4, "tip": "hand_b"},
+				{"from": 8, "to": 9, "box": [8, -82, 70, 30], "dmg": 12, "stun": 18, "kb": [15.8, 0.0], "block": 6, "chip": 2, "group": 0, "tip": "hand_b", "impact": 1.8},
+				{"from": 18, "to": 19, "box": [8, -100, 70, 30], "dmg": 12, "stun": 18, "kb": [15.8, 0.0], "block": 6, "chip": 2, "group": 1, "tip": "hand_f", "impact": 1.8},
+				{"from": 28, "to": 29, "box": [8, -82, 70, 30], "dmg": 12, "stun": 18, "kb": [15.8, 0.0], "block": 6, "chip": 2, "group": 2, "tip": "hand_b", "impact": 1.8},
+				{"from": 38, "to": 39, "box": [8, -100, 70, 30], "dmg": 12, "stun": 18, "kb": [15.8, 0.0], "block": 6, "chip": 2, "group": 3, "tip": "hand_f", "impact": 1.8},
+				{"from": 48, "to": 49, "box": [8, -82, 70, 30], "dmg": 12, "stun": 18, "kb": [15.8, 0.0], "block": 6, "chip": 2, "group": 4, "tip": "hand_b", "impact": 1.8},
 				# (the finish: the high cross into the floor - pinned, then the bounce; 14:33 "launching upwards is weird")
-				{"from": 41, "to": 43, "box": [6, -104, 64, 104], "dmg": 40, "stun": 34, "kb": [0.0, 2.0], "block": 14, "chip": 4, "group": 5,
-					"bounce": true, "bounce_up": 12.1, "bounce_x": 7.0, "pin": 2, "tip": "hand_f"},   # (his left - 15:21;
-					# 15:29 the bounce carries them on a little)
+				{"from": 61, "to": 63, "box": [6, -104, 64, 104], "dmg": 40, "stun": 34, "kb": [0.0, 2.0], "block": 14, "chip": 4, "group": 5,
+					"bounce": true, "bounce_up": 12.1, "bounce_x": 7.0, "pin": 2, "tip": "hand_f", "impact": 1.6},   # (his left -
+					# 15:21; 15:29 the bounce carries them on a little)
 			],
 			# (15:21 "These do not flow at all": a dash in, the next arm cocked, between every two)
-			"pose": [[0, "b_idle"], [4, "b_fl_wb"], [8, "b_fl_b"], [11, "b_fl_wa"], [14, "b_fl_a"], [17, "b_fl_wb"],
-				[20, "b_fl_b"], [23, "b_fl_wa"], [26, "b_fl_a"], [29, "b_fl_wb"], [32, "b_fl_b"], [35, "b_over_load"],
-				[40, "b_over_top"], [41, "b_overhand"], [52, "b_idle"]], "icon": "b_fl_a"},
+			"pose": [[0, "b_idle"], [4, "b_fl_wb"], [8, "b_fl_b"], [13, "b_fl_wa"], [18, "b_fl_a"], [23, "b_fl_wb"],
+				[28, "b_fl_b"], [33, "b_fl_wa"], [38, "b_fl_a"], [43, "b_fl_wb"], [48, "b_fl_b"], [53, "b_over_load"],
+				[60, "b_over_top"], [61, "b_overhand"], [72, "b_idle"]], "icon": "b_fl_a"},
 		"clinchfury": {"name": "Clinch Fury", "tab": "super", "kind": "grab", "frames": 64, "where": "ground", "aim": "facing",
 			"cost": 375, "no_cancel": true, "motion": [[2, 6, 5.0, 0.0]],
 			"note": "a clinch that won't let go: three knees and an elbow",
