@@ -135,13 +135,14 @@ func _motion_fx(prev: Array) -> void:
 		var p: Array = prev[i]
 		var mv := str(r[3])
 		var kind := str(Moves.move(_char(i), mv).get("kind", "")) if mv != "" else ""
-		if kind == "super" and int(r[4]) <= 1 and (str(p[3]) != mv or int(p[4]) > int(r[4])):
+		var is_super := kind == "super" or str(Moves.move(_char(i), mv).get("tab", "")) == "super" if mv != "" else false
+		if is_super and int(r[4]) <= 1 and (str(p[3]) != mv or int(p[4]) > int(r[4])):   # (Clinch Fury is a grab)
 			fx.super_start(i, _chest(i), colour_of(i), _tick_n * 13 + i, str(Moves.move(_char(i), mv)["name"]),
 					Moves.icon_pose(Moves.move(_char(i), mv)), float(r[2]))
 			if sfx != null:
 				sfx.play("super")
 		var speed := maxf(absf(float(r[0]) - float(p[0])), absf(float(r[1]) - float(p[1])) * 0.8)
-		var fast := int(r[5]) != 4 and (speed > 5.5 or kind in ["super", "burst"])
+		var fast := int(r[5]) != 4 and mv != "walk" and (speed > 5.5 or kind in ["super", "burst"])   # (not walking)
 		_after_n[i] = int(_after_n.get(i, 0)) + 1 if fast else 0
 		if mv == "fanstep" and speed > 60.0:   # (Fan Step's blink: her spin left fading where she was - 23 Oct)
 			fx.afterimage(i, p)
@@ -368,6 +369,8 @@ func _striking(i: int, mv: String, f: int) -> String:
 		if f < int(e["from"]) - 5 or f > int(e["to"]) + 3:   # (a longer sweep either side of the hit)
 			continue
 		var key := "%s:%s:%d" % [ch, mv, k]
+		if not _tip_of.has(key) and Moves.move(ch, mv).has("tip"):   # (23 Oct: the move names it - the audit found
+			_tip_of[key] = str(Moves.move(ch, mv)["tip"])                # kicks and knees traced as a hand)
 		if not _tip_of.has(key):
 			var travel := {}
 			var last := {}

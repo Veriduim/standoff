@@ -28,6 +28,22 @@ Standoff Workshop/tools (frames_sheet.gd draws a move's frames as the game poses
 - Bruiser: Clinch Elbow (Elbow's), Air Hook (Hook's), Barrage and Bull Rush (his strikes), Dump and Catch Dump (a
   generic throw)
 
+## Effects (the audit, 23 Oct 13:41 - Timmy: "our effects should be cool and snappy", YOMI + its char mods the
+inspiration, not copied)
+Every hit already gets a dark ink starburst, hitstop, shake and smear frames; a swing trail follows the striking limb;
+her fan hits cut (crescents), the rest thump (a star); big hits (45+) a giant starburst; supers a flash; fast movers
+after-images.
+- Fixed 23 Oct: Sauté Kick, Stomp, Kip-Up, Air Knee, Flying Knee, Quake Stomp traced a hand (now the foot / knee -
+  moves can name their "tip"); Clinch Fury (a grab) got no super flash; walking left after-images
+- Step 2 done: YOMI's movement particles - round dots in their colour on take-off, air jump, dash, landing
+- Nothing of their own beyond the generic hit: Dancer - Fan Tap, Fouette, Port de Bras, Pirouette, Saute Kick, Tour en
+  l'Air, Stomp, Pop, Snap Kick, Windmill, Plie Cut, Grand Jete, Kip-Up, Mirror Strike; Bruiser - Jab, Cross, Hook,
+  Body Blow, Leg Kick, Elbow, Clinch Knee, Dump, Air Knee, Air Hook, Rising Uppercut, Superman Punch
+- Nothing at all: both Taunts, Wait, Hold, Get Up; Mirror and Catch until they trigger
+- The three Forms all show the same pale ring
+- Dead (nothing triggers them): gust / gusted / ward effects, the sfan / cyclone / ripple shot drawings, the super
+  cut-in (`draw_cutin` is never called)
+
 ## Next (Timmy's "with the spine now existing a lot of our poses could use work")
 1. Getting hit with the spine: a body hit doubling over, a head hit snapping back, the crumple
 2. Her dance moves bending through the back (arabesque, bow, fouette, grand jete)
