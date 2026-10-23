@@ -203,12 +203,12 @@ const P := {
 	"b_edrop_dive": {"head": [28, -71], "neck": [17, -64], "hip": [0, -36], "elbow_f": [21, -46], "hand_f": [18, -62], "elbow_b": [8, -48], "hand_b": [16, -62], "knee_f": [-13, -13], "foot_f": [-36, -22], "knee_b": [-23, -23], "foot_b": [-43, -35], "bend": [3, 6, 3]},
 	"b_rush_2": {"head": [26, -77], "neck": [19, -68], "hip": [0, -41], "elbow_f": [34, -58], "hand_f": [38, -73], "elbow_b": [24, -50], "hand_b": [30, -65], "knee_f": [-11, -17], "foot_f": [-29, -2], "knee_b": [20, -24], "foot_b": [18, 0], "bend": [3, 5, 3]},
 	"b_rush_stop": {"head": [-6, -93], "neck": [-6, -81], "hip": [0, -49], "elbow_f": [6, -67], "hand_f": [9, -83], "elbow_b": [0, -64], "hand_b": [3, -80], "knee_f": [23, -36], "foot_f": [33, -14], "knee_b": [-7, -24], "foot_b": [-11, 0], "bend": [-1, -2, -1]},
-	"b_fl_a": {"head": [10, -89], "neck": [7, -77], "hip": [0, -45], "elbow_f": [22, -86], "hand_f": [36, -77], "elbow_b": [16, -62], "hand_b": [17, -78], "knee_f": [17, -25], "foot_f": [19, -1], "knee_b": [-15, -24], "foot_b": [-19, 0], "bend": [1, 2, 1]},
-	"b_fl_b": {"head": [21, -84], "neck": [17, -72], "hip": [0, -44], "elbow_f": [23, -55], "hand_f": [23, -71], "elbow_b": [32, -81], "hand_b": [46, -73], "knee_f": [20, -27], "foot_f": [18, -3], "knee_b": [-17, -24], "foot_b": [-19, 0], "bend": [4, 7, 4]},
+	"b_fl_a": {"head": [15, -83], "neck": [10, -72], "hip": [0, -40], "elbow_f": [25, -82], "hand_f": [39, -75], "elbow_b": [16, -55], "hand_b": [15, -71], "knee_f": [20, -24], "foot_f": [24, 0], "knee_b": [-20, -24], "foot_b": [-41, -12], "bend": [2, 4, 2]},
+	"b_fl_b": {"head": [15, -83], "neck": [10, -72], "hip": [0, -40], "elbow_f": [16, -55], "hand_f": [15, -71], "elbow_b": [25, -82], "hand_b": [39, -75], "knee_f": [-20, -24], "foot_f": [-41, -12], "knee_b": [20, -24], "foot_b": [24, 0], "bend": [2, 4, 2]},
 	"b_fknee_load": {"head": [-1, -95], "neck": [-1, -83], "hip": [0, -50], "elbow_f": [8, -67], "hand_f": [11, -83], "elbow_b": [5, -66], "hand_b": [5, -82], "knee_f": [23, -37], "foot_f": [11, -16], "knee_b": [-5, -24], "foot_b": [-13, -2], "bend": [1, 2, 1]},
 	"b_fknee": {"head": [-6, -94], "neck": [-6, -82], "hip": [0, -50], "elbow_f": [12, -79], "hand_f": [20, -66], "elbow_b": [11, -76], "hand_b": [17, -61], "knee_f": [24, -59], "foot_f": [20, -35], "knee_b": [-13, -27], "foot_b": [-34, -15], "bend": [-1, -2, -1]},
 	"b_clinch_knee": {"head": [-1, -95], "neck": [-3, -83], "hip": [0, -50], "elbow_f": [15, -81], "hand_f": [25, -69], "elbow_b": [15, -78], "hand_b": [23, -64], "knee_f": [25, -57], "foot_f": [17, -34], "knee_b": [-2, -24], "foot_b": [-4, 0], "bend": [-1, -2, -1]},
-	"b_over_load": {"head": [-5, -91], "neck": [-5, -79], "hip": [0, -46], "elbow_f": [4, -63], "hand_f": [7, -79], "elbow_b": [-20, -88], "hand_b": [-5, -94], "knee_f": [15, -25], "foot_f": [19, -1], "knee_b": [-11, -23], "foot_b": [-18, 0], "bend": [-2, -3, -2]},
+	"b_over_load": {"head": [-17, -89], "neck": [-12, -78], "hip": [0, -48], "elbow_f": [5, -72], "hand_f": [20, -75], "elbow_b": [-25, -91], "hand_b": [-41, -92], "knee_f": [17, -28], "foot_f": [26, -6], "knee_b": [-10, -24], "foot_b": [-14, 0], "bend": [-3, -6, -3]},
 	"b_overhand": {"head": [27, -77], "neck": [18, -69], "hip": [0, -42], "elbow_f": [15, -52], "hand_f": [13, -67], "elbow_b": [36, -73], "hand_b": [40, -57], "knee_f": [18, -24], "foot_f": [23, 0], "knee_b": [-17, -22], "foot_b": [-27, 0], "bend": [4, 7, 4]},
 	# hit reactions by how it landed (06:22 "Lets try 1 and 2"): they face whoever hit them (+x toward them). Doubled
 	# over at the body; the front leg taken from under them, pitching forward; crushed down under an overhead, arms over
@@ -276,6 +276,10 @@ const P := {
 	"air_grab": {"head": [4, -96], "neck": [4, -84], "hip": [0, -50], "elbow_f": [23, -87], "hand_f": [39, -88], "elbow_b": [23, -80], "hand_b": [39, -79], "knee_f": [-20, -33], "foot_f": [-7, -11], "knee_b": [-23, -37], "foot_b": [-18, -11], "bend": [-2, -4, -2]},
 	"air_throw": {"head": [27, -86], "neck": [18, -79], "hip": [0, -50], "elbow_f": [28, -62], "hand_f": [31, -46], "elbow_b": [25, -60], "hand_b": [23, -44], "knee_f": [-9, -26], "foot_f": [-33, -17], "knee_b": [-15, -29], "foot_b": [-41, -24], "bend": [5, 9, 5]},
 	"pushblock": {"head": [10, -91], "neck": [7, -79], "hip": [0, -46], "elbow_f": [27, -81], "hand_f": [43, -81], "elbow_b": [27, -78], "hand_b": [43, -77], "knee_f": [17, -26], "foot_f": [17, 0], "knee_b": [-17, -26], "foot_b": [-37, -9], "bend": [2, 3, 2]},
+	# (15:11 "splatter them into the ground": slammed flat on their front, arms flung out past the head, a heel kicked up)
+	"floor_splat": {"head": [-46, -7], "neck": [-34, -6], "hip": [2, -6], "elbow_f": [-50, -2], "hand_f": [-64, -2],
+		"elbow_b": [-22, -2], "hand_b": [-10, -1], "knee_f": [20, -3], "foot_f": [36, -2], "knee_b": [18, -8],
+		"foot_b": [30, -16], "bend": [0, -1, 0]},
 	"down": {"head": [-44, -8], "neck": [-32, -8], "hip": [0, -8], "elbow_f": [-20, -18], "hand_f": [-8, -24],
 		"elbow_b": [-28, -2], "hand_b": [-16, 0], "knee_f": [18, -14], "foot_f": [36, -6], "knee_b": [18, -4],
 		"foot_b": [38, 0]},
@@ -540,7 +544,7 @@ static func _ease(t: float) -> float:
 ## held through the hitstun (20 Oct, YOMI's held drawings: it used to ease off toward a reeling guard). In the air: the
 ## launch pose, unless they were flung.
 const HURT := {"head": "hurt", "body": "hurt_body", "low": "hurt_low", "crush": "hurt_crush", "slide": "hurt_slide",
-	"air": "hurt_air", "throw": "grabbed", "hold": "grabbed", "wall": "splat"}
+	"air": "hurt_air", "throw": "grabbed", "hold": "grabbed", "wall": "splat", "floor": "floor_splat"}
 const GRIPPED := 6       ## ticks a thrown fighter shows the grip before they fly (23 Oct)
 const IMPACT := 3        ## frames the reaction snaps past its pose
 

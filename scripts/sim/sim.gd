@@ -164,7 +164,8 @@ const PRESS_STUN := 2
 const PRESS_PUSH := 0.35
 ## How a hit landed (06:22 "Lets try 1 and 2" - hit reactions by type): the head snapped back, doubled over at the body,
 ## the legs taken (a low), crushed down (an overhead), flung sliding, sent up into the air. Recorded for the screen.
-const LOOKS := ["head", "body", "low", "crush", "slide", "air", "throw", "hold", "wall"]   ## (the last three: 23 Oct)
+const LOOKS := ["head", "body", "low", "crush", "slide", "air", "throw", "hold", "wall", "floor"]   ## (the last four:
+## 23 Oct - "floor": pinned flat on it)
 ## One on one: how far apart they start (20 Oct 13:54 "move them further apart": YOMI's default is 250 apart with 32-tall
 ## fighters, 7.8 heights - ours are ~106 tall). The stage itself is wider (05:27).
 const START_1V1 := 840.0
@@ -778,6 +779,13 @@ func _motion(f: Fighter) -> void:
 				return
 			f.vel.x = float(f.facing) * clampf((dx - near) * 0.5 + maxf(gv, 0.0), 6.0, CHASE_MAX)
 			return
+	if m.has("follow") and f.frame >= int(m["follow"][0]) and f.frame <= int(m["follow"][1]):   # (15:11: Barrage
+		var g := _ahead(f)   # stays on them as each hit drives them back - keeping "follow"[2] px off them)
+		if g != null:
+			var dx := (g.pos.x - f.pos.x) * float(f.facing)
+			var gv := g.vel.x * float(f.facing)
+			f.vel.x = float(f.facing) * clampf((dx - float(m["follow"][2])) * 0.6 + maxf(gv, 0.0), 0.0, CHASE_MAX)
+			return
 	for seg: Array in m.get("motion", []):
 		if f.frame >= int(seg[0]) and f.frame <= int(seg[1]):
 			var vx := _val(seg[2], f) * k
@@ -873,7 +881,7 @@ func _physics(f: Fighter) -> void:
 
 ## Off the ground and back up (once a combo), a bit more stun.
 func _bounce(f: Fighter) -> void:
-	f.vel.y = -BOUNCE_UP * LAUNCH_LIFT
+	f.vel.y = -(f.bounce_up if f.bounce_up > 0.0 else BOUNCE_UP) * LAUNCH_LIFT
 	f.stun += BOUNCE_STUN
 	f.bounced = true
 	f.bounce_due = false
@@ -955,6 +963,11 @@ func _count(f: Fighter) -> void:
 	f.burst = mini(BURST_FULL, f.burst + (BURST_REELING if f.stun > 0 else 1))
 	if f.slide > 0:
 		f.slide -= 1
+	if f.pinned > 0:   # (held flat on the floor - then the bounce)
+		f.pinned -= 1
+		f.vel = Vector2.ZERO
+		if f.pinned == 0:
+			_bounce(f)
 	if f.stun > 0:
 		f.hit_t = mini(255, f.hit_t + 1)
 	if f.restand > 0:   # (the restand window: not hit in it - the combo's over)
@@ -1674,7 +1687,13 @@ func _hurt(a: Fighter, d: Fighter, e: Dictionary, type: String, src := "", side_
 	if src == "":   # (combo pushback - on the hitter, when it's their own body that hit)
 		a.pos.x -= side * minf(COMBO_PUSH * float(d.combo), COMBO_PUSH_MAX) * 0.5
 	if e.get("bounce", false) and not d.bounced:   # (a ground bounce - once a combo)
-		if d.pos.y >= 0.0 and float(kb[1]) >= 0.0:
+		d.bounce_up = float(e.get("bounce_up", 0.0))   # (how hard: Barrage's finish sends them higher)
+		if d.pos.y >= 0.0 and float(kb[1]) >= 0.0 and int(e.get("pin", 0)) > 0:   # (15:11 "splatter them into the
+			d.pinned = int(e["pin"])   # ground for a frame or two before they bounce back up")
+			d.vel = Vector2.ZERO
+			d.hit_look = "floor"
+			_event("slam", d, a)
+		elif d.pos.y >= 0.0 and float(kb[1]) >= 0.0:
 			_bounce(d)
 		else:
 			d.bounce_due = true

@@ -1239,6 +1239,29 @@ func _test_bruiser() -> void:
 	_check("in blockstun from his jab, a guard break after it is just blocked (the wiki) (%s, %s)" % [stunned,
 			bl._block(bl.fighters[0], bl.fighters[1], gb, Moves.move("dancer", "block"), 9, false)], stunned
 			and bl._block(bl.fighters[0], bl.fighters[1], gb, Moves.move("dancer", "block"), 9, false))
+	# (15:11 Timmy: the Barrage drives them about a quarter of the stage, then pins them flat a frame or two before they
+	# bounce up to about one and a half times his height)
+	var br := _duel("bruiser", "dancer", 70.0)
+	br.fighters[0].meter = Sim.METER_MAX
+	br.fighters[1].burst = 0
+	br.apply({0: {"move": "barrage", "x": 1.0}, 1: {"move": "wait"}})
+	var br_x := []
+	var br_pin := 0
+	var br_top := 0.0
+	for _i in 100:
+		br.events.clear()
+		br.step()
+		for br_ev: Dictionary in br.events:
+			if str(br_ev["type"]) == "hit" and int(br_ev["a"]) == 0:
+				br_x.append(br.fighters[1].pos.x)
+		br_pin += 1 if br.fighters[1].pinned > 0 else 0
+		if br_x.size() == 6:
+			br_top = maxf(br_top, -br.fighters[1].pos.y)
+	var br_carried: float = float(br_x[br_x.size() - 1]) - float(br_x[0]) if br_x.size() > 1 else 0.0
+	_check("Barrage: all six land (%d), carrying her %.0f px (a quarter of the stage is %.0f), pinned %d ticks, then up %.0f px "
+			% [br_x.size(), br_carried, br.half / 2.0, br_pin, br_top] + "(his height %d)" % int(Moves.stats("bruiser")["height"]),
+			br_x.size() == 6 and absf(br_carried - br.half / 2.0) < 80.0 and br_pin >= 1 and br_pin <= 3 and br_top > 130.0
+			and br_top < 200.0)
 
 
 

@@ -218,6 +218,9 @@ func _effect(e: Dictionary, prev: Array) -> void:
 	if type == "ko":   # (a = the one knocked out)
 		fx.on_event(type, _chest(a), face, 0, colour_of(a), a, colour_of(a), false, n + a)
 		return
+	if type == "slam":   # (a = pinned flat to the floor - Barrage's finish: the floor takes it)
+		fx.slam(Vector2(float(frame[a][0]), 0.0), colour_of(d) if d >= 0 and d < frame.size() else Color.WHITE, n + a)
+		return
 	if type == "burst":   # (a = the one bursting out)
 		fx.burst_out(a, _chest(a), colour_of(a), n + a)
 		return

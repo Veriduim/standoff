@@ -47,6 +47,8 @@ var pushed := 0          ## ticks a Push Block's shove keeps their own move from
 var prorate := 0         ## the combo on them started this many hits in (the starter's proration)
 var bounce_due := false  ## the hit on them bounces them off the ground when they land
 var bounced := false     ## ...used up for this combo
+var bounce_up := 0.0     ## ...how hard it sends them up (0 = Sim.BOUNCE_UP)
+var pinned := 0          ## ticks left held flat on the floor before that bounce (Barrage's finish - 23 Oct)
 var splat_due := false   ## the hit on them sticks them to the wall if they reach it
 var splats := 0          ## wall splats this combo (3 at most)
 var splat := 0           ## ticks left stuck to the wall
@@ -82,6 +84,8 @@ func combo_over() -> void:
 	prorate = 0
 	bounce_due = false
 	bounced = false
+	bounce_up = 0.0
+	pinned = 0
 	splat_due = false
 	splats = 0
 	launched = false
@@ -107,7 +111,7 @@ func to_dict() -> Dictionary:
 		"hit_done": hit_done.keys(), "stun": stun, "blockstun": blockstun, "lock": lock, "combo": combo,
 		"air_moves": air_moves, "burst": burst, "di": [di.x, di.y], "combo_used": combo_used.duplicate(true),
 		"cancelled": cancelled, "cancel_frame": cancel_frame, "fc": fc, "freed": freed, "whiffed": whiffed, "down": down, "down_pick": down_pick,
-		"kd": kd, "sad": sad, "sadness": sadness, "sad_warned": sad_warned, "dist": dist, "parry_at": parry_at, "pushed": pushed, "prorate": prorate, "bounce_due": bounce_due, "bounced": bounced,
+		"kd": kd, "sad": sad, "sadness": sadness, "sad_warned": sad_warned, "dist": dist, "parry_at": parry_at, "pushed": pushed, "prorate": prorate, "bounce_due": bounce_due, "bounced": bounced, "bounce_up": bounce_up, "pinned": pinned,
 		"splat_due": splat_due, "splats": splats, "splat": splat, "launched": launched, "restand": restand, "stance": stance, "initiative": initiative, "fans": fans, "tempo": tempo,
 		"tempo_key": tempo_key, "tempo_idle": tempo_idle, "form": form, "grit": grit, "armor_left": armor_left,
 		"repeats": repeats, "slide": slide, "hit_look": hit_look, "hit_t": hit_t, "ko": ko}
@@ -159,6 +163,8 @@ static func from_dict(d: Dictionary) -> Fighter:
 	f.prorate = int(d.get("prorate", 0))
 	f.bounce_due = bool(d.get("bounce_due", false))
 	f.bounced = bool(d.get("bounced", false))
+	f.bounce_up = float(d.get("bounce_up", 0.0))
+	f.pinned = int(d.get("pinned", 0))
 	f.splat_due = bool(d.get("splat_due", false))
 	f.splats = int(d.get("splats", 0))
 	f.splat = int(d.get("splat", 0))

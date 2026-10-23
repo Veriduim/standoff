@@ -534,20 +534,24 @@ const BRUISER := {
 				"block": 16, "chip": 6, "group": 0, "splat": true, "fling": true}],
 			"pose": [[0, "b_idle"], [4, "b_rush"], [8, "b_rush_2"], [12, "b_rush"], [16, "b_rush_2"], [20, "b_rush"],
 				[24, "b_rush_2"], [27, "b_rush_stop"], [34, "b_idle"]], "icon": "b_rush"},
-		"barrage": {"name": "Barrage", "tab": "super", "drawn": true, "kind": "super", "frames": 46, "where": "ground", "aim": "facing",
-			"cost": 250, "invuln": [0, 8], "motion": [[2, 28, 2.5, 0.0]],
+		# (15:11 Timmy: five lunging hooks that drive them about a quarter of the stage back - a step through onto the
+		# other leg each time, "follow" keeping him on them - then the overhand wound right back that pins them flat to
+		# the floor a frame or two and bounces them up to about one and a half times his height)
+		"barrage": {"name": "Barrage", "tab": "super", "drawn": true, "kind": "super", "frames": 56, "where": "ground", "aim": "facing",
+			"cost": 250, "invuln": [0, 8], "motion": [[2, 7, 3.0, 0.0]], "follow": [9, 40, 46.0],
+			"note": "drives them back across the stage - then pins them to the floor and they bounce",
 			"hits": [
-				{"from": 8, "to": 9, "box": [8, -90, 56, 24], "dmg": 12, "stun": 16, "kb": [1.5, 0.0], "block": 6, "chip": 2, "group": 0},
-				{"from": 12, "to": 13, "box": [8, -90, 56, 24], "dmg": 12, "stun": 16, "kb": [1.5, 0.0], "block": 6, "chip": 2, "group": 1},
-				{"from": 16, "to": 17, "box": [8, -90, 56, 24], "dmg": 12, "stun": 16, "kb": [1.5, 0.0], "block": 6, "chip": 2, "group": 2},
-				{"from": 20, "to": 21, "box": [8, -90, 56, 24], "dmg": 12, "stun": 16, "kb": [1.5, 0.0], "block": 6, "chip": 2, "group": 3},
-				{"from": 24, "to": 25, "box": [8, -90, 56, 24], "dmg": 12, "stun": 16, "kb": [1.5, 0.0], "block": 6, "chip": 2, "group": 4},
-				# (the finish: an overhand down into the floor - they bounce, low; 14:33 "launching upwards is weird")
-				{"from": 30, "to": 33, "box": [6, -104, 58, 70], "dmg": 40, "stun": 30, "kb": [2.0, 2.0], "block": 14, "chip": 4, "group": 5,
-					"bounce": true},
+				{"from": 8, "to": 9, "box": [8, -90, 70, 30], "dmg": 12, "stun": 18, "kb": [18.3, 0.0], "block": 6, "chip": 2, "group": 0, "tip": "hand_f"},
+				{"from": 14, "to": 15, "box": [8, -90, 70, 30], "dmg": 12, "stun": 18, "kb": [18.3, 0.0], "block": 6, "chip": 2, "group": 1, "tip": "hand_b"},
+				{"from": 20, "to": 21, "box": [8, -90, 70, 30], "dmg": 12, "stun": 18, "kb": [18.3, 0.0], "block": 6, "chip": 2, "group": 2, "tip": "hand_f"},
+				{"from": 26, "to": 27, "box": [8, -90, 70, 30], "dmg": 12, "stun": 18, "kb": [18.3, 0.0], "block": 6, "chip": 2, "group": 3, "tip": "hand_b"},
+				{"from": 32, "to": 33, "box": [8, -90, 70, 30], "dmg": 12, "stun": 18, "kb": [18.3, 0.0], "block": 6, "chip": 2, "group": 4, "tip": "hand_f"},
+				# (the finish: the overhand into the floor - pinned, then the bounce; 14:33 "launching upwards is weird")
+				{"from": 41, "to": 43, "box": [6, -104, 64, 104], "dmg": 40, "stun": 34, "kb": [0.0, 2.0], "block": 14, "chip": 4, "group": 5,
+					"bounce": true, "bounce_up": 12.1, "pin": 2, "tip": "hand_b"},
 			],
-			"pose": [[0, "b_idle"], [6, "b_fl_b"], [8, "b_fl_a"], [12, "b_fl_b"], [16, "b_fl_a"], [20, "b_fl_b"],
-				[24, "b_fl_a"], [27, "b_over_load"], [30, "b_overhand"], [40, "b_idle"]], "icon": "b_fl_a"},
+			"pose": [[0, "b_idle"], [5, "b_fl_b"], [8, "b_fl_a"], [14, "b_fl_b"], [20, "b_fl_a"], [26, "b_fl_b"],
+				[32, "b_fl_a"], [35, "b_over_load"], [41, "b_overhand"], [52, "b_idle"]], "icon": "b_fl_a"},
 		"clinchfury": {"name": "Clinch Fury", "tab": "super", "kind": "grab", "frames": 64, "where": "ground", "aim": "facing",
 			"cost": 375, "no_cancel": true, "motion": [[2, 6, 5.0, 0.0]],
 			"note": "a clinch that won't let go: three knees and an elbow",
