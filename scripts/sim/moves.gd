@@ -297,7 +297,7 @@ const DANCER := {
 			"pose": [[0, "throw_wind"], [4, "throw_out"], [12, "idle"]], "icon": "throw_out"},
 		"fanstep": {"name": "Fan Step", "tab": "move", "kind": "move", "xf": "fans", "needs_out": true, "blink_at": 5,
 			"frames": 16, "where": "both", "aim": "none", "float": true, "invuln": [0, 8],
-			"pose": [[0, "crouch"], [5, "dash"], [10, "idle"]], "icon": "dash"},
+			"pose": [[0, "fs_vanish"], [5, "fs_catch"], [10, "fs_land"], [14, "idle"]], "icon": "fs_catch"},   # (23 Oct: its own drawings)
 		"recall": {"name": "Recall", "tab": "special", "kind": "special", "xf": "fans", "recall_at": 3, "frames": 12,
 			"where": "both", "aim": "lean", "float": true,   # (no direction: home; a direction: fling them that way first)
 			"pose": [[0, "throw_out"], [3, "throw_wind"], [9, "idle"]], "icon": "throw_wind"},

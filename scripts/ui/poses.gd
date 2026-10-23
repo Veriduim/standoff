@@ -227,6 +227,10 @@ const P := {
 	"b_beckon": {"head": [5, -92], "neck": [6, -80], "hip": [0, -47], "elbow_f": [24, -78], "hand_f": [40, -80], "elbow_b": [-2, -63], "hand_b": [10, -53], "knee_f": [13, -25], "foot_f": [19, -1], "knee_b": [-10, -23], "foot_b": [-16, 0]},
 	"b_curl": {"head": [5, -92], "neck": [6, -80], "hip": [0, -47], "elbow_f": [24, -78], "hand_f": [21, -94], "elbow_b": [-2, -63], "hand_b": [10, -53], "knee_f": [13, -25], "foot_f": [19, -1], "knee_b": [-10, -23], "foot_b": [-16, 0]},
 	"b_pound": {"head": [-9, -91], "neck": [-5, -80], "hip": [0, -48], "elbow_f": [0, -63], "hand_f": [-15, -67], "elbow_b": [10, -70], "hand_b": [16, -55], "knee_f": [12, -25], "foot_f": [15, -1], "knee_b": [-11, -24], "foot_b": [-14, 0]},
+	# (23 Oct 13:25: Fan Step's own drawings - the spin out, catching the fan in the air, the landing)
+	"fs_vanish": {"head": [-5, -98], "neck": [-2, -86], "hip": [0, -52], "elbow_f": [2, -105], "hand_f": [-5, -120], "elbow_b": [-6, -105], "hand_b": [1, -120], "knee_f": [19, -35], "foot_f": [-3, -22], "knee_b": [0, -26], "foot_b": [-1, 0]},
+	"fs_catch": {"head": [-8, -95], "neck": [-4, -84], "hip": [0, -50], "elbow_f": [3, -103], "hand_f": [4, -119], "elbow_b": [-23, -88], "hand_b": [-39, -87], "knee_f": [19, -33], "foot_f": [14, -7], "knee_b": [-20, -34], "foot_b": [-43, -22]},
+	"fs_land": {"head": [6, -92], "neck": [4, -81], "hip": [0, -47], "elbow_f": [22, -73], "hand_f": [35, -83], "elbow_b": [-10, -66], "hand_b": [-13, -50], "knee_f": [15, -25], "foot_f": [7, -1], "knee_b": [-15, -25], "foot_b": [-8, 0]},
 	"down": {"head": [-44, -8], "neck": [-32, -8], "hip": [0, -8], "elbow_f": [-20, -18], "hand_f": [-8, -24],
 		"elbow_b": [-28, -2], "hand_b": [-16, 0], "knee_f": [18, -14], "foot_f": [36, -6], "knee_b": [18, -4],
 		"foot_b": [38, 0]},

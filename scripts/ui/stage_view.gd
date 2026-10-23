@@ -143,6 +143,8 @@ func _motion_fx(prev: Array) -> void:
 		var speed := maxf(absf(float(r[0]) - float(p[0])), absf(float(r[1]) - float(p[1])) * 0.8)
 		var fast := int(r[5]) != 4 and (speed > 5.5 or kind in ["super", "burst"])
 		_after_n[i] = int(_after_n.get(i, 0)) + 1 if fast else 0
+		if mv == "fanstep" and speed > 60.0:   # (Fan Step's blink: her spin left fading where she was - 23 Oct)
+			fx.afterimage(i, p)
 		if fast and int(_after_n[i]) % 3 == 1:   # (a fading copy every third tick they're quick - fx keeps them longer;
 			# the Bruiser rushing in on his own feet leaves solid grey ones - 14:09 "The red guy could help with bruiser")
 			fx.afterimage(i, r, _char(i) == "bruiser" and int(r[5]) == 0 and speed > 5.5)
