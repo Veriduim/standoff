@@ -398,6 +398,52 @@ func ribbon(a: Vector2, b: Vector2, c: Color) -> void:
 		"r": 0.0, "w": 0.0, "x": 0.0})
 
 
+## YOMI's movement particles (23 Oct 13:36 Timmy: "Just use YOMI and its Char Mods as inspiration"): round dots in the
+## fighter's colour shot out and slowing to a stop - its JumpParticle, DashFloorParticle, DashParticle, LandingParticle
+## (study only: their counts, spreads, speeds, lifetimes, damping), scaled from YOMI's 32-tall fighters to ours.
+const YS := 3.3
+
+
+func _dots(at: Vector2, dir: Vector2, spread_deg: float, n: int, speed: float, life: float, size: float, c: Color,
+		rect := 0.0, sphere := 0.0) -> void:
+	for i in n:
+		var a := dir.angle() + deg_to_rad(_rng.randf_range(-spread_deg, spread_deg))
+		var off := Vector2(_rng.randf_range(-rect, rect), 0.0) * YS
+		if sphere > 0.0:
+			off = Vector2.from_angle(_rng.randf() * TAU) * _rng.randf() * sphere * YS
+		_add("dot", at + off, Vector2.from_angle(a) * speed * YS * _rng.randf_range(0.15, 1.0),
+				life * _rng.randf_range(0.25, 1.0), c, size * YS * _rng.randf_range(0.45, 1.0), 35.8 * YS * BIG)
+
+
+## A jump leaving the floor: a burst straight down off the feet, a little spray along the floor both ways.
+func takeoff(feet: Vector2, c: Color, s: float, seed_n: int) -> void:
+	_rng.seed = seed_n
+	_dots(feet, Vector2.DOWN, 6.55, int(21 * s), 84.6, 0.4, 6.9, c)
+	for side: float in [1.0, -1.0]:
+		_dots(feet, Vector2(side, -0.787).normalized(), 10.4, int(10 * s), 144.0, 0.29, 5.5, c, 16.0)
+
+
+## An air jump: the burst down off the feet, in the air.
+func airjump(feet: Vector2, c: Color, seed_n: int) -> void:
+	_rng.seed = seed_n
+	_dots(feet, Vector2.DOWN, 6.55, 21, 84.6, 0.4, 6.9, c)
+
+
+## A dash setting off (dir: the way they go): dots kicked up off the floor behind, a short cone off the body.
+func dash_off(feet: Vector2, dir: float, c: Color, seed_n: int, air := false) -> void:
+	_rng.seed = seed_n
+	if not air:
+		_dots(Vector2(feet.x, 0.0), Vector2(-dir, -0.787).normalized(), 10.4, 24, 144.0, 0.29, 5.5, c, 16.0)
+	_dots(feet + Vector2(0.0, -50.0), Vector2(-dir, 0.0), 6.55, 21, 73.9, 0.42, 5.2, c, 0.0, 9.4)
+
+
+## Touching down: dots sprayed along the floor both ways.
+func landing(feet: Vector2, c: Color, s: float, seed_n: int) -> void:
+	_rng.seed = seed_n
+	for side: float in [1.0, -1.0]:
+		_dots(Vector2(feet.x, 0.0), Vector2(side, -0.787).normalized(), 10.4, int(14 * s), 144.0, 0.29, 5.5, c, 16.0)
+
+
 ## Dust off the ground (a landing, feet sliding): grey bits kicked out both ways, low.
 func dust(at: Vector2, s: float, seed_n: int) -> void:
 	_rng.seed = seed_n
@@ -541,6 +587,9 @@ func update(delta: float) -> void:
 		if p["k"] == "chip":
 			v.y += 1100.0 * delta
 			v *= pow(0.3, delta)
+		elif p["k"] == "dot":   # (YOMI's particles: no gravity, slowed steadily to a stop - x = the damping)
+			var sp := v.length()
+			v = v / sp * maxf(0.0, sp - float(p["x"]) * delta) if sp > 0.0 else v
 		elif p["k"] in ["petal", "ember"]:
 			v = _bit_motion(p, v, delta)
 		else:
@@ -776,6 +825,8 @@ func draw_parts(st: StageView) -> void:
 		match str(p["k"]):
 			"ink", "bubble", "floorring", "ribbon", "crack", "spikes", "bigstar", "puff", "mline":   # (behind the fighters - draw_back)
 				pass
+			"dot":   # (YOMI's round particle in their colour, shrinking away)
+				st.draw_circle(at, maxf(0.6, s * 0.5 * (1.0 - t)), c, true, -1.0, true)
 			"wring":   # (a wide thin ring opening out round a big moment; x = how strong)
 				var e := 1.0 - pow(1.0 - t, 2.0)
 				c.a = float(p["x"]) * (1.0 - t)

@@ -145,6 +145,15 @@ func _motion_fx(prev: Array) -> void:
 		_after_n[i] = int(_after_n.get(i, 0)) + 1 if fast else 0
 		if mv == "fanstep" and speed > 60.0:   # (Fan Step's blink: her spin left fading where she was - 23 Oct)
 			fx.afterimage(i, p)
+		# (23 Oct, step 2 - YOMI's movement particles: a jump's burst, a dash's spray, an air jump's puff)
+		var feet := Vector2(float(r[0]), float(r[1]))
+		if mv in ["jump", "superjump"] and _crossed(p, r, mv, 5 if mv == "superjump" else 1):
+			fx.takeoff(Vector2(float(p[0]), 0.0), _dot_col(i), 1.3 if mv == "superjump" else 1.0, _tick_n * 7 + i)
+		elif mv == "airjump" and _crossed(p, r, mv, 1):
+			fx.airjump(feet, _dot_col(i), _tick_n * 7 + i)
+		elif mv in ["dash", "chase", "backstep", "airdash"] and _crossed(p, r, mv, 1):
+			var away := -1.0 if mv == "backstep" or (mv == "airdash" and _vx.get(i, 0.0) * float(r[2]) < 0.0) else 1.0
+			fx.dash_off(feet, float(r[2]) * away, _dot_col(i), _tick_n * 7 + i, mv == "airdash")
 		if fast and int(_after_n[i]) % 3 == 1:   # (a fading copy every third tick they're quick - fx keeps them longer;
 			# the Bruiser rushing in on his own feet leaves solid grey ones - 14:09 "The red guy could help with bruiser")
 			fx.afterimage(i, r, _char(i) == "bruiser" and int(r[5]) == 0 and speed > 5.5)
@@ -160,8 +169,8 @@ func _motion_fx(prev: Array) -> void:
 			fx.ribbon(Vector2(float(p[0]), -16.0), Vector2(float(r[0]), -16.0), colour_of(i))   # floor - the mods' beams)
 		if float(p[1]) < -6.0 and float(r[1]) >= -0.5 and int(r[5]) != 4:   # (landed: squash, and dust if it was a drop)
 			_land[i] = LAND_TICKS
-			if dy > 6.0:
-				fx.dust(Vector2(float(r[0]), 0.0), clampf(dy / 14.0, 0.4, 1.2), _tick_n * 5 + i)
+			if dy > 6.0:   # (YOMI's landing: dots along the floor in their colour - 23 Oct)
+				fx.landing(Vector2(float(r[0]), 0.0), _dot_col(i), clampf(dy / 14.0, 0.5, 1.2), _tick_n * 5 + i)
 				if sfx != null:
 					sfx.play("land", -4.0)
 		elif _land.has(i):
@@ -967,3 +976,15 @@ func _unhandled_input(event: InputEvent) -> void:
 ## Moving away from the way they face (23 Oct - a back jump flips backward, a backward dodge rolls backward).
 func _backward(i: int, r: Array) -> bool:
 	return float(_vx.get(i, 0.0)) * float(r[2]) < -1.0
+
+
+## The move reached frame k this tick (it started, or ticked past k) - a one-off effect fires once.
+func _crossed(p: Array, r: Array, mv: String, k: int) -> bool:
+	var f := int(r[4])
+	return f >= k and (str(p[3]) != mv or int(p[4]) < k)
+
+
+## YOMI's movement particles' colour: theirs, a little lighter.
+func _dot_col(i: int) -> Color:
+	return colour_of(i).lightened(0.25)
+
