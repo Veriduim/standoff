@@ -13,20 +13,26 @@ Standoff Workshop/tools (frames_sheet.gd draws a move's frames as the game poses
 - Fan Step: a spin out with arms crossed high, catching the fan in the air, a plie; an after-image where she vanished
 - Bruiser: hand wraps; Elbow C (a loose shoulder so the point clears his head)
 - A bendable spine (1/4, 1/2, 3/4 down) and loose shoulders for any drawing
+- Step 4, her own drawings (Umbra the inspiration): Fan Slash, Recall, Fouette Storm, Gale, Mirror, Mirror Strike,
+  Stomp, Air Throw, Push Block - and her petals: spins shed them, slaps throw a cone, Recall swirls them, Windmill /
+  Floor Slide / Grand Jete's landing kick them up; each Form its own
+- Step 5, his own drawings (Nakmuay the inspiration): Clinch Elbow (a shove, then the elbow rising), Dump and Catch
+  Dump (pulled down, twisted round, flung behind), Catch (guard, the scoop, guard), Air Hook, Elbow Drop (up, over, the
+  dive), Bull Rush (a two-stride run, the skid), Barrage (rolling hooks, his own uppercut) - shown as drawn. Bull
+  Rush's speed lines off his back and dust (Rhino's Charge), Elbow Drop slamming the floor; both elbows trace their
+  arc from the elbow
 
 ## No drawing of their own (stand, crouch, dash, jump, fall borrowed)
-- Both: Dash, Jump, Super Jump, Fast Fall
-- Dancer: Back Step, Air Dash, Flow Form
+- Dash, Jump, Super Jump, Fast Fall, Back Step, Air Dash: their own since step 2
+- Dancer: Flow Form
 - Everyone: Block, Wait, Whiff Cancel, Get Up, Hold
 
 ## One drawing only
-- Mirror, Push Block (Dancer); Elbow Drop, Catch (Bruiser)
+- None left (steps 4 and 5)
 
 ## Borrowing another move's drawings
-- Dancer: Fan Slash and Recall (Fan Throw's), Fouette Storm (Fouette's), Gale (the taunt's gather / spread), Mirror
-  Strike (Arabesque's), Stomp (Grand Battement's chop), Grab and Air Throw (the same pair), Encore (a mix)
-- Bruiser: Clinch Elbow (Elbow's), Air Hook (Hook's), Barrage and Bull Rush (his strikes), Dump and Catch Dump (a
-  generic throw)
+- Dancer: Grab (the shared reach and throw), Encore (a mix of her moves - on purpose?)
+- Bruiser: Clinch and Clinch Fury reach with the shared grab; Air Knee is the shared knee
 
 ## Effects (the audit, 23 Oct 13:41 - Timmy: "our effects should be cool and snappy", YOMI + its char mods the
 inspiration, not copied)

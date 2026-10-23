@@ -497,6 +497,25 @@ func dash_off(feet: Vector2, dir: float, c: Color, seed_n: int, air := false) ->
 	_dots(feet + Vector2(0.0, -50.0), Vector2(-dir, 0.0), 6.55, 21, 73.9, 0.42, 5.2, c, 0.0, 9.4)
 
 
+## Step 5 (23 Oct): his Bull Rush running - Nakmuay's Rhino's Charge: a few speed lines off his back, thick at
+## him, thinning behind.
+func charge(at: Vector2, face: float, c: Color, seed_n: int) -> void:
+	_rng.seed = seed_n
+	for i in 2:
+		var off := Vector2(-face * _rng.randf_range(8.0, 26.0), _rng.randf_range(-40.0, 34.0))
+		_add("mline", at + off, Vector2(-face * _rng.randf_range(60.0, 140.0), 0.0), _rng.randf_range(0.16, 0.22),
+				c.lightened(0.5), _rng.randf_range(50.0, 90.0), face)
+		parts[-1]["w"] = 0.0
+
+
+## His Elbow Drop meeting the floor: a ring in his colour, a few cracks, dust and a jolt (Quake's, much smaller).
+func slam(at: Vector2, c: Color, seed_n: int) -> void:
+	_rng.seed = seed_n
+	_add("floorring", Vector2(at.x, 0.0), Vector2.ZERO, 0.4, c.lightened(0.4), 60.0)
+	_add("crack", Vector2(at.x, 0.0), Vector2.ZERO, 0.9, Color("#c9ccd8"), 60.0, 0.0)
+	dust(Vector2(at.x, 0.0), 0.8, seed_n)
+
+
 ## Touching down: dots sprayed along the floor both ways.
 func landing(feet: Vector2, c: Color, s: float, seed_n: int) -> void:
 	_rng.seed = seed_n

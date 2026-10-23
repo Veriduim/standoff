@@ -155,6 +155,11 @@ func _motion_fx(prev: Array) -> void:
 			fx.petal_dance(Vector2(float(r[0]), float(r[1]) - 50.0), colour_of(i), _tick_n * 11 + i)
 		elif _char(i) == "dancer" and mv in ["fan", "airfan", "fanslash"] and _crossed(p, r, mv, Moves.startup(Moves.move("dancer", mv))):
 			fx.petal_slap(Vector2(float(r[0]) + float(r[2]) * 30.0, float(r[1]) - 62.0), float(r[2]), colour_of(i), _tick_n * 11 + i)
+		if mv == "bullrush" and int(r[5]) == 0 and int(r[4]) >= 4 and int(r[4]) <= 26 and speed > 5.5:   # (step 5:
+			if _tick_n % 2 == 0:   # his charge - Nakmuay's Rhino: lines streaming off his back, dust off his feet)
+				fx.charge(Vector2(float(r[0]), float(r[1]) - 56.0), float(r[2]), colour_of(i), _tick_n * 13 + i)
+			if _tick_n % 3 == 0:
+				fx.dust(Vector2(float(r[0]), 0.0), 0.3, _tick_n * 5 + i)
 		# (23 Oct, step 2 - YOMI's movement particles: a jump's burst, a dash's spray, an air jump's puff)
 		var feet := Vector2(float(r[0]), float(r[1]))
 		if mv in ["jump", "superjump"] and _crossed(p, r, mv, 5 if mv == "superjump" else 1):
@@ -179,6 +184,8 @@ func _motion_fx(prev: Array) -> void:
 			fx.ribbon(Vector2(float(p[0]), -16.0), Vector2(float(r[0]), -16.0), colour_of(i))   # floor - the mods' beams)
 		if float(p[1]) < -6.0 and float(r[1]) >= -0.5 and int(r[5]) != 4:   # (landed: squash, and dust if it was a drop)
 			_land[i] = LAND_TICKS
+			if dy > 6.0 and str(p[3]) == "elbowdrop":   # (his Elbow Drop hitting the floor: a ring, cracks, dust)
+				fx.slam(Vector2(float(r[0]), 0.0), colour_of(i), _tick_n * 5 + i)
 			if dy > 6.0 and _char(i) == "dancer" and str(p[3]) == "updraft":   # (Grand Jete coming down: petals)
 				fx.petal_burst(Vector2(float(r[0]), -8.0), colour_of(i), _tick_n * 5 + i, 10)
 			if dy > 6.0:   # (YOMI's landing: dots along the floor in their colour - 23 Oct)
@@ -370,7 +377,7 @@ func _arcs() -> void:
 			sfx.play("swing", -2.0, randf_range(0.9, 1.1))
 		_swinging[i] = true
 		var pose := Poses.for_record(_char(i), r, _backward(i, r))
-		var pivot := "hip" if tip.begins_with("foot") else "neck"
+		var pivot := "hip" if tip.begins_with("foot") or tip.begins_with("knee") else "neck"
 		var tip_w := _world(i, r, pose[tip])
 		if tip.begins_with("hand") and _char(i) == "dancer":   # (her fan's edge, not her hand: the slash a fan leaves -
 			var elbow := _world(i, r, pose["elbow_" + tip.trim_prefix("hand_")])   # Colossus's sword arcs, 23:01)
@@ -954,13 +961,16 @@ func _smear(i: int, r: Array, pose: Dictionary, base: Vector2, sc: float, face: 
 	if (now[tip] as Vector2).distance_to(then[tip]) < SMEAR_PX * zoom:
 		return
 	_smearing[i] = true
-	var mid := "elbow" + tip.trim_prefix("hand") if tip.begins_with("hand") else "knee" + tip.trim_prefix("foot")
-	var root := "neck" if tip.begins_with("hand") else "hip"
+	var root := "neck" if tip.begins_with("hand") or tip.begins_with("elbow") else "hip"
+	var bones: Array = [[root, tip]]   # (an elbow or a knee: the one bone)
+	if tip.begins_with("hand") or tip.begins_with("foot"):
+		var mid := "elbow" + tip.trim_prefix("hand") if tip.begins_with("hand") else "knee" + tip.trim_prefix("foot")
+		bones = [[root, mid], [mid, tip]]
 	var c := col.lightened(0.3)
 	c.a = 0.42
 	var tri := PackedVector2Array()
 	var cols := PackedColorArray()
-	for bone: Array in [[root, mid], [mid, tip]]:
+	for bone: Array in bones:
 		Stick._quad(tri, cols, then[bone[0]], then[bone[1]], now[bone[1]], now[bone[0]], c)
 	Stick.tris(self, tri, cols)
 	var tc := col.lightened(0.5)   # (the fist or foot, smeared out along the way it came)
