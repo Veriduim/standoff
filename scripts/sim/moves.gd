@@ -543,14 +543,15 @@ const BRUISER := {
 			"follow": {"near": 46.0, "at": [[11, 13], [17, 19], [23, 25], [29, 31], [35, 37]]},
 			"note": "dashes them back across the stage - then pins them to the floor and they bounce",
 			"hits": [
-				{"from": 8, "to": 9, "box": [8, -76, 70, 30], "dmg": 12, "stun": 18, "kb": [17.4, 0.0], "block": 6, "chip": 2, "group": 0, "tip": "hand_b"},
-				{"from": 14, "to": 15, "box": [8, -90, 70, 30], "dmg": 12, "stun": 18, "kb": [17.4, 0.0], "block": 6, "chip": 2, "group": 1, "tip": "hand_f"},
-				{"from": 20, "to": 21, "box": [8, -76, 70, 30], "dmg": 12, "stun": 18, "kb": [17.4, 0.0], "block": 6, "chip": 2, "group": 2, "tip": "hand_b"},
-				{"from": 26, "to": 27, "box": [8, -90, 70, 30], "dmg": 12, "stun": 18, "kb": [17.4, 0.0], "block": 6, "chip": 2, "group": 3, "tip": "hand_f"},
-				{"from": 32, "to": 33, "box": [8, -76, 70, 30], "dmg": 12, "stun": 18, "kb": [17.4, 0.0], "block": 6, "chip": 2, "group": 4, "tip": "hand_b"},
+				{"from": 8, "to": 9, "box": [8, -82, 70, 30], "dmg": 12, "stun": 18, "kb": [17.4, 0.0], "block": 6, "chip": 2, "group": 0, "tip": "hand_b"},
+				{"from": 14, "to": 15, "box": [8, -100, 70, 30], "dmg": 12, "stun": 18, "kb": [17.4, 0.0], "block": 6, "chip": 2, "group": 1, "tip": "hand_f"},
+				{"from": 20, "to": 21, "box": [8, -82, 70, 30], "dmg": 12, "stun": 18, "kb": [17.4, 0.0], "block": 6, "chip": 2, "group": 2, "tip": "hand_b"},
+				{"from": 26, "to": 27, "box": [8, -100, 70, 30], "dmg": 12, "stun": 18, "kb": [17.4, 0.0], "block": 6, "chip": 2, "group": 3, "tip": "hand_f"},
+				{"from": 32, "to": 33, "box": [8, -82, 70, 30], "dmg": 12, "stun": 18, "kb": [17.4, 0.0], "block": 6, "chip": 2, "group": 4, "tip": "hand_b"},
 				# (the finish: the high cross into the floor - pinned, then the bounce; 14:33 "launching upwards is weird")
 				{"from": 41, "to": 43, "box": [6, -104, 64, 104], "dmg": 40, "stun": 34, "kb": [0.0, 2.0], "block": 14, "chip": 4, "group": 5,
-					"bounce": true, "bounce_up": 12.1, "pin": 2, "tip": "hand_f"},   # (his left - 15:21)
+					"bounce": true, "bounce_up": 12.1, "bounce_x": 7.0, "pin": 2, "tip": "hand_f"},   # (his left - 15:21;
+					# 15:29 the bounce carries them on a little)
 			],
 			# (15:21 "These do not flow at all": a dash in, the next arm cocked, between every two)
 			"pose": [[0, "b_idle"], [4, "b_fl_wb"], [8, "b_fl_b"], [11, "b_fl_wa"], [14, "b_fl_a"], [17, "b_fl_wb"],

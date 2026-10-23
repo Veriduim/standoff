@@ -887,6 +887,9 @@ func _physics(f: Fighter) -> void:
 ## Off the ground and back up (once a combo), a bit more stun.
 func _bounce(f: Fighter) -> void:
 	f.vel.y = -(f.bounce_up if f.bounce_up > 0.0 else BOUNCE_UP) * LAUNCH_LIFT
+	if f.bounce_x != 0.0:   # (and on, the way the hit went - 15:29 "send the opponent forward a little as well")
+		f.vel.x = f.bounce_x
+		f.bounce_x = 0.0
 	f.stun += BOUNCE_STUN
 	f.bounced = true
 	f.bounce_due = false
@@ -1693,6 +1696,7 @@ func _hurt(a: Fighter, d: Fighter, e: Dictionary, type: String, src := "", side_
 		a.pos.x -= side * minf(COMBO_PUSH * float(d.combo), COMBO_PUSH_MAX) * 0.5
 	if e.get("bounce", false) and not d.bounced:   # (a ground bounce - once a combo)
 		d.bounce_up = float(e.get("bounce_up", 0.0))   # (how hard: Barrage's finish sends them higher)
+		d.bounce_x = float(e.get("bounce_x", 0.0)) * side
 		if d.pos.y >= 0.0 and float(kb[1]) >= 0.0 and int(e.get("pin", 0)) > 0:   # (15:11 "splatter them into the
 			d.pinned = int(e["pin"])   # ground for a frame or two before they bounce back up")
 			d.vel = Vector2.ZERO
