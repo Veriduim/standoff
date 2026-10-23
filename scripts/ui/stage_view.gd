@@ -23,6 +23,7 @@ const PAD := 170.0          ## world px kept round everyone
 ## it never comes in closer, however near they stand (YOMI's camera doesn't zoom in at all). It still pulls back further
 ## to fit everyone.
 const VIEW_MIN := 2120.0
+var view_min := VIEW_MIN      ## (dev: the move replays come in closer - scripts/dev/replay.gd)
 const ZOOM_MIN := 0.4         ## (a wider stage since 05:27 - six spread across it still fit)
 const ZOOM_MAX := 1.8        ## (22:40 "really small": in close, the camera comes right in)
 const TIPS := ["hand_f", "hand_b", "foot_f", "foot_b"]
@@ -402,6 +403,8 @@ func _striking(i: int, mv: String, f: int) -> String:
 		if f < int(e["from"]) - 5 or f > int(e["to"]) + 3:   # (a longer sweep either side of the hit)
 			continue
 		var key := "%s:%s:%d" % [ch, mv, k]
+		if not _tip_of.has(key) and e.has("tip"):   # (a hit names its own - Clinch Fury's knees, then its elbow)
+			_tip_of[key] = str(e["tip"])
 		if not _tip_of.has(key) and Moves.move(ch, mv).has("tip"):   # (23 Oct: the move names it - the audit found
 			_tip_of[key] = str(Moves.move(ch, mv)["tip"])                # kicks and knees traced as a hand)
 		if not _tip_of.has(key):
@@ -456,7 +459,7 @@ func _follow(delta: float) -> void:
 		lo = minf(lo, float(r[0]))
 		hi = maxf(hi, float(r[0]))
 		top = minf(top, float(r[1]))
-	var span := maxf(hi - lo + PAD * 2.0, VIEW_MIN)
+	var span := maxf(hi - lo + PAD * 2.0, view_min)
 	var tall := absf(top) + 260.0
 	var want_zoom := clampf(minf((view_right - view_left) / span, (view_bottom - view_top) / tall), ZOOM_MIN, ZOOM_MAX)
 	var want := Vector2((lo + hi) / 2.0, top * 0.5 - 70.0)

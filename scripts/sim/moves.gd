@@ -500,7 +500,7 @@ const BRUISER := {
 			"note": "leaps in - breaks a guard",
 			"hits": [{"from": 8, "to": 12, "box": [8, -92, 48, 54], "dmg": 40, "stun": 22, "kb": [6.0, -6.0],
 				"block": 12, "chip": 4, "group": 0, "guardbreak": true}],
-			"pose": [[0, "crouch"], [3, "knee"], [8, "b_flyknee"], [16, "fall"]], "icon": "b_flyknee"},
+			"pose": [[0, "crouch"], [3, "b_fknee_load"], [8, "b_fknee"], [16, "fall"]], "icon": "b_fknee"},
 		"superman": {"name": "Superman Punch", "tab": "special", "drawn": true, "kind": "attack", "frames": 30, "where": "ground",
 			"aim": "facing", "motion": [[2, 9, 11.0, -5.0], [10, 14, 9.0, 0.0]], "dist": [30, 30, 0.35],
 			"land_ends": true, "landing": 6, "note": "a leaping cross - an overhead",
@@ -527,7 +527,7 @@ const BRUISER := {
 			"meter_gain": 125, "pose": [[0, "b_tap"], [4, "b_idle"], [7, "b_tap"], [11, "b_beckon"], [15, "b_curl"],
 				[19, "b_beckon"], [23, "b_curl"], [28, "b_flex"], [37, "b_pound"], [44, "b_taunt"]], "icon": "b_taunt"},   # (23 Oct: a routine)
 		# ---- supers: armour through it all, a flurry, the clinch at its worst
-		"bullrush": {"name": "Bull Rush", "tab": "super", "drawn": true, "kind": "super", "frames": 40, "where": "ground", "aim": "facing",
+		"bullrush": {"tip": "", "name": "Bull Rush", "tab": "super", "drawn": true, "kind": "super", "frames": 40, "where": "ground", "aim": "facing",
 			"cost": 125, "armor": [0, 30], "armor_hits": 3, "motion": [[4, 26, 12.0, 0.0]], "cue": {"at": 4, "type": "rush"},
 			"note": "Super Armor for three hits - through shots and all",
 			"hits": [{"from": 8, "to": 26, "box": [10, -106, 52, 98], "dmg": 40, "stun": 40, "kb": [16.0, -4.0],
@@ -553,10 +553,10 @@ const BRUISER := {
 			"note": "a clinch that won't let go: three knees and an elbow",
 			"hits": [
 				{"from": 4, "to": 6, "box": [6, -100, 40, 72], "dmg": 20, "stun": 80, "kb": [0.0, 0.0], "group": 0, "hold": true},
-				{"from": 16, "to": 17, "box": [0, -86, 50, 46], "dmg": 26, "stun": 70, "kb": [0.0, -1.0], "group": 1, "hold": true, "strike": true, "min_dmg": 18},
-				{"from": 26, "to": 27, "box": [0, -86, 50, 46], "dmg": 26, "stun": 70, "kb": [0.0, -1.0], "group": 2, "hold": true, "strike": true, "min_dmg": 18},
-				{"from": 36, "to": 37, "box": [0, -86, 50, 46], "dmg": 30, "stun": 70, "kb": [0.0, -1.0], "group": 3, "hold": true, "strike": true, "min_dmg": 20},
-				{"from": 48, "to": 49, "box": [2, -106, 54, 48], "dmg": 50, "stun": 50, "kb": [9.0, -7.0], "group": 4, "strike": true, "min_dmg": 32, "knockdown": true},
+				{"from": 16, "to": 17, "box": [0, -86, 50, 46], "dmg": 26, "stun": 70, "kb": [0.0, -1.0], "group": 1, "hold": true, "strike": true, "min_dmg": 18, "tip": "knee_f"},
+				{"from": 26, "to": 27, "box": [0, -86, 50, 46], "dmg": 26, "stun": 70, "kb": [0.0, -1.0], "group": 2, "hold": true, "strike": true, "min_dmg": 18, "tip": "knee_f"},
+				{"from": 36, "to": 37, "box": [0, -86, 50, 46], "dmg": 30, "stun": 70, "kb": [0.0, -1.0], "group": 3, "hold": true, "strike": true, "min_dmg": 20, "tip": "knee_f"},
+				{"from": 48, "to": 49, "box": [2, -106, 54, 48], "dmg": 50, "stun": 50, "kb": [9.0, -7.0], "group": 4, "strike": true, "min_dmg": 32, "knockdown": true, "tip": "elbow_f"},
 			],
 			"pose": [[0, "grab_reach"], [6, "b_clinch"], [13, "b_clinch"], [16, "b_clinch_knee"], [21, "b_clinch"],
 				[26, "b_clinch_knee"], [31, "b_clinch"], [36, "b_clinch_knee"], [42, "b_elbow_wind"], [48, "b_elbow"],

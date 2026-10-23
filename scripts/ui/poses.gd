@@ -179,7 +179,6 @@ const P := {
 	"b_round_wind": {"head": [-6, -88], "neck": [-4, -77], "hip": [0, -47], "elbow_f": [8, -64], "hand_f": [14, -80], "elbow_b": [-18, -66], "hand_b": [-28, -58], "knee_f": [16, -60], "foot_f": [-2, -48], "knee_b": [-4, -24], "foot_b": [-6, 0]},
 	"b_round": {"head": [-22, -84], "neck": [-16, -74], "hip": [0, -50], "elbow_f": [-2, -66], "hand_f": [6, -80], "elbow_b": [-32, -70], "hand_b": [-46, -64], "knee_f": [22, -66], "foot_f": [46, -78], "knee_b": [-4, -26], "foot_b": [-8, 0]},
 	"b_clinch": {"head": [10, -86], "neck": [7, -75], "hip": [-2, -44], "elbow_f": [24, -70], "hand_f": [36, -82], "elbow_b": [20, -66], "hand_b": [32, -78], "knee_f": [14, -23], "foot_f": [22, 0], "knee_b": [-12, -22], "foot_b": [-20, 0]},
-	"b_clinch_knee": {"head": [8, -84], "neck": [5, -73], "hip": [-4, -46], "elbow_f": [22, -66], "hand_f": [34, -72], "elbow_b": [18, -62], "hand_b": [30, -68], "knee_f": [20, -66], "foot_f": [8, -46], "knee_b": [-10, -24], "foot_b": [-16, 0]},
 	"b_elbow_drop": {"head": [10, -80], "neck": [6, -70], "hip": [-4, -44], "elbow_f": [20, -50], "hand_f": [10, -64], "elbow_b": [-4, -58], "hand_b": [6, -70], "knee_f": [10, -30], "foot_f": [0, -12], "knee_b": [-14, -28], "foot_b": [-20, -10]},
 	"b_flyknee": {"head": [10, -96], "neck": [6, -84], "hip": [-4, -52], "elbow_f": [20, -90], "hand_f": [30, -104], "elbow_b": [10, -90], "hand_b": [20, -104], "knee_f": [24, -70], "foot_f": [6, -56], "knee_b": [-10, -32], "foot_b": [-24, -18]},
 	"b_hop": {"head": [6, -94], "neck": [4, -82], "hip": [0, -50], "elbow_f": [16, -70], "hand_f": [22, -86], "elbow_b": [-10, -66], "hand_b": [-4, -80], "knee_f": [14, -30], "foot_f": [10, -8], "knee_b": [-14, -40], "foot_b": [-36, -36]},
@@ -206,6 +205,9 @@ const P := {
 	"b_rush_stop": {"head": [-6, -93], "neck": [-6, -81], "hip": [0, -49], "elbow_f": [6, -67], "hand_f": [9, -83], "elbow_b": [0, -64], "hand_b": [3, -80], "knee_f": [23, -36], "foot_f": [33, -14], "knee_b": [-7, -24], "foot_b": [-11, 0], "bend": [-1, -2, -1]},
 	"b_fl_a": {"head": [10, -89], "neck": [7, -77], "hip": [0, -45], "elbow_f": [22, -86], "hand_f": [36, -77], "elbow_b": [16, -62], "hand_b": [17, -78], "knee_f": [17, -25], "foot_f": [19, -1], "knee_b": [-15, -24], "foot_b": [-19, 0], "bend": [1, 2, 1]},
 	"b_fl_b": {"head": [21, -84], "neck": [17, -72], "hip": [0, -44], "elbow_f": [23, -55], "hand_f": [23, -71], "elbow_b": [32, -81], "hand_b": [46, -73], "knee_f": [20, -27], "foot_f": [18, -3], "knee_b": [-17, -24], "foot_b": [-19, 0], "bend": [4, 7, 4]},
+	"b_fknee_load": {"head": [-1, -95], "neck": [-1, -83], "hip": [0, -50], "elbow_f": [8, -67], "hand_f": [11, -83], "elbow_b": [5, -66], "hand_b": [5, -82], "knee_f": [23, -37], "foot_f": [11, -16], "knee_b": [-5, -24], "foot_b": [-13, -2], "bend": [1, 2, 1]},
+	"b_fknee": {"head": [-6, -94], "neck": [-6, -82], "hip": [0, -50], "elbow_f": [12, -79], "hand_f": [20, -66], "elbow_b": [11, -76], "hand_b": [17, -61], "knee_f": [24, -59], "foot_f": [20, -35], "knee_b": [-13, -27], "foot_b": [-34, -15], "bend": [-1, -2, -1]},
+	"b_clinch_knee": {"head": [-1, -95], "neck": [-3, -83], "hip": [0, -50], "elbow_f": [15, -81], "hand_f": [25, -69], "elbow_b": [15, -78], "hand_b": [23, -64], "knee_f": [25, -57], "foot_f": [17, -34], "knee_b": [-2, -24], "foot_b": [-4, 0], "bend": [-1, -2, -1]},
 	"b_over_load": {"head": [-5, -91], "neck": [-5, -79], "hip": [0, -46], "elbow_f": [4, -63], "hand_f": [7, -79], "elbow_b": [-20, -88], "hand_b": [-5, -94], "knee_f": [15, -25], "foot_f": [19, -1], "knee_b": [-11, -23], "foot_b": [-18, 0], "bend": [-2, -3, -2]},
 	"b_overhand": {"head": [27, -77], "neck": [18, -69], "hip": [0, -42], "elbow_f": [15, -52], "hand_f": [13, -67], "elbow_b": [36, -73], "hand_b": [40, -57], "knee_f": [18, -24], "foot_f": [23, 0], "knee_b": [-17, -22], "foot_b": [-27, 0], "bend": [4, 7, 4]},
 	# hit reactions by how it landed (06:22 "Lets try 1 and 2"): they face whoever hit them (+x toward them). Doubled
@@ -647,10 +649,133 @@ static func for_record(character: String, r: Array, back := false) -> Dictionary
 	if state == 4 or state == 5 or (str(r[3]) in ["", "wait"] and state == 0):   # (lying down and standing: as drawn)
 		return pose
 	if state in [0, 3] and str(r[3]) != "" and bool(Moves.move(character, str(r[3])).get("drawn", false)):
-		return pose   # (her dance moves are posed at full stretch already - 20 Oct)
+		return _hell(character, str(r[3]), int(r[4]), pose)   # (her dance moves are posed at full stretch already -
+		# 20 Oct; a special or super still goes past it - _hell)
 	if state in [0, 3] and str(r[3]) != "" and _turns(character, str(r[3]), back):
 		return pose   # (a roll or flip's turned ball: stretched, its limbs flew out - 23 Oct)
+	if state in [0, 3]:
+		return _hell(character, str(r[3]), int(r[4]), exaggerate(pose))
 	return exaggerate(pose)
+
+
+## 23 Oct 14:49 Timmy: "Their moves arent exaggerated enough! In normal attacks thats fine but special and supers
+## should be exaggerated to hell!" - a special's or super's pose pushed on past its drawing: the body leaning further
+## off upright, the legs further off straight down (a wider, lower stance), the spine bending more, and the striking
+## limb stretched while its hit is out (a cartoon stretch - the hit box doesn't change). `hell`: how far (0 = as drawn).
+static var hell := 2.0
+const HELL_TORSO := 0.5      ## the lean off upright: this much more for each 1 of hell
+const HELL_LEGS := 0.45      ## the legs off straight down
+const HELL_TURN := 0.22      ## ...but either turned at most this many radians more for each 1 of hell
+const HELL_BEND := 0.5       ## the spine's bend (each point at most HELL_BEND_MAX)
+const HELL_BEND_MAX := 16.0
+const HELL_STRETCH := 0.15   ## the striking limb's length
+const HELL_LEAN_MAX := 1.05  ## radians off upright the body goes at most (legs: HELL_SPLIT_MAX off straight down) -
+const HELL_SPLIT_MAX := 1.25 ## (14:55: past these he lay flat on the floor)
+const HELL_SETTLE := 6       ## frames it takes to ease off after the last hit
+static var _hell_tips := {}
+
+
+static func _hell(character: String, mv: String, f: int, pose: Dictionary) -> Dictionary:
+	if hell <= 0.0 or mv == "" or not Moves.ROSTER.has(character):
+		return pose
+	var m := Moves.move(character, mv)
+	if not (str(m.get("tab", "")) in ["special", "super"] or str(m.get("kind", "")) == "super") 			or str(m.get("kind", "")) == "move":   # (her Forms are stances, not strikes)
+		return pose
+	if _turns(character, mv, false):   # (a turned ball: as it is)
+		return pose
+	var h := hell   # (15:10: after the last hit it eases back to the drawing over HELL_SETTLE frames - the follow-through
+	var hits: Array = m.get("hits", [])   # and the finish (the Grand Finale's bow) as drawn, not dragged to the floor)
+	if not hits.is_empty():
+		var settle := int(hits[hits.size() - 1]["to"]) + HOLD_ON + 4
+		h *= clampf(1.0 - float(f - settle) / float(HELL_SETTLE), 0.0, 1.0)
+	if h <= 0.0:
+		return pose
+	var tip := _hell_tip(character, mv, m, f)
+	var out := {"hip": pose["hip"]}
+	var lean := 0.0
+	var splay := {}
+	for b: Array in TREE:
+		var v: Vector2 = (pose[b[1]] as Vector2) - (pose[b[0]] as Vector2)
+		var a := v.angle()
+		var n := v.length()
+		match str(b[1]):
+			"neck":   # (the body: further off upright; the head and arms ride along on it, the arms keep their aim)
+				var a2 := -PI / 2.0 + _more(wrapf(a + PI / 2.0, -PI, PI), 1.0 + HELL_TORSO * h, HELL_LEAN_MAX,
+						HELL_TURN * h)
+				lean = a2 - a
+				a = a2
+			"head":
+				a += lean
+			"knee_f", "knee_b":   # (the legs: further off straight down - the shins keep the knee's bend)
+				var a3 := PI / 2.0 + _more(wrapf(a - PI / 2.0, -PI, PI), 1.0 + HELL_LEGS * h, HELL_SPLIT_MAX,
+						HELL_TURN * h)
+				splay[b[1]] = a3 - a
+				a = a3
+			"foot_f", "foot_b":
+				a += float(splay.get("knee" + str(b[1]).trim_prefix("foot"), 0.0))
+		if tip != "" and _on_limb(tip, str(b[1])):
+			n *= 1.0 + HELL_STRETCH * h
+		out[b[1]] = (out[b[0]] as Vector2) + Vector2.from_angle(a) * n
+	if pose.has("bend"):
+		var bd := bend_of(pose) * (1.0 + HELL_BEND * h)
+		out["bend"] = bd.clamp(-Vector3.ONE * HELL_BEND_MAX, Vector3.ONE * HELL_BEND_MAX)
+	_shoulders(out, pose, pose, 1.0)
+	var grounded := -INF   # (a foot that was on the floor is on it still)
+	for j: String in ["foot_f", "foot_b"]:
+		if (pose[j] as Vector2).y >= -2.0:
+			grounded = maxf(grounded, (out[j] as Vector2).y)
+	if grounded > -INF:
+		for j: String in out:
+			if out[j] is Vector2:
+				out[j] = (out[j] as Vector2) + Vector2(0.0, -grounded)
+	return out
+
+
+## An angle off its rest pushed by `mult`, up to `limit` and at most `extra` more (one already past the limit stays).
+static func _more(dev: float, mult: float, limit: float, extra: float) -> float:
+	if absf(dev) >= limit:
+		return dev
+	return dev + clampf(clampf(dev * mult, -limit, limit) - dev, -extra, extra)
+
+
+## The bone ending at `joint` is part of the striking limb `tip`.
+static func _on_limb(tip: String, joint: String) -> bool:
+	if joint == tip:
+		return true
+	if tip.begins_with("hand"):
+		return joint == "elbow" + tip.trim_prefix("hand")
+	if tip.begins_with("foot"):
+		return joint == "knee" + tip.trim_prefix("foot")
+	return false
+
+
+## The limb a special strikes with while its hits are out (the move's "tip", else the hand or foot thrown furthest
+## forward and up on its first hit's frame); "" outside them.
+static func _hell_tip(character: String, mv: String, m: Dictionary, f: int) -> String:
+	var hits: Array = m.get("hits", [])
+	if hits.is_empty() or f < int(hits[0]["from"]) - 1 or f > int(hits[hits.size() - 1]["to"]) + HOLD_ON:
+		return ""
+	var k := 0   # (the hit that's out or last out - Barrage's hooks swap hands)
+	for i in hits.size():
+		if f >= int(hits[i]["from"]) - 1:
+			k = i
+	if (hits[k] as Dictionary).has("tip"):   # (a hit may name its own - Clinch Fury's knees, then its elbow)
+		return str(hits[k]["tip"])
+	if m.has("tip"):   # ("" - nothing to stretch: Bull Rush leads with his shoulder)
+		return str(m["tip"])
+	var key := "%s:%s:%d" % [character, mv, k]
+	if not _hell_tips.has(key):
+		var hp := _for_record(character, [0.0, 0.0, 1, mv, int(hits[k]["from"]), 0, 0, 0])
+		var best := "hand_f"
+		var top := -INF
+		for t: String in ["hand_f", "hand_b", "foot_f", "foot_b"]:
+			var d: Vector2 = (hp[t] as Vector2) - (hp["neck" if t.begins_with("hand") else "hip"] as Vector2)
+			var sc := (d.x - 0.5 * d.y) / (34.0 if t.begins_with("hand") else 50.0)
+			if sc > top:
+				top = sc
+				best = t
+		_hell_tips[key] = best
+	return str(_hell_tips[key])
 
 
 ## The move's keys (back ones when moving back) have turned drawings - "tuck@90".
