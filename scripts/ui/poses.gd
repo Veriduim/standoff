@@ -196,27 +196,29 @@ const P := {
 	# the head; flung - thrown back, arms and feet trailing; sent up - arched, everything flung out
 	"hurt_body": {"head": [24, -74], "neck": [14, -72], "hip": [-6, -44], "elbow_f": [16, -54], "hand_f": [4, -56],
 		"elbow_b": [12, -54], "hand_b": [0, -52], "knee_f": [6, -22], "foot_f": [12, 0], "knee_b": [-16, -22],
-		"foot_b": [-22, 0]},
+		"foot_b": [-22, 0], "bend": [6, 11, 7]},
 	"hurt_low": {"head": [20, -82], "neck": [14, -71], "hip": [0, -40], "elbow_f": [28, -80], "hand_f": [40, -86],
 		"elbow_b": [0, -82], "hand_b": [-12, -90], "knee_f": [-4, -18], "foot_f": [-22, -8], "knee_b": [12, -20],
-		"foot_b": [16, 0]},
+		"foot_b": [16, 0], "bend": [3, 5, 3]},
 	"hurt_crush": {"head": [12, -77], "neck": [6, -67], "hip": [0, -34], "elbow_f": [18, -74], "hand_f": [12, -86],
 		"elbow_b": [-6, -74], "hand_b": [2, -86], "knee_f": [16, -20], "foot_f": [24, 0], "knee_b": [-16, -20],
-		"foot_b": [-24, 0]},
+		"foot_b": [-24, 0], "bend": [7, 12, 8]},
 	"hurt_slide": {"head": [-27, -78], "neck": [-19, -69], "hip": [-2, -40], "elbow_f": [-3, -75], "hand_f": [11, -80],
 		"elbow_b": [-7, -81], "hand_b": [5, -90], "knee_f": [14, -24], "foot_f": [30, -12], "knee_b": [8, -18],
-		"foot_b": [24, -4]},
+		"foot_b": [24, -4], "bend": [-3, -6, -4]},
 	"hurt_air": {"head": [-20, -90], "neck": [-10, -82], "hip": [0, -50], "elbow_f": [6, -94], "hand_f": [18, -104],
 		"elbow_b": [-24, -92], "hand_b": [-36, -100], "knee_f": [14, -34], "foot_f": [10, -12], "knee_b": [-10, -30],
-		"foot_b": [-22, -14]},
-	"hurt": {"head": [-24, -82], "neck": [-14, -74], "hip": [-2, -44], "elbow_f": [-2, -90], "hand_f": [6, -104], "elbow_b": [-30, -84], "hand_b": [-40, -96], "knee_f": [10, -22], "foot_f": [16, 0], "knee_b": [-12, -22], "foot_b": [-24, -4]},
+		"foot_b": [-22, -14], "bend": [-6, -11, -7]},
+	# (23 Oct 14:02 "I like the sp[i]ne hits": getting hit bends through the spine - a head hit arches back, a body
+	# hit hunches round it, a crush folds into a C, a launch arches)
+	"hurt": {"head": [-24, -82], "neck": [-14, -74], "hip": [-2, -44], "elbow_f": [-2, -90], "hand_f": [6, -104], "elbow_b": [-30, -84], "hand_b": [-40, -96], "knee_f": [10, -22], "foot_f": [16, 0], "knee_b": [-12, -22], "foot_b": [-24, -4], "bend": [-4, -8, -5]},
 	# (23 Oct, Timmy: "Lets fill the gaps in our two" - YOMI's fighters have these, ours didn't. Built by Standoff
 	# Workshop/tools/gap_poses.py.) tuck: a ball, knees to the chest - turned a quarter at a time ("tuck@90") it's every
 	# roll and flip; grabbed: held in a throw or the clinch, doubled over, the head pulled down, grabbing at the arm; splat: upright
 	# against the wall behind, one arm up it, one down it, the head knocked back, a knee buckling.
 	"tuck": {"head": [19, -92], "neck": [12, -82], "hip": [0, -50], "elbow_f": [31, -78], "hand_f": [46, -84], "elbow_b": [31, -85], "hand_b": [44, -96], "knee_f": [25, -57], "foot_f": [48, -44], "knee_b": [26, -50], "foot_b": [44, -32], "bend": [4, 7, 4]},
-	"grabbed": {"head": [38, -68], "neck": [27, -71], "hip": [0, -50], "elbow_f": [46, -64], "hand_f": [61, -70], "elbow_b": [41, -57], "hand_b": [57, -56], "knee_f": [8, -26], "foot_f": [4, 0], "knee_b": [-16, -30], "foot_b": [-26, -6]},
-	"splat": {"head": [-10, -94], "neck": [-4, -84], "hip": [0, -50], "elbow_f": [-16, -100], "hand_f": [-30, -108], "elbow_b": [-18, -70], "hand_b": [-34, -65], "knee_f": [12, -27], "foot_f": [0, -4], "knee_b": [-3, -24], "foot_b": [-6, 2]},
+	"grabbed": {"head": [38, -68], "neck": [27, -71], "hip": [0, -50], "elbow_f": [46, -64], "hand_f": [61, -70], "elbow_b": [41, -57], "hand_b": [57, -56], "knee_f": [8, -26], "foot_f": [4, 0], "knee_b": [-16, -30], "foot_b": [-26, -6], "bend": [6, 10, 6]},
+	"splat": {"head": [-10, -94], "neck": [-4, -84], "hip": [0, -50], "elbow_f": [-16, -100], "hand_f": [-30, -108], "elbow_b": [-18, -70], "hand_b": [-34, -65], "knee_f": [12, -27], "foot_f": [0, -4], "knee_b": [-3, -24], "foot_b": [-6, 2], "bend": [-4, -8, -5]},
 	# (13:05 "I should see that back bend": YOMI turns one ball for every tumble - ours open into the move first) arch: a
 	# back flip's take-off, the back bent, head thrown back, arms reaching back over; sitback: a backward roll's start.
 	"arch": {"head": [-29, -83], "neck": [-18, -79], "hip": [0, -50], "elbow_f": [-35, -89], "hand_f": [-51, -90], "elbow_b": [-33, -92], "hand_b": [-49, -96], "knee_f": [-8, -25], "foot_f": [-24, -5], "knee_b": [-4, -24], "foot_b": [-17, -2], "bend": [-5, -10, -6]},
@@ -240,6 +242,21 @@ const P := {
 	"fastfall": {"head": [0, -96], "neck": [0, -84], "hip": [0, -50], "elbow_f": [1, -104], "hand_f": [1, -120], "elbow_b": [-1, -104], "hand_b": [-3, -120], "knee_f": [0, -24], "foot_f": [0, 2], "knee_b": [-1, -24], "foot_b": [-3, 2]},
 	"backstep_hop": {"head": [-8, -97], "neck": [-7, -85], "hip": [0, -51], "elbow_f": [13, -88], "hand_f": [27, -95], "elbow_b": [11, -75], "hand_b": [27, -76], "knee_f": [25, -43], "foot_f": [33, -19], "knee_b": [-3, -26], "foot_b": [-7, 0]},
 	"b_dash_off": {"head": [17, -81], "neck": [14, -69], "hip": [0, -39], "elbow_f": [30, -60], "hand_f": [36, -75], "elbow_b": [23, -53], "hand_b": [26, -69], "knee_f": [21, -24], "foot_f": [19, 0], "knee_b": [-23, -27], "foot_b": [-46, -19]},
+	# (23 Oct 14:02, step 4: her moves that borrowed get their own drawings - Standoff Workshop/tools/her_poses.py)
+	"fsl_wind": {"head": [-5, -96], "neck": [-5, -84], "hip": [0, -50], "elbow_f": [-24, -77], "hand_f": [-29, -62], "elbow_b": [5, -66], "hand_b": [20, -61], "knee_f": [12, -27], "foot_f": [9, -1], "knee_b": [-10, -26], "foot_b": [-11, 0], "bend": [-2, -3, -2]},
+	"fsl_cut": {"head": [16, -85], "neck": [13, -73], "hip": [0, -42], "elbow_f": [33, -76], "hand_f": [49, -77], "elbow_b": [-7, -76], "hand_b": [-23, -76], "knee_f": [20, -26], "foot_f": [18, 0], "knee_b": [-23, -30], "foot_b": [-48, -23], "bend": [3, 5, 3]},
+	"recall_reach": {"head": [-8, -97], "neck": [-4, -86], "hip": [0, -52], "elbow_f": [15, -94], "hand_f": [30, -99], "elbow_b": [-22, -93], "hand_b": [-37, -98], "knee_f": [3, -26], "foot_f": [1, 0], "knee_b": [-5, -26], "foot_b": [-3, 0], "bend": [-3, -6, -4]},
+	"recall_catch": {"head": [5, -95], "neck": [2, -83], "hip": [0, -49], "elbow_f": [13, -66], "hand_f": [-1, -74], "elbow_b": [7, -63], "hand_b": [-2, -77], "knee_f": [11, -25], "foot_f": [4, 0], "knee_b": [-11, -26], "foot_b": [-8, 0], "bend": [3, 5, 3]},
+	"fst_a": {"head": [1, -98], "neck": [1, -86], "hip": [0, -52], "elbow_f": [21, -88], "hand_f": [37, -87], "elbow_b": [-19, -87], "hand_b": [-35, -86], "knee_f": [25, -44], "foot_f": [48, -33], "knee_b": [-1, -26], "foot_b": [-1, 0], "bend": [-1, -2, -1]},
+	"fst_b": {"head": [-3, -98], "neck": [-1, -86], "hip": [0, -52], "elbow_f": [2, -106], "hand_f": [-3, -121], "elbow_b": [-5, -106], "hand_b": [1, -121], "knee_f": [20, -35], "foot_f": [-3, -23], "knee_b": [0, -26], "foot_b": [-1, 0], "bend": [0, -1, 0]},
+	"gale_rise": {"head": [-22, -91], "neck": [-13, -83], "hip": [0, -52], "elbow_f": [-22, -101], "hand_f": [-34, -111], "elbow_b": [-25, -99], "hand_b": [-39, -106], "knee_f": [4, -26], "foot_f": [1, 0], "knee_b": [-4, -26], "foot_b": [-1, 0], "bend": [-6, -11, -7]},
+	"mirror_hold": {"head": [-5, -95], "neck": [-5, -83], "hip": [0, -50], "elbow_f": [15, -80], "hand_f": [16, -96], "elbow_b": [-18, -69], "hand_b": [-24, -54], "knee_f": [11, -26], "foot_f": [10, 0], "knee_b": [-12, -27], "foot_b": [-15, -1], "bend": [-2, -4, -2]},
+	"mstrike_cut": {"head": [6, -96], "neck": [6, -84], "hip": [0, -50], "elbow_f": [18, -100], "hand_f": [27, -113], "elbow_b": [-11, -74], "hand_b": [-27, -71], "knee_f": [9, -26], "foot_f": [10, 0], "knee_b": [-16, -30], "foot_b": [-36, -13], "bend": [2, 4, 2]},
+	"stomp_up": {"head": [-3, -98], "neck": [-4, -86], "hip": [0, -52], "elbow_f": [12, -99], "hand_f": [12, -115], "elbow_b": [-21, -96], "hand_b": [-26, -111], "knee_f": [14, -74], "foot_f": [13, -48], "knee_b": [0, -26], "foot_b": [-1, 0], "bend": [2, 3, 2]},
+	"stomp_down": {"head": [16, -92], "neck": [9, -82], "hip": [0, -49], "elbow_f": [-3, -66], "hand_f": [-17, -58], "elbow_b": [-9, -75], "hand_b": [-25, -72], "knee_f": [16, -28], "foot_f": [23, -3], "knee_b": [-11, -26], "foot_b": [-16, 0], "bend": [4, 7, 4]},
+	"air_grab": {"head": [4, -96], "neck": [4, -84], "hip": [0, -50], "elbow_f": [23, -87], "hand_f": [39, -88], "elbow_b": [23, -80], "hand_b": [39, -79], "knee_f": [-20, -33], "foot_f": [-7, -11], "knee_b": [-23, -37], "foot_b": [-18, -11], "bend": [-2, -4, -2]},
+	"air_throw": {"head": [27, -86], "neck": [18, -79], "hip": [0, -50], "elbow_f": [28, -62], "hand_f": [31, -46], "elbow_b": [25, -60], "hand_b": [23, -44], "knee_f": [-9, -26], "foot_f": [-33, -17], "knee_b": [-15, -29], "foot_b": [-41, -24], "bend": [5, 9, 5]},
+	"pushblock": {"head": [10, -91], "neck": [7, -79], "hip": [0, -46], "elbow_f": [27, -81], "hand_f": [43, -81], "elbow_b": [27, -78], "hand_b": [43, -77], "knee_f": [17, -26], "foot_f": [17, 0], "knee_b": [-17, -26], "foot_b": [-37, -9], "bend": [2, 3, 2]},
 	"down": {"head": [-44, -8], "neck": [-32, -8], "hip": [0, -8], "elbow_f": [-20, -18], "hand_f": [-8, -24],
 		"elbow_b": [-28, -2], "hand_b": [-16, 0], "knee_f": [18, -14], "foot_f": [36, -6], "knee_b": [18, -4],
 		"foot_b": [38, 0]},
@@ -595,7 +612,8 @@ static func exaggerate(pose: Dictionary) -> Dictionary:
 	if grounded > -INF:
 		var dy := 0.0 - grounded
 		for j: String in out:
-			out[j] = (out[j] as Vector2) + Vector2(0.0, dy)
+			if out[j] is Vector2:   # (not the spine's bend - 23 Oct, a Vector3 cast here broke every bent pose on the floor)
+				out[j] = (out[j] as Vector2) + Vector2(0.0, dy)
 	return out
 
 

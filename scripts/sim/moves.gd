@@ -68,7 +68,7 @@ const COMMON := {
 	"block": {"name": "Block", "tab": "defend", "kind": "guard", "interrupt": true, "frames": 20, "where": "both",
 		"aim": "height", "parry_frame": true, "pose": [[0, "guard"]], "icon": "guard"},
 	"pushblock": {"name": "Push Block", "tab": "defend", "kind": "guard", "push": true, "frames": 22, "where": "both",
-		"aim": "none", "pose": [[0, "parry"]], "icon": "parry"},
+		"aim": "none", "pose": [[0, "pushblock"]], "icon": "parry"},
 	"wait": {"name": "Wait", "tab": "move", "kind": "wait", "interrupt": true, "frames": 10, "where": "both", "aim": "none",
 		"pose": [[0, "idle"]]},
 	# ---- only while reeling with a full Burst gauge (Timmy 18:37: "Burst is the move we do to get out of stun lock")
@@ -214,19 +214,19 @@ const DANCER := {
 			"window": [3, 24], "counter_move": "mirrorstrike", "reflect": true,
 			"note": "catches a strike and kicks back; turns shots round",
 			"counter_hit": {"dmg": 42, "stun": 30, "kb": [6.0, -11.0], "group": 0},
-			"pose": [[0, "mirror"]], "icon": "mirror"},
+			"pose": [[0, "mirror_hold"]], "icon": "mirror"},
 		"mirrorstrike": {"name": "Mirror Strike", "tab": "special", "kind": "attack", "hidden": true, "frames": 20,
-			"where": "both", "aim": "none", "invuln": [0, 12], "pose": [[0, "side_kick"], [12, "idle"]]},
+			"where": "both", "aim": "none", "invuln": [0, 12], "pose": [[0, "mstrike_cut"], [12, "idle"]]},
 		"stomp": {"tip": "foot_f", "name": "Stomp", "tab": "attack", "kind": "attack", "frames": 22, "where": "ground", "aim": "facing", "motion": [[2, 8, 5.0, 0.0]],
 			"hits": [{"from": 8, "to": 10, "box": [8, -26, 54, 28], "dmg": 26, "stun": 18, "kb": [2.0, -7.0], "block": 8,
 				"chip": 2, "group": 0, "height": "low", "otg": true}],
-			"pose": [[0, "kick_wind"], [8, "axe_down"], [15, "idle"]], "icon": "axe_down"},
+			"pose": [[0, "stomp_up"], [8, "stomp_down"], [15, "idle"]], "icon": "axe_down"},
 		"airthrow": {"name": "Air Throw", "tab": "attack", "kind": "grab", "air_grab": true, "frames": 16, "where": "air",
 			"land_ends": true, "landing": 6,
 			"aim": "facing",
 			"hits": [{"from": 3, "to": 5, "box": [4, -100, 50, 80], "dmg": 50, "stun": 26, "kb": [-6.0, 9.0],
 				"group": 0, "knockdown": true}],
-			"pose": [[0, "grab_reach"], [5, "throw"], [11, "fall"]], "icon": "grab_reach"},
+			"pose": [[0, "air_grab"], [5, "air_throw"], [11, "fall"]], "icon": "grab_reach"},
 		# ---- grabs
 		# (20 Oct 15:34 "I think our grab is 5 frames instead of the standard 3": YOMI's own Throw, from its source, is out
 		# frames 3-5 of 16 - so is ours now; it was 5-6 of 22)
@@ -248,15 +248,15 @@ const DANCER := {
 				{"from": 20, "to": 21, "box": [-16, -96, 92, 56], "dmg": 14, "stun": 14, "kb": [1.5, 0.0], "block": 8, "chip": 1, "group": 2},
 				{"from": 26, "to": 27, "box": [-16, -96, 92, 56], "dmg": 14, "stun": 14, "kb": [1.5, 0.0], "block": 8, "chip": 1, "group": 3},
 				{"from": 32, "to": 33, "box": [-16, -96, 92, 56], "dmg": 28, "stun": 26, "kb": [7.0, -8.0], "block": 9, "chip": 2, "group": 4, "knockdown": true}],
-			"pose": [[0, "fou_chamber"], [8, "fou_kick"], [11, "fou_chamber"], [14, "fou_kick"], [17, "fou_chamber"],
-				[20, "fou_kick"], [23, "fou_chamber"], [26, "fou_kick"], [29, "fou_chamber"], [32, "fou_kick"], [40, "idle"]],
+			"pose": [[0, "fst_b"], [8, "fst_a"], [11, "fst_b"], [14, "fst_a"], [17, "fst_b"],
+				[20, "fst_a"], [23, "fst_b"], [26, "fst_a"], [29, "fst_b"], [32, "fou_kick"], [40, "idle"]],
 			"icon": "fou_kick"},
 		"gale": {"name": "Gale", "tab": "super", "kind": "super", "frames": 30, "where": "both", "aim": "none", "cost": 125,
 			"invuln": [0, 9],
 			"hits": [{"from": 6, "to": 9, "box": [-110, -150, 220, 160], "dmg": 30, "stun": 24, "kb": [10.0, -6.0],
 				"block": 10, "chip": 4, "group": 0, "away": true}],
 			"cue": [{"at": 6, "type": "gust"}, {"at": 6, "type": "sweep_up"}, {"at": 6, "type": "galering"}],
-			"pose": [[0, "gather"], [5, "fan_spread"], [17, "fan_spread"], [24, "idle"]], "icon": "fan_spread"},
+			"pose": [[0, "gather"], [5, "gale_rise"], [17, "gale_rise"], [24, "idle"]], "icon": "fan_spread"},
 		# (the Grand Finale - 3 bars: a Pirouette in, three Fouettés, a Grand Jeté landing on a cut that floors them, and
 		# the Révérence - her bow)
 		"finale": {"name": "Grand Finale", "tab": "super", "kind": "super", "frames": 92, "where": "ground", "aim": "facing",
@@ -294,13 +294,13 @@ const DANCER := {
 			"where": "ground", "aim": "facing", "motion": [[2, 6, 5.0, 0.0]], "proration": 1,
 			"hits": [{"from": 4, "to": 6, "box": [6, -100, 96, 64], "dmg": 26, "stun": 16, "kb": [5.0, -2.0],
 				"block": 8, "chip": 2, "group": 0}],
-			"pose": [[0, "throw_wind"], [4, "throw_out"], [12, "idle"]], "icon": "throw_out"},
+			"pose": [[0, "fsl_wind"], [4, "fsl_cut"], [12, "idle"]], "icon": "throw_out"},
 		"fanstep": {"name": "Fan Step", "tab": "move", "kind": "move", "xf": "fans", "needs_out": true, "blink_at": 5,
 			"frames": 16, "where": "both", "aim": "none", "float": true, "invuln": [0, 8],
 			"pose": [[0, "fs_vanish"], [5, "fs_catch"], [10, "fs_land"], [14, "idle"]], "icon": "fs_catch"},   # (23 Oct: its own drawings)
 		"recall": {"name": "Recall", "tab": "special", "kind": "special", "xf": "fans", "recall_at": 3, "frames": 12,
 			"where": "both", "aim": "lean", "float": true,   # (no direction: home; a direction: fling them that way first)
-			"pose": [[0, "throw_out"], [3, "throw_wind"], [9, "idle"]], "icon": "throw_wind"},
+			"pose": [[0, "recall_reach"], [5, "recall_catch"], [9, "idle"]], "icon": "throw_wind"},
 		# (Encore - Tempo full: a flurry of three cuts, the last floors them - a melee finisher since 20 Oct; it was three
 		# spectral fans)
 		"encore": {"name": "Encore", "tab": "special", "kind": "special", "xf": "tempo", "tempo": 4, "frames": 36,

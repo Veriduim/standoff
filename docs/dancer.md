@@ -59,3 +59,13 @@ shut). Two-hit moves are `"no_cancel"` - the first hit landing doesn't end them.
 moves' frames, boxes and damage: scripts/sim/moves.gd (DANCER).
 
 The trait is `"trait": "spacer"` on her stats, so a future character can be something else.
+
+## Her range, next (Timmy 23 Oct 14:02 - "going more for rule of cool than realistic")
+Every YOMI fighter has 4-7 ranged moves (one free basic shot, the strong ones on meter or ammo); she has two, and the fan
+turns home after ~2.8 heights while a round starts ~8 apart. His ideas, for when we come back to it:
+- **More fans** in her kit.
+- **Further out** before they come home.
+- **Moves through her fans**: the fans spinning in a circle where they are; recall all of them early; first-in,
+  last-out recall.
+- **A super as one gigantic fan.**
+

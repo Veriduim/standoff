@@ -940,6 +940,27 @@ func _test_strike_timeline() -> void:
 		var lp := ((p[bone[1]] as Vector2) - (p[bone[0]] as Vector2)).length()
 		kept = kept and absf(lb - lp) < 0.01
 	_check("a pose pushed on past another keeps every limb's length", kept)
+	# (23 Oct: a bent spine is a Vector3 in the pose - the stretch's floor shift cast it to a Vector2 and every bent pose
+	# standing on the floor came out broken; nothing checked the whole set) every move of both fighters, forward and
+	# moving back, and every way of being hit, gives every joint
+	var whole := true
+	var broken := ""
+	for ch: String in ["dancer", "bruiser"]:
+		for mv: String in Moves.of(ch).keys():
+			var mm := Moves.move(ch, mv)
+			for f in range(0, int(mm.get("frames", 1)) + 1, 3):
+				for back: bool in [false, true]:
+					var pp := Poses.for_record(ch, [0.0, 0.0, 1, mv, f, 0, 400, 0], back)
+					if not Poses.JOINTS.all(func(j: String) -> bool: return pp.get(j) is Vector2):
+						whole = false
+						broken = "%s %s f%d" % [ch, mv, f]
+		for look in Sim.LOOKS.size():
+			for air: float in [0.0, -80.0]:
+				var hp := Poses.for_record(ch, [0.0, air, 1, "", 0, 1, 400, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, look, 9])
+				if not Poses.JOINTS.all(func(j: String) -> bool: return hp.get(j) is Vector2):
+					whole = false
+					broken = "%s hit look %d" % [ch, look]
+	_check("every move of both fighters (and moving back) and every way of being hit gives a whole pose %s" % broken, whole)
 	# (a stand-in with the old Haymaker's keys: his own is "drawn" since 20 Oct - no extra coil)
 	var m := {"kind": "attack", "frames": 40, "hits": [{"from": 13, "to": 15}],
 		"pose": [[0, "heavy_wind"], [13, "heavy_hit"], [26, "b_idle"]]}

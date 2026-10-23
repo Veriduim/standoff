@@ -147,6 +147,10 @@ func _motion_fx(prev: Array) -> void:
 		if mv == "fanstep" and speed > 60.0:   # (Fan Step's blink: her spin left fading where she was - 23 Oct)
 			fx.afterimage(i, p)
 		# (23 Oct, step 4 - her petals, Umbra's: a spin sheds a ring of them; a throw / Fan Slash slaps a cone out)
+		if _char(i) == "dancer" and mv == "recall" and _crossed(p, r, mv, 1):   # (calling them home: a swirl)
+			fx.petal_dance(Vector2(float(r[0]), float(r[1]) - 50.0), colour_of(i), _tick_n * 11 + i, 12)
+		elif _char(i) == "dancer" and mv in ["windmill", "floorslide"] and _tick_n % 4 == 0 and int(r[5]) == 0:
+			fx.petal_burst(Vector2(float(r[0]), -10.0), colour_of(i), _tick_n * 11 + i, 4)   # (petals off the floor)
 		if _char(i) == "dancer" and mv in SPINS and _crossed(p, r, mv, 1):
 			fx.petal_dance(Vector2(float(r[0]), float(r[1]) - 50.0), colour_of(i), _tick_n * 11 + i)
 		elif _char(i) == "dancer" and mv in ["fan", "airfan", "fanslash"] and _crossed(p, r, mv, Moves.startup(Moves.move("dancer", mv))):
@@ -175,6 +179,8 @@ func _motion_fx(prev: Array) -> void:
 			fx.ribbon(Vector2(float(p[0]), -16.0), Vector2(float(r[0]), -16.0), colour_of(i))   # floor - the mods' beams)
 		if float(p[1]) < -6.0 and float(r[1]) >= -0.5 and int(r[5]) != 4:   # (landed: squash, and dust if it was a drop)
 			_land[i] = LAND_TICKS
+			if dy > 6.0 and _char(i) == "dancer" and str(p[3]) == "updraft":   # (Grand Jete coming down: petals)
+				fx.petal_burst(Vector2(float(r[0]), -8.0), colour_of(i), _tick_n * 5 + i, 10)
 			if dy > 6.0:   # (YOMI's landing: dots along the floor in their colour - 23 Oct)
 				fx.landing(Vector2(float(r[0]), 0.0), _dot_col(i), clampf(dy / 14.0, 0.5, 1.2), _tick_n * 5 + i)
 				if sfx != null:
