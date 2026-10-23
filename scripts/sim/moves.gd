@@ -236,7 +236,8 @@ const DANCER := {
 			"pose": [[0, "grab_reach"], [5, "throw"], [11, "idle"]], "icon": "grab_reach"},
 		# ---- show-off
 		"taunt": {"name": "Taunt", "tab": "defend", "kind": "wait", "interrupt": true, "frames": 50, "where": "ground", "aim": "facing",
-			"meter_gain": 125, "pose": [[0, "taunt"]]},
+			"meter_gain": 125, "pose": [[0, "gather"], [5, "fan_spread"], [11, "twirl_a"], [15, "twirl_b"], [19, "twirl_a"],
+				[23, "pir_spin"], [29, "fan_up"], [36, "bow"], [44, "taunt"]], "icon": "taunt"},   # (23 Oct: a routine, YOMI-long - it was one pose)
 		# (her supers, a melee spacer's - 20 Oct 16:17: the dance itself, her fans the blades. Fouetté Storm - 1 bar: five
 		# whipping kicks as she travels on, the last floors them)
 		"fanstorm": {"name": "Fouetté Storm", "tab": "super", "kind": "super", "frames": 46, "where": "ground",
@@ -522,7 +523,8 @@ const BRUISER := {
 			"pose": [[0, "mt_ko_load"], [5, "mt_ko"], [20, "fall"], [34, "b_idle"]], "icon": "mt_ko"},
 		# ---- show-off: the Wai Khru's bow
 		"taunt": {"name": "Taunt", "tab": "defend", "kind": "wait", "interrupt": true, "frames": 50, "where": "ground", "aim": "facing",
-			"meter_gain": 125, "pose": [[0, "b_taunt"]], "icon": "b_taunt"},
+			"meter_gain": 125, "pose": [[0, "b_tap"], [4, "b_idle"], [7, "b_tap"], [11, "b_beckon"], [15, "b_curl"],
+				[19, "b_beckon"], [23, "b_curl"], [28, "b_flex"], [37, "b_pound"], [44, "b_taunt"]], "icon": "b_taunt"},   # (23 Oct: a routine)
 		# ---- supers: armour through it all, a flurry, the clinch at its worst
 		"bullrush": {"name": "Bull Rush", "tab": "super", "kind": "super", "frames": 40, "where": "ground", "aim": "facing",
 			"cost": 125, "armor": [0, 30], "armor_hits": 3, "motion": [[4, 26, 12.0, 0.0]], "cue": {"at": 4, "type": "rush"},

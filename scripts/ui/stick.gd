@@ -24,8 +24,10 @@ static var style := {"limb": 9.0, "head": 11.5, "body": 1.45, "hips": 1.45, "fis
 
 
 ## Each character's build over the shared style - the same body, their own prop (22:30 the mods "just do it with their
-## props"): the Bruiser broader through the chest, in boxing gloves (05:03 Muay Thai + Little Mac); the Dancer as A is.
-const BUILD := {"bruiser": {"fist": 1.2, "body": 1.8, "hips": 1.5, "glove": true}}
+## props"): the Bruiser broader through the chest, in hand wraps (05:03 Muay Thai + Little Mac).
+## (23 Oct 13:12 "i dont actually love the gloves on bruiser and would want them to be wraps", 13:18 "Wraps yes"): hand
+## wraps - a fist a little bigger than hers, white tape across the knuckles and round the wrist (gloves: "glove": true)
+const BUILD := {"bruiser": {"fist": 0.78, "body": 1.8, "hips": 1.5, "wraps": true}}
 const CUFF := Color("#f2f2f7")    ## the gloves' wrist band
 
 
@@ -49,6 +51,7 @@ static func draw(ci: CanvasItem, pose: Dictionary, origin: Vector2, scale: float
 	var front := _arms(FRONT, pts)
 	var build: Dictionary = BUILD.get(ch, {})
 	var glove := bool(build.get("glove", false))
+	var wraps := bool(build.get("wraps", false))
 	var gap := float(style.get("gap", 0.0)) * thick
 	if gap > 0.0:   # (the head floats a little off the body)
 		var up := ((pts["head"] as Vector2) - (pts["neck"] as Vector2)).normalized()
@@ -85,6 +88,8 @@ static func draw(ci: CanvasItem, pose: Dictionary, origin: Vector2, scale: float
 		_toe(ci, pts, "b", facing, toe, thick * (1.0 - 0.55 * taper), far)
 	if glove:
 		_glove(ci, pts, "b", fist, far, CUFF.darkened(FAR))
+	elif wraps:
+		_wraps(ci, pts, "b", fist, far, CUFF.darkened(FAR), thick)
 	else:
 		ci.draw_circle(pts["hand_b"], fist * (1.0 - 0.6 * taper), far, true, -1.0, true)
 	if foot > 0.0:
@@ -98,6 +103,8 @@ static func draw(ci: CanvasItem, pose: Dictionary, origin: Vector2, scale: float
 		_toe(ci, pts, "f", facing, toe, thick * (1.0 - 0.55 * taper), col)
 	if glove:
 		_glove(ci, pts, "f", fist, col, CUFF)
+	elif wraps:
+		_wraps(ci, pts, "f", fist, col, CUFF, thick)
 	else:
 		ci.draw_circle(pts["hand_f"], fist * (1.0 - 0.6 * taper), col, true, -1.0, true)
 	if ring > 0.0:
@@ -105,6 +112,21 @@ static func draw(ci: CanvasItem, pose: Dictionary, origin: Vector2, scale: float
 	else:
 		ci.draw_circle(pts["head"], head_r, col, true, -1.0, true)
 	return pts
+
+
+## Hand wraps (23 Oct): the fist in their colour, white tape over the knuckles and two turns round the wrist.
+static func _wraps(ci: CanvasItem, pts: Dictionary, side: String, r: float, c: Color, tape: Color, thick: float) -> void:
+	var hand: Vector2 = pts["hand_" + side]
+	var elbow: Vector2 = pts["elbow_" + side]
+	var d := (hand - elbow).normalized() if hand.distance_to(elbow) > 0.5 else Vector2.RIGHT
+	var n := Vector2(-d.y, d.x)
+	var t := tape
+	t.a = c.a
+	for k in [0.9, 1.6]:   # (the wrist: two turns of tape across the forearm)
+		var at: Vector2 = hand - d * r * float(k)
+		ci.draw_line(at - n * thick * 0.55, at + n * thick * 0.55, t, thick * 0.32, true)
+	ci.draw_circle(hand, r, c, true, -1.0, true)
+	ci.draw_arc(hand, r * 0.72, d.angle() - 1.1, d.angle() + 1.1, 10, t, r * 0.5, true)   # (the knuckles taped)
 
 
 ## A boxing glove (the Bruiser's): a big round fist in their colour, a thumb along it, a white band at the wrist.
@@ -145,6 +167,13 @@ static func _toe(ci: CanvasItem, pts: Dictionary, side: String, facing: float, l
 ## The body: neck to hip, chest-wide at the top and hips-wide at the bottom - pinched in at the waist when the style
 ## has one (waist > 0: its width in limbs, 22:12 "I want their model to be better").
 static func _torso(ci: CanvasItem, pts: Dictionary, chest: float, waist: float, hips: float, c: Color) -> void:
+	if pts.has("spine"):   # (a bent back: neck, three spine points, hips - chest to hips width along it)
+		var line: Array = [pts["neck"]] + (pts["spine"] as Array) + [pts["hip"]]
+		for k in 4:
+			_bone(ci, line[k], line[k + 1], lerpf(chest, hips, k / 4.0), lerpf(chest, hips, (k + 1) / 4.0), c)
+		for k in range(1, 4):   # (round at each bend, no notch)
+			ci.draw_circle(line[k], lerpf(chest, hips, k / 4.0) / 2.0, c, true, -1.0, true)
+		return
 	if waist <= 0.0 or float(style.get("waist", 0.0)) <= 0.0:
 		_bone(ci, pts["neck"], pts["hip"], chest, hips, c)
 		return
@@ -173,6 +202,16 @@ static func _place(pose: Dictionary, origin: Vector2, scale: float, facing: floa
 		if pose.has(s):
 			var v: Vector2 = pose[s]
 			pts[s] = origin + Vector2(v.x * facing, v.y + drop) * scale
+	# (13:14 "bend in the middle and at the 3/4 and 1/4 mark") the spine's three points, pushed off the neck-hip line
+	var bend := Poses.bend_of(pose)
+	if bend != Vector3.ZERO:
+		var neck: Vector2 = pose["neck"]
+		var back := ((pose["hip"] as Vector2) - neck).normalized().rotated(PI / 2.0)   # (toward their back)
+		var sp := []
+		for k in 3:
+			var v: Vector2 = neck.lerp(hip, 0.25 * (k + 1)) + back * bend[k]
+			sp.append(origin + Vector2(v.x * facing, v.y + drop) * scale)
+		pts["spine"] = sp
 	return pts
 
 

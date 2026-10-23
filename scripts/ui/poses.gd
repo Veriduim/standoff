@@ -214,13 +214,19 @@ const P := {
 	# Workshop/tools/gap_poses.py.) tuck: a ball, knees to the chest - turned a quarter at a time ("tuck@90") it's every
 	# roll and flip; grabbed: held in a throw or the clinch, doubled over, the head pulled down, grabbing at the arm; splat: upright
 	# against the wall behind, one arm up it, one down it, the head knocked back, a knee buckling.
-	"tuck": {"head": [35, -77], "neck": [23, -75], "hip": [0, -50], "elbow_f": [21, -55], "hand_f": [6, -50], "elbow_b": [28, -56], "hand_b": [12, -53], "knee_f": [12, -73], "foot_f": [7, -48], "knee_b": [7, -75], "foot_b": [-3, -51]},
+	"tuck": {"head": [19, -92], "neck": [12, -82], "hip": [0, -50], "elbow_f": [31, -78], "hand_f": [46, -84], "elbow_b": [31, -85], "hand_b": [44, -96], "knee_f": [25, -57], "foot_f": [48, -44], "knee_b": [26, -50], "foot_b": [44, -32], "bend": [4, 7, 4]},
 	"grabbed": {"head": [38, -68], "neck": [27, -71], "hip": [0, -50], "elbow_f": [46, -64], "hand_f": [61, -70], "elbow_b": [41, -57], "hand_b": [57, -56], "knee_f": [8, -26], "foot_f": [4, 0], "knee_b": [-16, -30], "foot_b": [-26, -6]},
 	"splat": {"head": [-10, -94], "neck": [-4, -84], "hip": [0, -50], "elbow_f": [-16, -100], "hand_f": [-30, -108], "elbow_b": [-18, -70], "hand_b": [-34, -65], "knee_f": [12, -27], "foot_f": [0, -4], "knee_b": [-3, -24], "foot_b": [-6, 2]},
 	# (13:05 "I should see that back bend": YOMI turns one ball for every tumble - ours open into the move first) arch: a
 	# back flip's take-off, the back bent, head thrown back, arms reaching back over; sitback: a backward roll's start.
-	"arch": {"head": [-29, -83], "neck": [-18, -79], "hip": [0, -50], "elbow_f": [-35, -89], "hand_f": [-51, -90], "elbow_b": [-33, -92], "hand_b": [-49, -96], "knee_f": [-8, -25], "foot_f": [-24, -5], "knee_b": [-4, -24], "foot_b": [-17, -2]},
+	"arch": {"head": [-29, -83], "neck": [-18, -79], "hip": [0, -50], "elbow_f": [-35, -89], "hand_f": [-51, -90], "elbow_b": [-33, -92], "hand_b": [-49, -96], "knee_f": [-8, -25], "foot_f": [-24, -5], "knee_b": [-4, -24], "foot_b": [-17, -2], "bend": [-5, -10, -6]},
 	"sitback": {"head": [-16, -64], "neck": [-16, -52], "hip": [0, -22], "elbow_f": [4, -51], "hand_f": [19, -55], "elbow_b": [4, -55], "hand_b": [18, -63], "knee_f": [25, -30], "foot_f": [28, -5], "knee_b": [26, -26], "foot_b": [27, 0]},
+	# (23 Oct: his taunt as a routine, YOMI-long - gloves tapped, a beckon, a flex, a chest pound)
+	"b_tap": {"head": [2, -92], "neck": [1, -80], "hip": [0, -47], "elbow_f": [17, -71], "hand_f": [32, -74], "elbow_b": [19, -79], "hand_b": [28, -92], "knee_f": [12, -24], "foot_f": [16, -1], "knee_b": [-10, -23], "foot_b": [-16, 0]},
+	"b_flex": {"head": [-3, -92], "neck": [-1, -80], "hip": [0, -47], "elbow_f": [17, -83], "hand_f": [14, -99], "elbow_b": [-19, -83], "hand_b": [-16, -99], "knee_f": [11, -24], "foot_f": [12, 0], "knee_b": [-11, -24], "foot_b": [-12, 0]},
+	"b_beckon": {"head": [5, -92], "neck": [6, -80], "hip": [0, -47], "elbow_f": [24, -78], "hand_f": [40, -80], "elbow_b": [-2, -63], "hand_b": [10, -53], "knee_f": [13, -25], "foot_f": [19, -1], "knee_b": [-10, -23], "foot_b": [-16, 0]},
+	"b_curl": {"head": [5, -92], "neck": [6, -80], "hip": [0, -47], "elbow_f": [24, -78], "hand_f": [21, -94], "elbow_b": [-2, -63], "hand_b": [10, -53], "knee_f": [13, -25], "foot_f": [19, -1], "knee_b": [-10, -23], "foot_b": [-16, 0]},
+	"b_pound": {"head": [-9, -91], "neck": [-5, -80], "hip": [0, -48], "elbow_f": [0, -63], "hand_f": [-15, -67], "elbow_b": [10, -70], "hand_b": [16, -55], "knee_f": [12, -25], "foot_f": [15, -1], "knee_b": [-11, -24], "foot_b": [-14, 0]},
 	"down": {"head": [-44, -8], "neck": [-32, -8], "hip": [0, -8], "elbow_f": [-20, -18], "hand_f": [-8, -24],
 		"elbow_b": [-28, -2], "hand_b": [-16, 0], "knee_f": [18, -14], "foot_f": [36, -6], "knee_b": [18, -4],
 		"foot_b": [38, 0]},
@@ -333,9 +339,9 @@ const P := {
 	"mt_elbow_load": {"head": [-3, -92], "neck": [-2, -80], "hip": [-1, -47], "elbow_f": [-8, -63], "hand_f": [0, -77],
 		"elbow_b": [0, -62], "hand_b": [6, -77], "knee_f": [12, -24], "foot_f": [18, -1],
 		"knee_b": [-11, -23], "foot_b": [-18, 0]},
-	"mt_elbow": {"head": [24, -85], "neck": [19, -75], "hip": [6, -44], "elbow_f": [32, -87], "hand_f": [22, -74],
-		"elbow_b": [21, -57], "hand_b": [27, -72], "knee_f": [22, -24], "foot_f": [26, 0],
-		"knee_b": [-10, -24], "foot_b": [-26, -6]},
+	# (23 Oct 13:18 Timmy's pick C - "we can cheat a little and disconnect the shoulder so the elbow can go forward":
+	# the lead shoulder 16 forward of his neck, the elbow level, the fist folded back - the point clear of his head)
+	"mt_elbow": {"head": [21, -87], "neck": [17, -76], "hip": [6, -44], "elbow_f": [50, -77], "hand_f": [35, -76], "elbow_b": [18, -58], "hand_b": [25, -72], "knee_f": [22, -24], "foot_f": [26, 0], "knee_b": [-10, -24], "foot_b": [-26, -6], "shoulder_f": [33, -76]},
 	"mt_round_load": {"head": [-6, -91], "neck": [-5, -79], "hip": [-1, -46], "elbow_f": [9, -68], "hand_f": [11, -84],
 		"elbow_b": [-14, -64], "hand_b": [-28, -56], "knee_f": [11, -23], "foot_f": [17, 0],
 		"knee_b": [-14, -24], "foot_b": [-17, 0]},
@@ -375,7 +381,34 @@ static func get_pose(pose_name: String) -> Dictionary:
 	for j: String in JOINTS:
 		var v: Array = src[j]
 		out[j] = Vector2(float(v[0]), float(v[1]))
+	if src.has("bend"):
+		var b: Array = src["bend"]
+		out["bend"] = Vector3(float(b[0]), float(b[1]), float(b[2]))
+	for s: String in SHOULDERS:
+		if src.has(s):
+			var v: Array = src[s]
+			out[s] = Vector2(float(v[0]), float(v[1]))
 	return out
+
+
+## A pose's loose shoulders (23 Oct, the Elbow): an arm may hang from a shoulder off the neck - kept as an offset from
+## the neck through blends, overshoots and the stretch; without one the arm starts at the neck.
+const SHOULDERS := ["shoulder_f", "shoulder_b"]
+
+
+static func _shoulders(out: Dictionary, a: Dictionary, b: Dictionary, t: float) -> void:
+	for s: String in SHOULDERS:
+		if a.has(s) or b.has(s):
+			var oa: Vector2 = (a.get(s, a["neck"]) as Vector2) - (a["neck"] as Vector2)
+			var ob: Vector2 = (b.get(s, b["neck"]) as Vector2) - (b["neck"] as Vector2)
+			out[s] = (out["neck"] as Vector2) + oa.lerp(ob, t)
+
+
+## (23 Oct 13:14 Timmy: "His body needs to be able to bend in the middle and at the 3/4 and 1/4 mark for tumble to
+## work") a pose's spine: how far the back is pushed out at a quarter, half and three quarters of the way from the neck
+## to the hips (pose units; + rounds the back, - arches it). Without one the torso is straight, as it always was.
+static func bend_of(p: Dictionary) -> Vector3:
+	return p.get("bend", Vector3.ZERO)
 
 
 ## A pose turned (23 Oct - the rolls and flips YOMI draws as four drawings): "name@deg" turns it deg degrees forward (the
@@ -390,13 +423,19 @@ static func _turned(spec: String) -> Dictionary:
 	mid /= float(JOINTS.size())
 	var a := deg_to_rad(float(arg.trim_suffix("g")))
 	var out := {}
+	if p.has("bend"):
+		out["bend"] = p["bend"]
 	var low := -INF
 	for j: String in JOINTS:
 		out[j] = mid + ((p[j] as Vector2) - mid).rotated(a)
 		low = maxf(low, (out[j] as Vector2).y)
+	for s: String in SHOULDERS:
+		if p.has(s):
+			out[s] = mid + ((p[s] as Vector2) - mid).rotated(a)
 	if ground:
-		for j: String in JOINTS:
-			out[j] = (out[j] as Vector2) + Vector2(0.0, -low)
+		for j: String in JOINTS + SHOULDERS:
+			if out.has(j):
+				out[j] = (out[j] as Vector2) + Vector2(0.0, -low)
 	return out
 
 
@@ -404,6 +443,9 @@ static func blend(a: Dictionary, b: Dictionary, t: float) -> Dictionary:
 	var out := {}
 	for j: String in JOINTS:
 		out[j] = (a[j] as Vector2).lerp(b[j], t)
+	if a.has("bend") or b.has("bend"):
+		out["bend"] = bend_of(a).lerp(bend_of(b), t)
+	_shoulders(out, a, b, t)
 	return out
 
 
@@ -434,6 +476,9 @@ static func push(a: Dictionary, b: Dictionary, k: float) -> Dictionary:
 		var vb: Vector2 = (b[bone[1]] as Vector2) - (b[bone[0]] as Vector2)
 		var turn := clampf(wrapf(vb.angle() - va.angle(), -PI, PI) * k, -PUSH_MAX, PUSH_MAX)
 		out[bone[1]] = (out[bone[0]] as Vector2) + Vector2.from_angle(vb.angle() + turn) * vb.length()
+	if a.has("bend") or b.has("bend"):   # (the spine past its drawing too)
+		out["bend"] = bend_of(b) + (bend_of(b) - bend_of(a)) * k
+	_shoulders(out, b, b, 1.0)
 	return out
 
 
@@ -516,6 +561,8 @@ static func _strike(m: Dictionary, keys: Array, f: int) -> Variant:
 static func exaggerate(pose: Dictionary) -> Dictionary:
 	var base := get_pose("idle")
 	var out := {}
+	if pose.has("bend"):
+		out["bend"] = pose["bend"]
 	var hip: Vector2 = pose["hip"]
 	out["hip"] = hip + Vector2(0.0, (hip.y - (base["hip"] as Vector2).y) * 0.35)   # (crouches go lower, leaps higher)
 	for b: Array in TREE:
@@ -527,6 +574,7 @@ static func exaggerate(pose: Dictionary) -> Dictionary:
 		var k := AMP_LEGS if int(b[2]) == 1 else AMP
 		var more := clampf(dev * (k - 1.0), -AMP_MAX, AMP_MAX)
 		out[b[1]] = (out[b[0]] as Vector2) + Vector2.from_angle(v.angle() + more) * v.length()
+	_shoulders(out, pose, pose, 1.0)
 	var grounded := -INF   # (a foot that was on the floor is on it still)
 	for j: String in ["foot_f", "foot_b"]:
 		if (pose[j] as Vector2).y >= -2.0:

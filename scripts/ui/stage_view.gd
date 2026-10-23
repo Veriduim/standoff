@@ -255,7 +255,7 @@ func _hit_style(e: Dictionary, a: int) -> String:
 				"fanward", "fanflick"]
 				else "blunt")
 	var mv := str(frame[a][3])
-	if _char(a) == "bruiser":   # (his elbows cut; gloves, shins and knees thump)
+	if _char(a) == "bruiser":   # (his elbows cut; fists, shins and knees thump)
 		return "slash" if mv in ["elbow", "clinchelbow"] else "blunt"
 	if mv == "" or _char(a) != "dancer":
 		return "blunt"
@@ -782,7 +782,7 @@ func _figure(i: int, r: Array, alpha: float, bare := false, tint := Color(0, 0, 
 		return
 	if alpha >= 1.0 and r.size() > 15 and int(r[15]) > 0 and int(r[5]) != 4:   # (Tempo: shards of her colour orbit her,
 		_tempo_aura(i, pts, int(r[15]), col, h * zoom)                          # one a beat - Yharim's in the mod study)
-	if r.size() > 17 and int(r[17]) >= Sim.GRIT_MAX and int(r[5]) != 4:   # (the Bruiser's Grit full: his gloves glow hot)
+	if r.size() > 17 and int(r[17]) >= Sim.GRIT_MAX and int(r[5]) != 4:   # (the Bruiser's Grit full: his fists glow hot)
 		_grit_aura(pts, h * zoom)
 	if deciding.has(i):
 		var pulse := 0.5 + 0.5 * sin(_time * 6.0)
@@ -799,7 +799,7 @@ func _figure(i: int, r: Array, alpha: float, bare := false, tint := Color(0, 0, 
 				Color.WHITE)
 
 
-## Grit full (the K.O. Punch is there): a hot orange glow round both gloves, pulsing, sparks rising off them.
+## Grit full (the K.O. Punch is there): a hot orange glow round both fists, pulsing, sparks rising off them.
 func _grit_aura(pts: Dictionary, sc: float) -> void:
 	var pulse := 0.5 + 0.5 * sin(_time * 7.0)
 	for side: String in ["hand_f", "hand_b"]:
